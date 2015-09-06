@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;     // DLL support
-using Microsoft.Research.ScientificDataSet.NetCDF4;
 
 namespace FlowSharp
 {
@@ -12,16 +6,16 @@ namespace FlowSharp
     {
         public static void Run()
         {
-            Console.Out.WriteLine("Running!");
+            // Loading the temperature variable to have a frame of reference (should be ~20-35 degree at upper levels).
+            Loader ncFile = new Loader("E:/Anke/Dev/Data/First/s1/Posterior_Diag.nc");
 
-            // Testing NetCDF, getting to know how it works.
+            Loader.SliceRange slice = new Loader.SliceRange(ncFile, RedSea.Variable.TEMPERATURE);
+            slice.SetOffset(RedSea.Dimension.MEMBER, 0);
+            slice.SetOffset(RedSea.Dimension.TIME, 0);
+            slice.SetOffset(RedSea.Dimension.CENTER_Z, 25);
+            ncFile.LoadFieldSlice(slice);
 
-            int fileID;
-            int dims;
-            NetCDF.nc_open("E:/Anke/Dev/Data/First/s1/Posterior_Diag.nc", NetCDF.CreateMode.NC_NOWRITE, out fileID);
-            Console.Out.WriteLine(fileID);
-            NetCDF.nc_inq_ndims(fileID, out dims);
-            Console.Out.WriteLine("Dims: " + dims);
+            ncFile.Close();
         }
     }
 }

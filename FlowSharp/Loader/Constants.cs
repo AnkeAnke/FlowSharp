@@ -168,5 +168,19 @@ namespace Microsoft.Research.ScientificDataSet.NetCDF4
             /// <summary>max per variable dimensions </summary>
             NC_MAX_VAR_DIMS = 10
         }
+
+        /// <summary>
+        /// Endianess of a variable.
+        /// </summary>
+        public enum NcEndian : int
+        {
+            /// <summary>Not created yet.</summary>
+            NC_ENDIAN_NATIVE = 0,
+            /// <summary>Little endian.</summary>
+            NC_ENDIAN_LITTLE = 1,
+            /// <summary>Big Endian</summary>
+            NC_ENDIAN_BIG = 2
+
+        }
     }
 }
