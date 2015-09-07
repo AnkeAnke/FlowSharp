@@ -126,46 +126,51 @@ namespace FlowSharp
             // NetCDF.nc_get_vara_float(_fileID, )
         }
 
-        /// <summary>
-        /// Load one value into memory completely.
-        /// </summary>
-        /// <param name="var"></param>
-        /// <returns></returns>
-        public ScalarField LoadField(RedSea.Variable var)
-        {
-            ScalarField field;
-            // Query number of dimensions, since it may differ for each variable.
-            int numDims;
-            NetCDF.nc_inq_varndims(_fileID, (int)var, out numDims);
+//        /// <summary>
+//        /// Load one value into memory completely.
+//        /// </summary>
+//        /// <param name="var"></param>
+//        /// <returns></returns>
+//        public ScalarField LoadField(RedSea.Variable var)
+//        {
+//            ScalarField field;
+//            // Query number of dimensions, since it may differ for each variable.
+//            int numDims;
+//            NetCDF.nc_inq_varndims(_fileID, (int)var, out numDims);
 
-            // Query sizes of all relevant dimensions to know the scalar fields size.
-            Index size = new Index(numDims);
-            int[] dimIDs = new int[numDims];
-            NetCDF.nc_inq_vardimid(_fileID, (int)var, dimIDs);
+//            // Query sizes of all relevant dimensions to know the scalar fields size.
+//            Index size = new Index(numDims);
+//            int[] dimIDs = new int[numDims];
+//            NetCDF.nc_inq_vardimid(_fileID, (int)var, dimIDs);
 
-            // Fill index directly.
-            for(int dim = 0; dim < numDims; ++dim)
-            {
-                int sizeDim;
-                NetCDF.nc_inq_dimlen(_fileID, dimIDs[dim], out sizeDim);
-                size[dim] = sizeDim;
-            }
+//            // Fill index directly.
+//            for(int dim = 0; dim < numDims; ++dim)
+//            {
+//                int sizeDim;
+//                NetCDF.nc_inq_dimlen(_fileID, dimIDs[dim], out sizeDim);
+//                size[dim] = sizeDim;
+//            }
 
-#if DEBUG
-            Console.WriteLine("Field dimensions of " + var.ToString() + ": " + size.ToString());
+//#if DEBUG
+//            Console.WriteLine("Field dimensions of " + var.ToString() + ": " + size.ToString());
 
-            // Assert the type is float.
-            NetCDF.NcType type;
-            NetCDF.nc_inq_vartype(_fileID, (int)var, out type);
-            Debug.Assert(type == NetCDF.NcType.NC_FLOAT);
-#endif
-            // Create scalar field instance and fill it with data.
-            field = new ScalarField(size);
-            int[] zero = new int[numDims];
-            NetCDF.nc_get_var_float(_fileID, (int)var, field.Data);
+//            // Assert the type is float.
+//            NetCDF.NcType type;
+//            NetCDF.nc_inq_vartype(_fileID, (int)var, out type);
+//            Debug.Assert(type == NetCDF.NcType.NC_FLOAT);
+//#endif
 
-            return field;
-        }
+//            // Create a grid descriptor for the field. 
+//            // TODO: Actually load this data.
+//            RectlinearGrid grid = new RectlinearGrid(size, new )
+
+//            // Create scalar field instance and fill it with data.
+//            field = new ScalarField(size);
+//            int[] zero = new int[numDims];
+//            NetCDF.nc_get_var_float(_fileID, (int)var, field.Data);
+
+//            return field;
+//        }
 
         /// <summary>
         /// Load a slice from the file.
@@ -208,8 +213,12 @@ namespace FlowSharp
             Index fieldSize = new Index(numDimsField);
             Array.Copy(sizeField, fieldSize.Data, numDimsField);
 
+            // Create a grid descriptor for the field. 
+            // TODO: Actually load this data.
+            RectlinearGrid grid = new RectlinearGrid(fieldSize, new Vector(0.0f, fieldSize.Length), new Vector(0.1f, fieldSize.Length));
+
             // Create scalar field instance and fill it with data.
-            field = new ScalarField(fieldSize);
+            field = new ScalarField(grid);
             NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets, sizeInFile, field.Data);
 
             return field;

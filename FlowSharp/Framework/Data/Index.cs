@@ -42,7 +42,7 @@ namespace FlowSharp
         }
 
         /// <summary>
-        /// Index with di melements set to v.
+        /// Index with dim elements set to v.
         /// </summary>
         /// <param name="v"></param>
         /// <param name="dim"></param>
@@ -56,6 +56,7 @@ namespace FlowSharp
 
         #endregion
 
+        #region Operators
         public int this[int index]
         {
             get { return _data[index]; }
@@ -70,6 +71,39 @@ namespace FlowSharp
                 sum[dim] += b[dim];
 
             return sum;
+        }
+
+        public static Index operator *(Index a, Index b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            Index prod = new Index(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                prod[dim] *= b[dim];
+
+            return prod;
+        }
+
+        public static Vector operator *(Index a, Vector b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            Vector prod = new Vector(b);
+            for (int dim = 0; dim < a.Length; ++dim)
+                prod[dim] *= (float)a[dim];
+
+            return prod;
+        }
+
+        public static Vector operator *(Vector a, Index b)
+        {
+            return b * a;
+        }
+
+        public static explicit operator Vector(Index vec)  // explicit byte to digit conversion operator
+        {
+            Vector result = new Vector(vec.Length);
+            for(int dim = 0; dim < vec.Length; ++dim)
+                result[dim] = (float)vec[dim];
+            return result;
         }
 
         /// <summary>
@@ -127,6 +161,8 @@ namespace FlowSharp
         {
             return !(a > b);
         }
+
+        #endregion
 
         /// <summary>
         /// Product of all components.

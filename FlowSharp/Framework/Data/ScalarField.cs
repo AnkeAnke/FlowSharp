@@ -11,7 +11,6 @@ namespace FlowSharp
     /// <summary>
     /// Class for N dimensional float fields.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     class ScalarField
     {
         /// <summary>
@@ -19,10 +18,11 @@ namespace FlowSharp
         /// </summary>
         public int N { get; protected set; }
 
+        public FieldGrid Grid { get; protected set; }
         /// <summary>
         /// Number of grid edges in every dimension.
         /// </summary>
-        public Index Size { get; protected set; }
+        public Index Size { get { return Grid.Size; } }
 
         protected float[] _data;
 
@@ -49,12 +49,13 @@ namespace FlowSharp
         /// Instanciate a new field. The dimension is derived from the fields size.
         /// </summary>
         /// <param name="fieldSize">Number of grid edges in each dimension.</param>
-        public ScalarField(Index fieldSize)
+        public ScalarField(FieldGrid grid)
         {
-            N = fieldSize.Length;
-            Size = fieldSize;
+            N = grid.Size.Length;
+            Grid = grid;
             _data = new float[Size.Product()];
         }
+
         /// <summary>
         /// Returns a value from the grid.
         /// </summary>

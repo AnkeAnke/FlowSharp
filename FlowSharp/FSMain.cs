@@ -13,7 +13,7 @@ namespace FlowSharp
             slice.SetOffset(RedSea.Dimension.MEMBER, 0);
             slice.SetOffset(RedSea.Dimension.TIME, 0);
             slice.SetOffset(RedSea.Dimension.CENTER_Z, 25);
-            ncFile.LoadFieldSlice(slice);
+            ScalarField temperature = ncFile.LoadFieldSlice(slice);
 
             ncFile.Close();
         }

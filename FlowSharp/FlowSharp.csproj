@@ -56,9 +56,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Framework\Data\Field.cs" />
+    <Compile Include="Framework\Data\ScalarField.cs" />
     <Compile Include="Framework\Data\Index.cs" />
     <Compile Include="Framework\Data\Vector.cs" />
+    <Compile Include="Framework\Data\VectorField.cs" />
+    <Compile Include="Framework\Renderer\Renderer.cs" />
     <Compile Include="RedSea.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -106,7 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Framework\Algorithms\" />
-    <Folder Include="Renderer\Data\" />
+    <Folder Include="Framework\Renderer\Data\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
