@@ -4,9 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FlowSharp"
+        xmlns:WPFHost="clr-namespace:WPFHost"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="WPF Window" Height="797.015" Width="1000">
     <Grid>
-        
+        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="381" Margin="198,181,0,0" VerticalAlignment="Top" Width="574"/>
     </Grid>
 </Window>

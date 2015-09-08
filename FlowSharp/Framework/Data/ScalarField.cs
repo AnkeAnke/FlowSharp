@@ -34,6 +34,7 @@ namespace FlowSharp
 
         //protected bool _containsInvalidValue = false;
         //protected float _invalidValue;
+
         ///// <summary>
         ///// Value assigned to nonexistant values.
         ///// </summary>
@@ -76,6 +77,23 @@ namespace FlowSharp
             }
 
             return _data[index];
+        }
+
+        /// <summary>
+        /// Returns a value from the grid.
+        /// </summary>
+        /// <param name="index">Scalar index.</param>
+        /// <returns></returns>
+        public float Sample(int index)
+        {
+            Debug.Assert(index < Size.Product() && index >= 0);
+
+            return _data[index];
+        }
+
+        public float Sample(Vector position)
+        {
+            return Grid.Sample(this, position);
         }
 
         /// <summary>

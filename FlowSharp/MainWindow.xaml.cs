@@ -20,9 +20,12 @@ namespace FlowSharp
     /// </summary>
     public partial class MainWindow : Window
     {
+        Renderer renderer = new Renderer();
         public MainWindow()
         {
             InitializeComponent();
+
+            DX11Display.Scene = renderer;
         }
     }
 }

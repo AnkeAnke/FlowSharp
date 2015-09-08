@@ -21,23 +21,27 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;FromMemory</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;FromMemory</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="SlimDX, Version=4.0.13.43, Culture=neutral, PublicKeyToken=b1b0c32fd1ffe4f9, processorArchitecture=x86" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -47,20 +51,30 @@
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="UIAutomationProvider" />
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Framework\Renderer\Data\ColorMapping.cs" />
+    <Compile Include="Framework\Renderer\Data\Plane.cs" />
+    <Compile Include="Framework\Renderer\Data\Renderable.cs" />
+    <Compile Include="WPFHost\Disposer.cs" />
+    <Compile Include="WPFHost\DPFCanvas.cs" />
+    <Compile Include="WPFHost\DX11ImageSource.cs" />
+    <Compile Include="Framework\Data\Grid.cs" />
     <Compile Include="Framework\Data\ScalarField.cs" />
     <Compile Include="Framework\Data\Index.cs" />
     <Compile Include="Framework\Data\Vector.cs" />
     <Compile Include="Framework\Data\VectorField.cs" />
     <Compile Include="Framework\Renderer\Renderer.cs" />
+    <Compile Include="WPFHost\IScene.cs" />
     <Compile Include="RedSea.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -108,7 +122,14 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Framework\Algorithms\" />
-    <Folder Include="Framework\Renderer\Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Framework\Renderer\Colormap.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Framework\Renderer\Data\DataEffects\Plane.fx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
