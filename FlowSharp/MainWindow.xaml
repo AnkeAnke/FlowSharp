@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         Title="WPF Window" Height="797.015" Width="1000">
     <Grid>
-        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="381" Margin="198,181,0,0" VerticalAlignment="Top" Width="574"/>
+        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="747" Width="486" Margin="10,10,0,0" VerticalAlignment="Top" />
+        <ComboBox x:Name="DataTypesDropDown" HorizontalAlignment="Left" Margin="702,214,0,0" VerticalAlignment="Top" Width="120"/>
     </Grid>
 </Window>

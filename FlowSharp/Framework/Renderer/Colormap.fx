@@ -1,3 +1,10 @@
+Texture2D field0;
+SamplerState FieldTextureSampler {
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
 struct VS_IN
 {
 	float4 pos : POSITION;
@@ -22,12 +29,17 @@ PS_IN VS( VS_IN input )
 
 float4 PS_nTex_1( PS_IN input ) : SV_Target
 {
-	return input.col;
+	//return input.col;
+	float value = field0.Sample(FieldTextureSampler, input.col).x;
+return float4(value, value, value, 1.0);
 }
 
 float4 PS_nTex_2(PS_IN input) : SV_Target
 {
-	return float4(1.0, 1.0, 1.0, 2.0) - input.col;
+	//return float4(1.0, 1.0, 1.0, 2.0) - input.col;
+	float value = field0.Sample(FieldTextureSampler, input.col).x;
+return float4(value, value, 0.0, 1.0);
+}
 }
 
 technique10 RenderTex1

@@ -17,7 +17,6 @@ namespace FlowSharp
         {
             base.OnStartup(e);
             Console.Out.WriteLine("Hello Flow!");
-            FSMain.Run();
         }
     }
 }

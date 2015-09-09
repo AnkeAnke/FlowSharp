@@ -70,4 +70,26 @@ namespace FlowSharp
 
         public abstract void Update(TimeSpan totalTime);
     }
+
+    abstract class ColormapRenderable : Renderable
+    {
+        protected Effect _effect;
+        public Colormap? UsedMap { get; set; }
+
+        /// <summary>
+        /// When a colormap is set, set the associated texture as colormap.
+        /// </summary>
+        protected void SetColormapResources()
+        {
+            if (UsedMap == null)
+                return;
+            _effect.GetVariableByName("colormap").AsResource().SetResource(ColorMapping.GetColormapTexture((Colormap)UsedMap));
+        }
+
+        public override void Render(Device device)
+        {
+            SetColormapResources();
+            base.Render(device);
+        }
+    }
 }

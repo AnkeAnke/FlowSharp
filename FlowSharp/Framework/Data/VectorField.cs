@@ -22,6 +22,16 @@ namespace FlowSharp
         public int V { get { return Scalars.Length; } }
 
         /// <summary>
+        /// Pun. TODO: Better.
+        /// </summary>
+        /// <param name="fields"></param>
+        public VectorField(ScalarField[] fields)
+        {
+            Scalars = fields;
+            Grid = fields[0].Grid;
+        }
+
+        /// <summary>
         /// Access field by scalar index.
         /// </summary>
         public Vector Sample(int index)

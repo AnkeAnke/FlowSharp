@@ -8,15 +8,16 @@ using SlimDX.DXGI;
 using Device = SlimDX.Direct3D11.Device;
 using SlimDX;
 using SlimDX.D3DCompiler;
+using System.IO;
 
 namespace FlowSharp
 {
-    class Plane : Renderable
+    class Plane : ColormapRenderable
     {
         /// <summary>
         /// A number of equally sized textures. Depending on the number, a differnet mapping to color will be applied.
         /// </summary>
-        protected Texture2D[] _fields;
+        protected ShaderResourceView[] _fields;
 
         /// <summary>
         /// Plane to display scalar/vector field data on. Condition: Fields domain is 2D.
@@ -26,13 +27,14 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, ScalarField[] fields)
+        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, ScalarField[] fields, Colormap map = Colormap.Parula)
         {
 #if DEBUG
             // Assert that the fields are 2 dimensional.
             foreach(ScalarField field in fields)
                 System.Diagnostics.Debug.Assert(field.Size.Length == 2);
 #endif
+            this._effect = _planeEffect;
             this._technique = _planeEffect.GetTechniqueByName("RenderTex" + fields.Length);
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
                 new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0),
@@ -40,17 +42,19 @@ namespace FlowSharp
             });
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
-
-            // TODO: remove!
-            _numVertices = 3;
+            this.UsedMap = map;
 
             // Setting up the vertex buffer. 
-            GenerateGeometry(origin, xAxis,yAxis, scale);
+            GenerateGeometry(origin, xAxis,yAxis, scale, (RectlinearGrid)fields[0].Grid);
 
-            
+
             // Generating Textures from the fields.
-            //TODO
-
+            _fields = new ShaderResourceView[fields.Length];
+            for(int f = 0; f < fields.Length; ++f)
+            {
+                Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);
+                _fields[f] = new ShaderResourceView(_device, tex);
+            }
         }
 
         /// <summary>
@@ -60,16 +64,26 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale)
+        protected void GenerateGeometry(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, RectlinearGrid grid)
         {
-            var stream = new DataStream(3 * 32, true, true);
+            Vector Extent = grid.Extent;
+            Vector3 maximum = origin + xAxis * Extent[1] * scale + yAxis * Extent[0] * scale;
+
+            // Write poition and UV-map data.
+            var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
             stream.WriteRange(new[] {
-                new Vector4(0.0f, 0.5f, 0.5f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
-                new Vector4(0.5f, -0.5f, 0.5f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
-                new Vector4(-0.5f, -0.5f, 0.5f, 1.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f)
+                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
+                new Vector4(maximum[0], maximum[1], 0.5f, 1.0f), new Vector4(1.0f, 1.0f, 0.0f, 1.0f),
+                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+
+                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
+                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),               
+                new Vector4( origin[0],  origin[1], 0.5f, 1.0f), new Vector4(0.0f, 0.0f, 0.0f, 1.0f)
+
             });
             stream.Position = 0;
 
+            // Create and fill buffer.
             _vertices = new SlimDX.Direct3D11.Buffer(_device, stream, new BufferDescription()
             {
                 BindFlags = BindFlags.VertexBuffer,
@@ -83,7 +97,8 @@ namespace FlowSharp
 
         public override void Render(Device device)
         {
-            // TODO: Set texture.
+            for(int fieldNr = 0; fieldNr < _fields.Length; ++fieldNr)
+            _planeEffect.GetVariableByName("field" + fieldNr).AsResource().SetResource(_fields[fieldNr]);
             base.Render(device);
         }
 
@@ -98,6 +113,7 @@ namespace FlowSharp
         public static void Initialize(Device device)
         {
             _device = device;
+            string cuu = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.ToString();
             var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Colormap.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
             _planeEffect = new Effect(_device, bytecode);
         }

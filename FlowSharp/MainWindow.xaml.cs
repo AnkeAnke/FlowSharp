@@ -20,12 +20,19 @@ namespace FlowSharp
     /// </summary>
     public partial class MainWindow : Window
     {
-        Renderer renderer = new Renderer();
         public MainWindow()
         {
             InitializeComponent();
 
-            DX11Display.Scene = renderer;
+            DX11Display.Scene = Renderer.Singleton;
+
+            FSMain.LoadData();
+        }
+
+        protected override void OnInitialized(EventArgs e)
+        {
+            base.OnInitialized(e);
+            DataTypesDropDown.ItemsSource = Enum.GetValues(typeof(RedSea.Variable)).Cast<RedSea.Variable>();
         }
     }
 }
