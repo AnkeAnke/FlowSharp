@@ -61,9 +61,6 @@ namespace FlowSharp
             Plane.Initialize(Device);
             ColorMapping.Initialize(Device);
             _renderables = new List<Renderable>();
-            //ScalarField testField = new ScalarField(new RectlinearGrid(new Index(4, 2), new Vector(0.0f, 2), new Vector(0.1f, 2)));
-            //Plane plane = new Plane(new Vector3(0, 0, 0.5f), Vector3.UnitX, Vector3.UnitY, 1.0f, new ScalarField[] { testField });
-            //_renderables.Add(plane);
 
             Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
             Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
@@ -89,9 +86,6 @@ namespace FlowSharp
 
         public void Update(TimeSpan timeSpan)
         {
-            //relativeTime = timeSpan.Milliseconds;
-            //throw new NotImplementedException();
-
             foreach (Renderable obj in _renderables)
                 obj.Update(timeSpan);
         }

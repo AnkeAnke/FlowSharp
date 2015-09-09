@@ -129,9 +129,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Framework\Renderer\ColormapParula.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Resource>
     <Content Include="Framework\Renderer\Data\DataEffects\Plane.fx" />
     <Content Include="Framework\Renderer\Resources\ColormapParula.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
