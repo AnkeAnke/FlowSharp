@@ -73,7 +73,7 @@ namespace FlowSharp
 
         public void OnResize(ISceneHost host)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         float relativeTime;

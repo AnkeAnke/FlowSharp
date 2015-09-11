@@ -125,7 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Framework\Renderer\Colormap.fx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
