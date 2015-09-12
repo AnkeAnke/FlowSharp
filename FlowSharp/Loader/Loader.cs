@@ -220,6 +220,13 @@ namespace FlowSharp
             // Create scalar field instance and fill it with data.
             field = new ScalarField(grid);
             NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets, sizeInFile, field.Data);
+            //int fill;
+            //float fillValue;
+
+            //NetCDF.nc_inq_var_fill(_fileID, (int)slice.GetVariable(), out fill, out fillValue);
+            //field.InvalidValue = fillValue;
+            //HACK!
+            field.InvalidValue = field.Data[0];
 
             return field;
         }

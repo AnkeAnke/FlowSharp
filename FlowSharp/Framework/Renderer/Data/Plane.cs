@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using SlimDX.Direct3D11;
 using SlimDX.DXGI;
 using Device = SlimDX.Direct3D11.Device;
+using Buffer = SlimDX.Direct3D11.Buffer;
 using SlimDX;
 using SlimDX.D3DCompiler;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
@@ -38,11 +40,16 @@ namespace FlowSharp
             this._technique = _planeEffect.GetTechniqueByName("RenderTex" + fields.Length);
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
                 new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0),
-                new InputElement("COLOR", 0, Format.R32G32B32A32_Float, 16, 0)
+                new InputElement("TEXTURE", 0, Format.R32G32B32A32_Float, 16, 0)
             });
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
+            var x = fields[0].Size[0];
+            var y = fields[0].Size[1];
+            _planeEffect.GetVariableByName("width").AsScalar().Set(fields[0].Size[1]);
+            _planeEffect.GetVariableByName("height").AsScalar().Set(fields[0].Size[0]);
+            _planeEffect.GetVariableByName("invalidNum").AsScalar().Set((float)fields[0].InvalidValue);
 
             // Setting up the vertex buffer. 
             GenerateGeometry(origin, xAxis,yAxis, scale, (RectlinearGrid)fields[0].Grid);
@@ -84,7 +91,7 @@ namespace FlowSharp
             stream.Position = 0;
 
             // Create and fill buffer.
-            _vertices = new SlimDX.Direct3D11.Buffer(_device, stream, new BufferDescription()
+            _vertices = new Buffer(_device, stream, new BufferDescription()
             {
                 BindFlags = BindFlags.VertexBuffer,
                 CpuAccessFlags = CpuAccessFlags.None,
@@ -98,7 +105,8 @@ namespace FlowSharp
         public override void Render(Device device)
         {
             for(int fieldNr = 0; fieldNr < _fields.Length; ++fieldNr)
-            _planeEffect.GetVariableByName("field" + fieldNr).AsResource().SetResource(_fields[fieldNr]);
+                _planeEffect.GetVariableByName("field" + fieldNr).AsResource().SetResource(_fields[fieldNr]);
+
             base.Render(device);
         }
 
@@ -127,6 +135,15 @@ namespace FlowSharp
         /// Device for creating resources.
         /// </summary>
         protected static Device _device;
+
+
+        protected struct FieldConstants
+        {
+            public float Width;
+            public float Height;
+            public float pad0;
+            public float pad1;
+        }
 
     }
 }
