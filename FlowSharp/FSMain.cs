@@ -7,6 +7,7 @@ namespace FlowSharp
     {
         static ScalarField temperature;
         static VectorField velocity;
+        static PointSet points;
 
         public static void LoadData()
         {
@@ -33,16 +34,40 @@ namespace FlowSharp
 
             velocity = new VectorField(new ScalarField[] { v0, v1 });
 
+
+            Point a = new Point()
+            {
+                Position = new Vector3(5.0f, 10.0f, 0.5f),
+                Color = new Vector3(0.0f, 0.0f, 1.0f),
+                Radius = 0.015f
+            };
+
+            Point kaust = new Point()
+            {
+                Position = new Vector3(39.0f - 32.0f, 23.0f - 9.0f,  0.5f),
+                Color = new Vector3(0.4f, 0.0f, 0.0f),
+                Radius = 0.015f
+            };
+            points = new PointSet() { Points = new Point[] { kaust } };
+
+
+            //Tests.TestCP();
+            points = FieldAnalysis.ComputeCriticalPointsRectlinear2D(velocity);
+
+
+
             ncFile.Close();
         }
 
         public static void CreateRenderables()
         {
             Plane temperaturePlane = new Plane(new Vector3(-0.9f, -0.9f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, new ScalarField[] { temperature });
-            Plane velocityPlane = new Plane(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, velocity.Scalars);
+            Plane velocityPlane = new Plane(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, velocity.Scalars, Plane.RenderEffect.LIC);
+            PointCloud cloud = new PointCloud(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, points);
 
             Renderer.Singleton.AddRenderable(temperaturePlane);
             Renderer.Singleton.AddRenderable(velocityPlane);
+            Renderer.Singleton.AddRenderable(cloud);
         }
     }
 }

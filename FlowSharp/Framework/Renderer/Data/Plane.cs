@@ -7,10 +7,11 @@ using SlimDX.Direct3D11;
 using SlimDX.DXGI;
 using Device = SlimDX.Direct3D11.Device;
 using Buffer = SlimDX.Direct3D11.Buffer;
+using Debug = System.Diagnostics.Debug;
 using SlimDX;
 using SlimDX.D3DCompiler;
 using System.IO;
-using System.Runtime.InteropServices;
+
 
 namespace FlowSharp
 {
@@ -29,7 +30,7 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, ScalarField[] fields, Colormap map = Colormap.Parula)
+        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, ScalarField[] fields, RenderEffect effect = RenderEffect.DEFAULT, Colormap map = Colormap.Parula)
         {
 #if DEBUG
             // Assert that the fields are 2 dimensional.
@@ -37,16 +38,9 @@ namespace FlowSharp
                 System.Diagnostics.Debug.Assert(field.Size.Length == 2);
 #endif
             this._effect = _planeEffect;
-            this._technique = _planeEffect.GetTechniqueByName("RenderTex" + fields.Length);
-            this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
-                new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0),
-                new InputElement("TEXTURE", 0, Format.R32G32B32A32_Float, 16, 0)
-            });
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
-            var x = fields[0].Size[0];
-            var y = fields[0].Size[1];
             _planeEffect.GetVariableByName("width").AsScalar().Set(fields[0].Size[1]);
             _planeEffect.GetVariableByName("height").AsScalar().Set(fields[0].Size[0]);
             _planeEffect.GetVariableByName("invalidNum").AsScalar().Set((float)fields[0].InvalidValue);
@@ -62,6 +56,29 @@ namespace FlowSharp
                 Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);
                 _fields[f] = new ShaderResourceView(_device, tex);
             }
+
+            this.SetRenderEffect(effect);
+            this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
+                new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0),
+                new InputElement("TEXTURE", 0, Format.R32G32B32A32_Float, 16, 0)
+            });
+        }
+
+        public void SetRenderEffect(RenderEffect effect)
+        {
+            switch (effect)
+            {
+                case RenderEffect.LIC:
+                    Debug.Assert(_fields.Length == 2);
+                    this._technique = _planeEffect.GetTechniqueByName("RenderLIC");
+                    break;
+                case RenderEffect.DEFAULT:
+                default:
+                    this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fields.Length);
+                    break;
+                
+            }
+
         }
 
         /// <summary>
@@ -121,9 +138,15 @@ namespace FlowSharp
         public static void Initialize(Device device)
         {
             _device = device;
-            string cuu = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.ToString();
-            var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Colormap.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
-            _planeEffect = new Effect(_device, bytecode);
+            try
+            {
+                var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Data/DataEffects/Plane.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
+                _planeEffect = new Effect(_device, bytecode);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
 
         /// <summary>
@@ -136,14 +159,10 @@ namespace FlowSharp
         /// </summary>
         protected static Device _device;
 
-
-        protected struct FieldConstants
+        public enum RenderEffect
         {
-            public float Width;
-            public float Height;
-            public float pad0;
-            public float pad1;
+            DEFAULT = 0,
+            LIC = 1
         }
-
     }
 }

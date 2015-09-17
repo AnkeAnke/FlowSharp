@@ -17,24 +17,18 @@ namespace FlowSharp
     class Renderer : WPFHost.IScene
     {
         protected static Renderer _instance;
-        public static Renderer Singleton {
+        public static Renderer Singleton
+        {
             get
             {
                 if (_instance == null)
                     _instance = new Renderer();
                 return _instance;
-            } }
-
-
+            }
+        }
 
         private WPFHost.ISceneHost _host;
-        public SlimDX.Direct3D11.Device Device {  get { return _host.Device; } }
-
-        //TODO: remove
-        private SlimDX.Direct3D11.Buffer _vertices;
-
-        protected Effect _effect;
-        protected InputLayout _layout;
+        public SlimDX.Direct3D11.Device Device { get { return _host.Device; } }
 
         protected List<Renderable> _renderables;
 
@@ -58,12 +52,15 @@ namespace FlowSharp
 
         protected void SetupRenderer()
         {
+
             Plane.Initialize(Device);
             ColorMapping.Initialize(Device);
-            _renderables = new List<Renderable>();
+            PointCloud.Initialize(Device);
 
             Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
             Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
+
+            _renderables = new List<Renderable>();
         }
 
         public void Detach()
@@ -73,10 +70,7 @@ namespace FlowSharp
 
         public void OnResize(ISceneHost host)
         {
-            //throw new NotImplementedException();
         }
-
-        float relativeTime;
 
         public void Render()
         {
@@ -86,6 +80,10 @@ namespace FlowSharp
 
         public void Update(TimeSpan timeSpan)
         {
+            while (_renderables == null)
+            {
+                System.Threading.Thread.Sleep(0);
+            }
             foreach (Renderable obj in _renderables)
                 obj.Update(timeSpan);
         }

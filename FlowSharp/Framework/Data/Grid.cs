@@ -19,9 +19,8 @@ namespace FlowSharp
         {
             // Query relevant edges and their weights. Reault varies with different grid types.
             int numCells = NumAdjecentPoints();
-            int[] indices = new int[numCells];
-            float[] weights = new float[numCells];
-            FindAdjacentIndices(position, out indices, out weights);
+            float[] weights;
+            int[] indices = FindAdjacentIndices(position, out weights);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -43,9 +42,8 @@ namespace FlowSharp
         {
             // Query relevant edges and their weights. Reault varies with different grid types.
             int numCells = NumAdjecentPoints();
-            int[] indices = new int[numCells];
-            float[] weights = new float[numCells];
-            FindAdjacentIndices(position, out indices, out weights);
+            float[] weights;
+            int[] indices = FindAdjacentIndices(position, out weights);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -62,7 +60,14 @@ namespace FlowSharp
             return result;
         }
 
-        protected abstract void FindAdjacentIndices(Vector position, out int[] result, out float[] weights);
+        /// <summary>
+        /// Returns all cell points necessary to interpolate a value at the position.
+        /// </summary>
+        /// <param name="position">The position in either world or grid space.</param>
+        /// <param name="weights">The weights used for linear interpolation.</param>
+        /// <param name="worldSpace">Is the position given in world space (origin + size * cellSize) or grid space (size)?</param>
+        /// <returns>Scalar indices for acessing the grid.</returns>
+        public abstract int[] FindAdjacentIndices(Vector position, out float[] weights, bool worldSpace = true);
     }
 
     /// <summary>
@@ -88,25 +93,41 @@ namespace FlowSharp
             CellSize = new Vector(cellSize);
         }
 
+        public Vector GetWorldPosition(Index index)
+        {
+            return Origin + index * CellSize;
+        }
+
         public override int NumAdjecentPoints()
         {
             return 1 << Size.Length; // 2 to the power of N 
         }
 
-        protected override void FindAdjacentIndices(Vector pos, out int[] indices, out float[] weights)
+        /// <summary>
+        /// Returns the adjacent grid point indices.
+        /// Indices in ascending order.
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="indices"></param>
+        /// <param name="weights"></param>
+        public override int[] FindAdjacentIndices(Vector pos, out float[] weights, bool worldSpace = true)
         {
             int numPoints = NumAdjecentPoints();
-            indices = new int[numPoints];
+            int[] indices = new int[numPoints];
             weights = new float[numPoints];
 
             Vector position = new Vector(pos);
 
-            // Find minimum grid point.
-            position -= Origin;
-            position /= CellSize;
+            if (worldSpace)
+            {
+                // Find minimum grid point.
+                position -= Origin;
+                position /= CellSize;
+            }
 
             Index gridPos = (Index)position;
             Vector relativePos = position - (Vector)gridPos;
+
 
             // Convert to int.
             int offsetScale = 1;
@@ -146,6 +167,8 @@ namespace FlowSharp
                 indices[point] = pointIndex;
                 weights[point] = pointWeight;
             }
+
+            return indices;
         }
     }
 }

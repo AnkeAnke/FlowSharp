@@ -73,6 +73,16 @@ namespace FlowSharp
             return sum;
         }
 
+        public static Index operator -(Index a, Index b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            Index sum = new Index(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                sum[dim] -= b[dim];
+
+            return sum;
+        }
+
         public static Index operator *(Index a, Index b)
         {
             Debug.Assert(a.Length == b.Length);

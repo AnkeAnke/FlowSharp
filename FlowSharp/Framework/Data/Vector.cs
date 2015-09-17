@@ -24,7 +24,7 @@ namespace FlowSharp
             Data = new float[Length];
         }
 
-        public Vector(int[] data)
+        public Vector(float[] data)
         {
             Length = data.Length;
             _data = (float[])data.Clone();
@@ -118,6 +118,14 @@ namespace FlowSharp
             for(int dim = 0; dim < vec.Length; ++dim)
                 result[dim] = (int)vec[dim];
             return result;
+        }
+
+        /// <summary>
+        /// Convert first two elementsto SlimDX.Vector2.
+        /// </summary>
+        public static explicit operator SlimDX.Vector2(Vector vec)  // explicit byte to digit conversion operator
+        {
+            return new SlimDX.Vector2(vec[0], vec[1]);
         }
 
         /// <summary>

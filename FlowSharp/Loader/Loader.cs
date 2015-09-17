@@ -51,81 +51,6 @@ namespace FlowSharp
                 name = new StringBuilder(null);
             }
         }
-
-        public void TestStuff()
-        {
-            int value;
-
-
-            //NetCDF.nc_inq_natts(_fileID, out numAtts);
-            //Console.Out.WriteLine("VNum attributes:\t" + numAtts);
-
-            StringBuilder name = new StringBuilder(null);
-
-            //for (int i = 0; i < _numVars; ++i)
-            //{
-            //    for (int j = 0; j < numAtts; ++j)
-            //    {
-            //        NetCDF.nc_inq_attname(_fileID, i, j, name);
-            //        Console.Out.WriteLine("Var " + i + ", Att. " + j + ":\t" + name);
-            //        name = new StringBuilder(null);
-            //    }
-            //}
-            for (int i = 0; i < 14; ++i)
-            {
-                NetCDF.nc_inq_dimname(_fileID, i, name);
-                NetCDF.nc_inq_dimlen(_fileID, i, out value);
-                Console.Out.WriteLine("Dim name " + i + ":\t" + name + ", Dim Length: " + value);
-            }
-            //int groups[] = new int[]
-            //NetCDF.nc_inq_grps(_fileID, out value, null);
-            //Console.Out.WriteLine("Num Groups: " + value);
-
-            //for (int i = 0; i < value; ++i)
-            //{
-            //    NetCDF.nc_inq_grpname(i, name);
-            //    Console.WriteLine("Groupname: " + name);
-            //}
-            NetCDF.NcType type;
-            NetCDF.nc_inq_vartype(_fileID, 12, out type);
-            NetCDF.nc_inq_varndims(_fileID, 12, out value);
-            Console.WriteLine("Var 12, type:\t" + type.ToString() + ", Num Dims:\t" + value);
-            int[] dimIDs = new int[value];
-            NetCDF.nc_inq_vardimid(_fileID, 12, dimIDs);
-            for (int i = 0; i < value; ++i)
-                Console.Write("DimID " + i + ": " + dimIDs[i] + '\t');
-            NetCDF.nc_inq_varnatts(_fileID, 12, out value);
-            Console.WriteLine("Num Atts: " + value);
-
-            NetCDF.NcEndian endian;
-            int status = NetCDF.nc_inq_var_endian(_fileID, 12, out endian);
-            Console.WriteLine("Endianess: " + endian.ToString());
-            if (status != 0)
-                status = 0;
-
-            float[] data = new float[210 * 450]; //Enough to read one slice.
-            float[] variance = new float[210 * 450]; //Enough to read one slice.
-            int[] origin = new int[] { 0, 0, 0, 0, 0 };
-            int[] size = new int[] { 1, 1, 1, 210, 450 };
-            status = NetCDF.nc_get_vara_float(_fileID, 12, origin, size, data);
-            if (status != 0)
-                status = 0;
-            origin = new int[] { 0, 1, 0, 0, 0 };
-            NetCDF.nc_get_vara_float(_fileID, 12, origin, size, variance);
-
-            Random RND = new Random();
-
-            for(int i = 0; i < 100; ++i)
-            {
-                int rnd = RND.Next(450 * 210);
-                byte[] bytes = BitConverter.GetBytes(data[rnd]);
-                byte[] swapped = new byte[] { bytes[3], bytes[2], bytes[1], bytes[0]};
-                float result = BitConverter.ToSingle(swapped, 0);
-                Console.WriteLine("Value at " + rnd + ": " + data[rnd] + ", variance: " + variance[rnd]);
-            }
-            // NetCDF.nc_get_vara_float(_fileID, )
-        }
-
 //        /// <summary>
 //        /// Load one value into memory completely.
 //        /// </summary>
@@ -223,8 +148,6 @@ namespace FlowSharp
             //int fill;
             //float fillValue;
 
-            //NetCDF.nc_inq_var_fill(_fileID, (int)slice.GetVariable(), out fill, out fillValue);
-            //field.InvalidValue = fillValue;
             //HACK!
             field.InvalidValue = field.Data[0];
 
