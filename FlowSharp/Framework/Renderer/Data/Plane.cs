@@ -41,8 +41,8 @@ namespace FlowSharp
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
-            _planeEffect.GetVariableByName("width").AsScalar().Set(fields[0].Size[1]);
-            _planeEffect.GetVariableByName("height").AsScalar().Set(fields[0].Size[0]);
+            _planeEffect.GetVariableByName("width").AsScalar().Set(fields[0].Size[0]);
+            _planeEffect.GetVariableByName("height").AsScalar().Set(fields[0].Size[1]);
             _planeEffect.GetVariableByName("invalidNum").AsScalar().Set((float)fields[0].InvalidValue);
 
             // Setting up the vertex buffer. 
@@ -91,7 +91,7 @@ namespace FlowSharp
         protected void GenerateGeometry(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, RectlinearGrid grid)
         {
             Vector Extent = grid.Extent;
-            Vector3 maximum = origin + xAxis * Extent[1] * scale + yAxis * Extent[0] * scale;
+            Vector3 maximum = origin + xAxis * Extent[0] * scale + yAxis * Extent[1] * scale;
 
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using SlimDX;
 
 namespace FlowSharp
 {
@@ -31,16 +32,16 @@ namespace FlowSharp
                 {
                     // Get neighbors.
                     float[] cellWeights;
-                    Vector cellCenter = new Vector(new float[] { 0.5f + x, 0.5f +y });
+                    Vector cellCenter = new Vector(new float[] { 0.5f + x, 0.5f + y });
                     // Use the neighbor function of the grid data type.
                     int[] adjacentCells = field.Grid.FindAdjacentIndices(cellCenter, out cellWeights, false);
 
                     bool pos = false;
                     bool neg = false;
                     bool containsZero = true;
-                    for(int dim = 0; dim < 2; ++dim)
+                    for (int dim = 0; dim < 2; ++dim)
                     {
-                        for(int neighbor = 0; neighbor < adjacentCells.Length; ++neighbor)
+                        for (int neighbor = 0; neighbor < adjacentCells.Length; ++neighbor)
                         {
                             float data = field.Scalars[dim].Data[adjacentCells[neighbor]];
                             // Is the cell data valid?
@@ -82,7 +83,7 @@ namespace FlowSharp
                         // Degenerated double-linear case?
                         if (c[0] == 0 && c[1] == 0)
                         {
-                            float abi = 1/(a[1] * b[0] - a[0] * b[1]);
+                            float abi = 1 / (a[1] * b[0] - a[0] * b[1]);
                             // Only one solution.
                             valT = new float[1]; valS = new float[1];
                             valT[0] = (a[0] * d[1] - a[1] * d[0]) * abi;
@@ -116,7 +117,7 @@ namespace FlowSharp
                     else
                     {
                         // Both dimensions are quadratic.
-                        float denom = 1 / ( a[0] * c[1] - a[1] * c[0]);
+                        float denom = 1 / (a[0] * c[1] - a[1] * c[0]);
                         Debug.Assert(denom != 0);
                         float pPQ = (a[0] * b[1] - a[1] * b[0]) + (c[1] * d[0] - c[0] * d[1]);
                         pPQ *= denom / 2;
@@ -134,8 +135,8 @@ namespace FlowSharp
                     }
 
                     // Check whether the points lay in the cell. Write those to the point set.
-                    WritePoints:
-                    for(int p = 0; p < valS.Length; ++p)
+                WritePoints:
+                    for (int p = 0; p < valS.Length; ++p)
                     {
                         // Continue when not inside.
                         if (valS[p] < 0 || valS[p] > 1 || valT[p] < 0 || valT[p] > 1)
@@ -144,32 +145,58 @@ namespace FlowSharp
                         Vector cSize = (field.Grid as RectlinearGrid).CellSize;
                         Point cp = new Point()
                         {
-                            Position = new SlimDX.Vector3((valS[p] + x)*cSize[0] , (valT[p] + y) * cSize[1], 0.0f),
-                            Color = new SlimDX.Vector3(1.0f, 0.0f, 1.0f), // Debug color. 
-                            Radius = 0.1f
+                            Position = new SlimDX.Vector3((valS[p] + x) * cSize[0], (valT[p] + y) * cSize[1], 0.0f),
+                            Color = new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
+                            Radius = 0.01f
                         };
                         cpList.Add(cp);
-
-                        PointSet cpSetL = new PointSet()
-                        {
-                            Points = cpList.ToArray()
-                        };
-                        return cpSetL;
                     }
 
-                    NextCell:
+                NextCell:
                     y++;
                 }
 
 
 
-            PointSet cpSet = new PointSet()
-            {
-                Points = cpList.ToArray()
-            };
+            PointSet cpSet = new PointSet(cpList.ToArray());
 
             return cpSet;
 
+        }
+
+        public static PointSet ValidCells(VectorField field)
+        {
+            // Only for 2D rectlinear grids.
+            Debug.Assert(field.Grid as RectlinearGrid != null);
+            Debug.Assert(field.Size.Length == 2);
+
+            List<Point> cpList = new List<Point>(field.Size.Product()); // Rough guess.
+
+            //Index numCells = field.Size - new Index(1, field.Size.Length);
+            for (int x = 0; x < field.Size[0] - 1; ++x)
+                for (int y = 0; y < field.Size[1] - 1; ++y)
+                {
+                    float data = field.Scalars[0].Sample(new Index(new int[] { x, y }));
+                    // Is the cell data valid?
+                    if (data == field.Scalars[0].InvalidValue)
+                        continue;
+
+
+                    Point cp = new Point()
+                    {
+                        Position = new SlimDX.Vector3(x, y, 0.0f),
+                        Color = new SlimDX.Vector3(1.0f, 0.0f, 1.0f), // Debug color. 
+                        Radius = 0.005f
+                    };
+                    cpList.Add(cp);
+                }
+            RectlinearGrid rGrid = field.Grid as RectlinearGrid;
+            Vector3 cellSize = new Vector3(rGrid.CellSize[0], rGrid.CellSize[1], 0.0f);
+            Vector3 origin = new Vector3(rGrid.Origin[0], rGrid.Origin[1], 0.0f);
+
+            PointSet cpSetL = new PointSet(cpList.ToArray(), cellSize, origin);
+
+            return cpSetL;
         }
 
         /// <summary>

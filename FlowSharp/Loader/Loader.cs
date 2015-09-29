@@ -138,6 +138,11 @@ namespace FlowSharp
             Index fieldSize = new Index(numDimsField);
             Array.Copy(sizeField, fieldSize.Data, numDimsField);
 
+            //TODO: HACK! REMOVE!
+            int tmp = fieldSize[0];
+            fieldSize[0] = fieldSize[1];
+            fieldSize[1] = tmp;
+
             // Create a grid descriptor for the field. 
             // TODO: Actually load this data.
             RectlinearGrid grid = new RectlinearGrid(fieldSize, new Vector(0.0f, fieldSize.Length), new Vector(0.1f, fieldSize.Length));

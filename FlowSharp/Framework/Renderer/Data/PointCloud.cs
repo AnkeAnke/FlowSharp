@@ -54,8 +54,9 @@ namespace FlowSharp
 
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
-            foreach(Point point in points.Points)
+            for (int index = 0; index < points.Points.Length; ++index )
             {
+                Point point = points.GetWorldPoint(index);
                 stream.Write(new Vector4(origin + (xAxis * point.Position[0] + yAxis * point.Position[1]) * scale, 1.0f));
                 stream.Write(point.Color);
                 stream.Write(point.Radius);

@@ -33,8 +33,8 @@ namespace FlowSharp
                     BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
                     CpuAccessFlags = CpuAccessFlags.None,
                     Format = Format.R32_Float,
-                    Width = field.Size[1],
-                    Height = field.Size[0],
+                    Width = field.Size[0],
+                    Height = field.Size[1],
                     MipLevels = 1,
                     OptionFlags = ResourceOptionFlags.None,
                     SampleDescription = new SampleDescription(1, 0),
@@ -45,7 +45,7 @@ namespace FlowSharp
 
             // Put field data into stream/rectangle object
             DataStream slimStream = new DataStream(field.Data, true, false);
-            DataRectangle texData = new DataRectangle(field.Size[1] * sizeof(float), slimStream);
+            DataRectangle texData = new DataRectangle(field.Size[0] * sizeof(float), slimStream);
 
             // Create texture.
             Texture2D tex = new Texture2D(device, desc, texData);

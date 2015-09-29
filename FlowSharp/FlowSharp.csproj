@@ -67,6 +67,7 @@
     </ApplicationDefinition>
     <Compile Include="Framework\Algorithms\FieldAnalysis.cs" />
     <Compile Include="Framework\Data\Points.cs" />
+    <Compile Include="Framework\MathHelper.cs" />
     <Compile Include="Framework\Renderer\Data\ColorMapping.cs" />
     <Compile Include="Framework\Renderer\Data\PointCloud.cs" />
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
