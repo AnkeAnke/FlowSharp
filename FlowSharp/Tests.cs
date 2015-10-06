@@ -23,7 +23,7 @@ namespace FlowSharp
                     cell1.Data[i] = (float)rnd.NextDouble() - 0.5f;
                 }
                 VectorField cell = new VectorField(new ScalarField[] { cell0, cell1 });
-                PointSet points = FieldAnalysis.ComputeCriticalPointsRectlinear2D(cell);
+                PointSet points = FieldAnalysis.ComputeCriticalPointsRegularAnalytical2D(cell);
             }
         }
     }

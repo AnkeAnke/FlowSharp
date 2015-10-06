@@ -21,6 +21,9 @@ namespace FlowSharp
         /// A number of equally sized textures. Depending on the number, a differnet mapping to color will be applied.
         /// </summary>
         protected ShaderResourceView[] _fields;
+        protected int _width, _height;
+        protected float _invalid;
+
 
         /// <summary>
         /// Plane to display scalar/vector field data on. Condition: Fields domain is 2D.
@@ -41,10 +44,10 @@ namespace FlowSharp
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
-            _planeEffect.GetVariableByName("width").AsScalar().Set(fields[0].Size[0]);
-            _planeEffect.GetVariableByName("height").AsScalar().Set(fields[0].Size[1]);
-            _planeEffect.GetVariableByName("invalidNum").AsScalar().Set((float)fields[0].InvalidValue);
-
+            this._width  = fields[0].Size[0];
+            this._height = fields[0].Size[1];
+            this._invalid = fields[0].InvalidValue ?? float.MaxValue;
+            
             // Setting up the vertex buffer. 
             GenerateGeometry(origin, xAxis,yAxis, scale, (RectlinearGrid)fields[0].Grid);
 
@@ -72,6 +75,9 @@ namespace FlowSharp
                     Debug.Assert(_fields.Length == 2);
                     this._technique = _planeEffect.GetTechniqueByName("RenderLIC");
                     break;
+                case RenderEffect.CHECKERBOARD:
+                    this._technique = _planeEffect.GetTechniqueByName("RenderChecker");
+                    break;
                 case RenderEffect.DEFAULT:
                 default:
                     this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fields.Length);
@@ -93,16 +99,22 @@ namespace FlowSharp
             Vector Extent = grid.Extent;
             Vector3 maximum = origin + xAxis * Extent[0] * scale + yAxis * Extent[1] * scale;
 
+            // Offset, becaue the grid data points shall be OUTSIDE of the grid cells.
+            float uMin = 1.0f / (grid.Size[0] - 1) * 0.5f;
+            float vMin = 1.0f / (grid.Size[1] - 1) * 0.5f;
+            float uMax = 1 - uMin;
+            float vMax = 1 - vMin;
+
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
             stream.WriteRange(new[] {
-                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
-                new Vector4(maximum[0], maximum[1], 0.5f, 1.0f), new Vector4(1.0f, 1.0f, 0.0f, 1.0f),
-                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(uMin, vMax, 0.0f, 1.0f),
+                new Vector4(maximum[0], maximum[1], 0.5f, 1.0f), new Vector4(uMax, vMax, 0.0f, 1.0f),
+                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(uMax, vMin, 0.0f, 1.0f),
 
-                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
-                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),               
-                new Vector4( origin[0],  origin[1], 0.5f, 1.0f), new Vector4(0.0f, 0.0f, 0.0f, 1.0f)
+                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(uMin, vMax, 0.0f, 1.0f),
+                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(uMax, vMin, 0.0f, 1.0f),               
+                new Vector4( origin[0],  origin[1], 0.5f, 1.0f), new Vector4(uMin, vMin, 0.0f, 1.0f)
 
             });
             stream.Position = 0;
@@ -124,6 +136,10 @@ namespace FlowSharp
             for(int fieldNr = 0; fieldNr < _fields.Length; ++fieldNr)
                 _planeEffect.GetVariableByName("field" + fieldNr).AsResource().SetResource(_fields[fieldNr]);
 
+            _planeEffect.GetVariableByName("width").AsScalar().Set(_width);
+            _planeEffect.GetVariableByName("height").AsScalar().Set(_height);
+            _planeEffect.GetVariableByName("invalidNum").AsScalar().Set(_invalid);
+            
             base.Render(device);
         }
 
@@ -162,7 +178,8 @@ namespace FlowSharp
         public enum RenderEffect
         {
             DEFAULT = 0,
-            LIC = 1
+            LIC = 1,
+            CHECKERBOARD = 2
         }
     }
 }

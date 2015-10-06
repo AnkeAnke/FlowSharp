@@ -111,8 +111,8 @@ namespace WPFHost
             Disposer.RemoveAndDispose(ref this.RenderTargetView);
             Disposer.RemoveAndDispose(ref this.RenderTarget);
 
-            int width = Math.Max((int)RenderSize.Width, 100);
-            int height = Math.Max((int)RenderSize.Height, 100);
+            int width = Math.Max((int)Width, 100);
+            int height = Math.Max((int)Height, 100);
 
             Texture2DDescription colordesc = new Texture2DDescription
             {

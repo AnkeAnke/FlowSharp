@@ -6,9 +6,12 @@
         xmlns:local="clr-namespace:FlowSharp"
         xmlns:WPFHost="clr-namespace:WPFHost"
         mc:Ignorable="d"
-        Title="WPF Window" Height="800" Width="1600">
-    <Grid>
-        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="747" Width="1228" Margin="10,10,0,0" VerticalAlignment="Top" />
-        <ComboBox x:Name="DataTypesDropDown" HorizontalAlignment="Left" Margin="1269,199,0,0" VerticalAlignment="Top" Width="120"/>
+        Title="WPF Window" Height="1303" Width="1600">
+    <Grid Margin="0,0,0,-20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="1210" Width="1379" Margin="10,10,0,0" VerticalAlignment="Top" />
+        <ComboBox x:Name="DataTypesDropDown" HorizontalAlignment="Left" Margin="1389,199,0,0" VerticalAlignment="Top" Width="120"/>
     </Grid>
 </Window>

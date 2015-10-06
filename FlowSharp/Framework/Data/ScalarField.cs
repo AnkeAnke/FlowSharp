@@ -32,18 +32,6 @@ namespace FlowSharp
             protected set { _data = value; }
         }
 
-        //protected bool _containsInvalidValue = false;
-        //protected float _invalidValue;
-
-        ///// <summary>
-        ///// Value assigned to nonexistant values.
-        ///// </summary>
-        //public float InvalidValue
-        //{
-        //    get { return _invalidValue; }
-        //    set { _containsInvalidValue = true; _invalidValue = value; }
-        //}
-
         public float? InvalidValue = null;
 
         /// <summary>
@@ -91,9 +79,9 @@ namespace FlowSharp
             return _data[index];
         }
 
-        public float Sample(Vector position)
+        public float Sample(Vector position, bool worldSpace = true)
         {
-            return Grid.Sample(this, position);
+            return Grid.Sample(this, position, worldSpace);
         }
 
         /// <summary>
@@ -104,6 +92,37 @@ namespace FlowSharp
         public bool IsValid(Index gridPosition)
         {
             return (InvalidValue == null || Sample(gridPosition) != InvalidValue);
+        }
+
+
+        public delegate float AnalyticalField(Vector pos);
+
+        public static ScalarField FromAnalyticalField(AnalyticalField func, Index size, Vector origin, Vector cellSize)
+        {
+            Debug.Assert(size.Length == origin.Length && size.Length == cellSize.Length);
+
+            RectlinearGrid grid = new RectlinearGrid(size, origin, cellSize);
+            ScalarField field = new ScalarField(grid);
+
+            for(int idx = 0; idx < size.Product(); ++idx)
+            {
+                // Compute the n-dimensional position.
+                int index = idx;
+                Index pos = new Index(0, size.Length);
+                pos[0] = index % size[0];
+
+                for(int dim = 1; dim < size.Length; ++dim)
+                {
+                    index -= pos[dim - 1];
+                    index /= size[dim - 1];
+                    pos[dim] = index % size[dim];
+                }
+
+                Vector posV = origin + pos * cellSize;
+                field.Data[idx] = func(posV);
+            }
+
+            return field;
         }
     }
 }

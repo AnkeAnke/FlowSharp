@@ -13,22 +13,32 @@ namespace FlowSharp
     /// </summary>
     static class FieldAnalysis
     {
+        private const float EPS_ZERO = 0.015f;
+
         /// <summary>
-        /// Searches for all 0-vectors in a 2D rectlinear vector field.
+        /// Computes all 0-vectors in a 2D rectlinear vector field.
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet ComputeCriticalPointsRectlinear2D(VectorField field)
+        public static PointSet ComputeCriticalPointsRegularAnalytical2D(VectorField field, float eps = EPS_ZERO)
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
             Debug.Assert(field.Size.Length == 2);
 
             List<Point> cpList = new List<Point>(field.Size.Product() / 10); // Rough guess.
+            // DEBUG
+            cpList.Add(new Point()
+            {
+                Position = new Vector3(0, 0, 0),
+                Color = new Vector3(1, 1, 0)
+            });
             Vector halfCell = new Vector(0.5f, 2);
+            Vector cSize = (field.Grid as RectlinearGrid).CellSize;
+            Vector origin = (field.Grid as RectlinearGrid).Origin;
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0] - 1; ++x)
-                for (int y = 0; y < field.Size[1] - 1; ) // Doing the y++ down at the end.
+                for (int y = 0; y < field.Size[1] - 1;) // Doing the y++ down at the end.
                 {
                     // Get neighbors.
                     float[] cellWeights;
@@ -36,33 +46,37 @@ namespace FlowSharp
                     // Use the neighbor function of the grid data type.
                     int[] adjacentCells = field.Grid.FindAdjacentIndices(cellCenter, out cellWeights, false);
 
-                    bool pos = false;
-                    bool neg = false;
-                    bool containsZero = true;
                     for (int dim = 0; dim < 2; ++dim)
                     {
+                        bool pos = false;
+                        bool neg = false;
+
                         for (int neighbor = 0; neighbor < adjacentCells.Length; ++neighbor)
                         {
                             float data = field.Scalars[dim].Data[adjacentCells[neighbor]];
                             // Is the cell data valid?
                             if (data == field.Scalars[dim].InvalidValue)
                                 goto NextCell;
-                            if (data >= 0)
+                            if (data > 0)
                                 pos = true;
-                            else
+                            else if (data < 0)
                                 neg = true;
+                            else
+                            {
+                                neg = true;
+                                pos = true;
+                            }
                         }
                         // If no 0 can be achieved in this cell, go on to next cell.
                         if (!pos || !neg)
                         {
-                            containsZero = false;
-                            break;
-                        }
-
-                        if (!containsZero)
                             goto NextCell;
-
+                        }
                     }
+
+                    //DEBUG:
+                    Vector3 color;
+
                     // Now, compute the position. Possible since the function is only quadratic!
                     Vector p00 = field.Sample(adjacentCells[0]);
                     Vector p10 = field.Sample(adjacentCells[1]);
@@ -78,24 +92,29 @@ namespace FlowSharp
                     float[] valT = new float[2];
 
                     // Degenerated linear case?
-                    if (c[0] == 0 || c[1] == 0)
+                    if (Math.Abs(c[0]) < eps || Math.Abs(c[1]) < eps)
                     {
                         // Degenerated double-linear case?
-                        if (c[0] == 0 && c[1] == 0)
+                        if (Math.Abs(c[0]) < eps && Math.Abs(c[1]) < eps)
                         {
                             float abi = 1 / (a[1] * b[0] - a[0] * b[1]);
                             // Only one solution.
                             valT = new float[1]; valS = new float[1];
                             valT[0] = (a[0] * d[1] - a[1] * d[0]) * abi;
                             valS[0] = -(b[0] * valT[0] / a[0] + d[0] / a[0]);
+                            // DEBUG
+                            //valT[0] = 0.5f; valS[0] = 0.5f;
+                            color = new Vector3(1, 0, 0);
 
                             goto WritePoints;
                         }
                         // Dimension in which the solution is linear.
-                        int lD = c[0] == 0 ? 0 : 1;
+                        int lD = Math.Abs(c[0]) < eps ? 0 : 1;
                         int qD = 1 - lD;
 
-                        Debug.Assert(b[lD] != 0 && c[qD] != 0);
+                        if (b[lD] == 0)
+                            goto NextCell;
+
                         float cbi = 1 / (c[qD] * b[lD]);
                         // Values for PQ formula.
                         float pPQ = d[lD] / b[lD] + a[qD] / c[qD] + a[lD] * b[qD] * cbi;
@@ -112,6 +131,9 @@ namespace FlowSharp
 
                         valS[0] = -(b[lD] * valT[0] / a[lD] + d[lD] / a[lD]);
                         valS[1] = -(b[lD] * valT[1] / a[lD] + d[lD] / a[lD]);
+
+                        color = new Vector3(0, 1, 0);
+
                         goto WritePoints; // Don't need this. Still here, for better readability.
                     }
                     else
@@ -120,8 +142,8 @@ namespace FlowSharp
                         float denom = 1 / (a[0] * c[1] - a[1] * c[0]);
                         Debug.Assert(denom != 0);
                         float pPQ = (a[0] * b[1] - a[1] * b[0]) + (c[1] * d[0] - c[0] * d[1]);
-                        pPQ *= denom / 2;
-                        float qPQ = 4 * (b[1] * d[0] - b[0] * d[1]) * denom;
+                        pPQ *= denom * 0.5f;
+                        float qPQ = (b[1] * d[0] - b[0] * d[1]) * denom;
 
                         float root = pPQ * pPQ - qPQ;
                         if (root < 0)
@@ -132,31 +154,42 @@ namespace FlowSharp
 
                         valT[0] = -(a[0] * valS[0] + d[0]) / (b[0] + c[0] * valS[0]);
                         valT[1] = -(a[0] * valS[1] + d[0]) / (b[0] + c[0] * valS[1]);
+
+                        color = new Vector3(0, 0, 1);
                     }
 
                     // Check whether the points lay in the cell. Write those to the point set.
-                WritePoints:
+                    WritePoints:
                     for (int p = 0; p < valS.Length; ++p)
                     {
-                        // Continue when not inside.
-                        if (valS[p] < 0 || valS[p] > 1 || valT[p] < 0 || valT[p] > 1)
-                            continue;
+                        //Continue when not inside.
+                        //if (valS[p] < 0 || valS[p] >= 1 || valT[p] < 0 || valT[p] >= 1)
+                        //    continue;
 
-                        Vector cSize = (field.Grid as RectlinearGrid).CellSize;
                         Point cp = new Point()
                         {
-                            Position = new SlimDX.Vector3((valS[p] + x) * cSize[0], (valT[p] + y) * cSize[1], 0.0f),
-                            Color = new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
-                            Radius = 0.01f
+                            Position = new Vector3(origin[0] + (0.5f + x) * cSize[0], origin[1] + (0.5f + y) * cSize[1], 0.0f), //new Vector3(origin[0] + (valS[p] + x) * cSize[0], origin[1] + (valT[p] + y) * cSize[1], 0.0f),
+                            Color = color, //new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
+                            Radius = 0.002f
+                        };
+                        cpList.Add(cp);
+
+                        //Continue when not inside.
+                        if (valS[p] < 0 || valS[p] >= 1 || valT[p] < 0 || valT[p] >= 1)
+                            continue;
+
+                        cp = new Point()
+                        {
+                            Position = new Vector3(origin[0] + (valS[p] + x) * cSize[0], origin[1] + (valT[p] + y) * cSize[1], 0.0f),
+                            Color = color, //new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
+                            Radius = 0.006f
                         };
                         cpList.Add(cp);
                     }
 
-                NextCell:
+                    NextCell:
                     y++;
                 }
-
-
 
             PointSet cpSet = new PointSet(cpList.ToArray());
 
@@ -164,17 +197,118 @@ namespace FlowSharp
 
         }
 
-        public static PointSet ValidCells(VectorField field)
+        /// <summary>
+        /// Searches for all 0-vectors in a 2 or 3D rectlinear vector field.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public static PointSet ComputeCriticalPointsRegularSubdivision23D(VectorField field, int numDivisions = 5)
+        {
+            // Only for rectlinear grids.
+            RectlinearGrid grid = field.Grid as RectlinearGrid;
+            Debug.Assert(grid != null);
+            Debug.Assert(grid.Size.Length <= 3);
+
+            List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
+
+            Vector halfCell = new Vector(0.5f, 2);
+            Vector cSize = (field.Grid as RectlinearGrid).CellSize;
+            Vector origin = (field.Grid as RectlinearGrid).Origin;
+            //Index numCells = field.Size - new Index(1, field.Size.Length);
+            for (int x = 0; x < field.Size[0] - 1; ++x)
+                for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
+                {
+                    SubdivideCell(field, new Vector(new float[] { x, y }), 0, numDivisions, cpList);
+                }
+
+            Point[] points = new Point[cpList.Count];
+            for (int index = 0; index < cpList.Count; ++index)
+            {
+                points[index] = new Point()
+                {
+                    Position = (Vector3)cpList[index],
+                    Color = new Vector3(1, 1, 0),
+                    Radius = 0.006f
+                };
+            }
+
+            return new PointSet(points, (Vector3)grid.CellSize, (Vector3)grid.Origin);
+        }
+
+        /// <summary>
+        /// Recursively check each subcell if a 0 can be interpolated. Stop after some level of detail. 
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="level"></param>
+        /// <param name="maxLevel"></param>
+        /// <param name="cpList">Each found cp will be attached.</param>
+        private static void SubdivideCell(VectorField field, Vector origin, int level, int maxLevel, List<Vector> cpList)
+        {
+            float cellLength = 1.0f / (1 << level);
+
+            // For each dimension, check that a positive and negative value are present.
+            for (int dim = 0; dim < field.Scalars.Length; ++dim)
+            {
+                bool pos = false;
+                bool neg = false;
+
+                for (int neighbor = 0; neighbor < (field.Grid as RectlinearGrid).NumAdjacentPoints(); ++neighbor)
+                {
+                    // Compute the neighbors position.
+                    Vector position = new Vector(origin);
+                    for (int axis = 0; axis < origin.Length; ++axis)
+                    {
+                        position[axis] += (neighbor & (1 << axis)) > 0 ? cellLength : 0;
+                    }
+
+                    float value = field.Scalars[dim].Sample(position, false);
+                    if (value == field.Scalars[dim].InvalidValue)
+                        return;
+                    if (value >= 0)
+                        pos = true;
+                    if (value <= 0)
+                        neg = true;
+                }
+                if (!pos || !neg)
+                    return;
+            }
+            // 0 can be included. Return or subdivide.
+            // If the maximum depth is reached, append the point and return.
+            if (level == maxLevel)
+            {
+                cpList.Add(origin + new Vector(cellLength * 0.5f, origin.Length));
+                return;
+            }
+            // Subdivide into 2^dim parts.
+            for (int part = 0; part < (field.Grid as RectlinearGrid).NumAdjacentPoints(); ++part)
+            {
+                // Compute the neighbors position.
+                Vector position = new Vector(origin);
+                for (int axis = 0; axis < origin.Length; ++axis)
+                {
+                    position[axis] += (part & (1 << axis)) > 0 ? cellLength * 0.5f : 0;
+                }
+                SubdivideCell(field, position, level + 1, maxLevel, cpList);
+            }
+
+        }
+
+        /// <summary>
+        /// Outputs all valid cells in the data set as points. Mostly for debugging purposes.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public static PointSet ValidDataPoints(VectorField field)
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
             Debug.Assert(field.Size.Length == 2);
 
-            List<Point> cpList = new List<Point>(field.Size.Product()); // Rough guess.
+            List<Point> cpList = new List<Point>(field.Size.Product());
 
             //Index numCells = field.Size - new Index(1, field.Size.Length);
-            for (int x = 0; x < field.Size[0] - 1; ++x)
-                for (int y = 0; y < field.Size[1] - 1; ++y)
+            for (int x = 0; x < field.Size[0]; ++x)
+                for (int y = 0; y < field.Size[1]; ++y)
                 {
                     float data = field.Scalars[0].Sample(new Index(new int[] { x, y }));
                     // Is the cell data valid?
@@ -185,8 +319,8 @@ namespace FlowSharp
                     Point cp = new Point()
                     {
                         Position = new SlimDX.Vector3(x, y, 0.0f),
-                        Color = new SlimDX.Vector3(1.0f, 0.0f, 1.0f), // Debug color. 
-                        Radius = 0.005f
+                        Color = new SlimDX.Vector3(0.6f, 0.3f, 0.3f), // Debug color. 
+                        Radius = 0.003f
                     };
                     cpList.Add(cp);
                 }
@@ -194,38 +328,10 @@ namespace FlowSharp
             Vector3 cellSize = new Vector3(rGrid.CellSize[0], rGrid.CellSize[1], 0.0f);
             Vector3 origin = new Vector3(rGrid.Origin[0], rGrid.Origin[1], 0.0f);
 
-            PointSet cpSetL = new PointSet(cpList.ToArray(), cellSize, origin);
+            PointSet cpSet = new PointSet(cpList.ToArray(), cellSize, origin);
 
-            return cpSetL;
+            return cpSet;
         }
 
-        /// <summary>
-        /// Searches for all 0-vectors in a vector field.
-        /// </summary>
-        /// <param name="field"></param>
-        /// <returns></returns>
-        //public static PointSet ComputeCriticalPointsRectlinear(VectorField field)
-        //{
-        //    // Only for rectlinear grids.
-        //    Debug.Assert(field.Grid as RectlinearGrid != null);
-
-        //    List<Point> cpList = new List<Point>(field.Size.Product() / 10);
-
-        //    Index numCells = field.Size - new Index(1, field.Size.Length);
-        //    for(int cell = 0; cell < numCells.Product(); ++cell)
-        //    {
-
-        //    }
-
-
-
-        //    PointSet cpSet = new PointSet()
-        //    {
-        //        Points = cpList.ToArray()
-        //    };
-
-        //    return cpSet;
-
-        //}
     }
 }

@@ -14,13 +14,13 @@ namespace FlowSharp
     {
         public Index Size;
 
-        public abstract int NumAdjecentPoints();
-        public virtual Vector Sample(VectorField field, Vector position)
+        public abstract int NumAdjacentPoints();
+        public virtual Vector Sample(VectorField field, Vector position, bool worldSpace = true)
         {
             // Query relevant edges and their weights. Reault varies with different grid types.
-            int numCells = NumAdjecentPoints();
+            int numCells = NumAdjacentPoints();
             float[] weights;
-            int[] indices = FindAdjacentIndices(position, out weights);
+            int[] indices = FindAdjacentIndices(position, out weights, worldSpace);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -38,12 +38,12 @@ namespace FlowSharp
             return result;
         }
 
-        public virtual float Sample(ScalarField field, Vector position)
+        public virtual float Sample(ScalarField field, Vector position, bool worldSpace = true)
         {
             // Query relevant edges and their weights. Reault varies with different grid types.
-            int numCells = NumAdjecentPoints();
+            int numCells = NumAdjacentPoints();
             float[] weights;
-            int[] indices = FindAdjacentIndices(position, out weights);
+            int[] indices = FindAdjacentIndices(position, out weights, worldSpace);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -77,7 +77,7 @@ namespace FlowSharp
     {
         public Vector Origin, CellSize;
 
-        public Vector Extent { get { return Size * CellSize; } }
+        public Vector Extent { get { return (Size - new Index(1, Size.Length)) * CellSize; } }
         public Vector Maximum { get { return Origin + Extent; } }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace FlowSharp
             return Origin + index * CellSize;
         }
 
-        public override int NumAdjecentPoints()
+        public override int NumAdjacentPoints()
         {
             return 1 << Size.Length; // 2 to the power of N 
         }
@@ -112,7 +112,7 @@ namespace FlowSharp
         /// <param name="weights"></param>
         public override int[] FindAdjacentIndices(Vector pos, out float[] weights, bool worldSpace = true)
         {
-            int numPoints = NumAdjecentPoints();
+            int numPoints = NumAdjacentPoints();
             int[] indices = new int[numPoints];
             weights = new float[numPoints];
 
@@ -128,12 +128,11 @@ namespace FlowSharp
             Index gridPos = (Index)position;
             Vector relativePos = position - (Vector)gridPos;
 
-
             // Convert to int.
             int offsetScale = 1;
             int index = 0;
 
-            // Have last dimension running fastest.
+            // Have last dimension running fastest. Compute 1D index.
             for (int dim = 0; dim < Size.Length; ++dim)
             {
                 index += offsetScale * gridPos[dim];
@@ -153,7 +152,9 @@ namespace FlowSharp
                     // Is the dimth bit set?
                     if ((point & (1 << dim)) > 0)
                     {
-                        pointIndex += stepDim;
+                        // Extremum case: The value is on the outmost border. Clip that position.
+                        if (gridPos[dim] != Size[dim] - 1)
+                            pointIndex += stepDim;
                         pointWeight *= relativePos[dim];
                     }
                     else

@@ -32,6 +32,8 @@ namespace FlowSharp
 
         protected List<Renderable> _renderables;
 
+        public Camera Camera { get; set; }
+
         protected Renderer() { }
 
         /// <summary>
@@ -61,6 +63,7 @@ namespace FlowSharp
             Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
 
             _renderables = new List<Renderable>();
+            Camera = new Camera(Device, ((float)_host.RenderTargetWidth)/_host.RenderTargetHeight);
         }
 
         public void Detach()

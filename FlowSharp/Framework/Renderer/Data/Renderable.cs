@@ -64,6 +64,9 @@ namespace FlowSharp
             for (int i = 0; i < _technique.Description.PassCount; ++i)
             {
                 _technique.GetPassByIndex(i).Apply(device.ImmediateContext);
+                // Just to be sure.
+                Renderer.Singleton.Camera.UpdateResources(device);
+
                 context.Draw(_numVertices, 0);
             }
         }

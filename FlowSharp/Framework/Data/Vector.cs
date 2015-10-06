@@ -9,7 +9,7 @@ namespace FlowSharp
 {
     class Vector
     {
-        public int Length { get; protected set; }
+        public virtual int Length { get; protected set; }
 
         protected float[] _data;
         public float[] Data
@@ -121,11 +121,19 @@ namespace FlowSharp
         }
 
         /// <summary>
-        /// Convert first two elementsto SlimDX.Vector2.
+        /// Convert first two elements to SlimDX.Vector2.
         /// </summary>
         public static explicit operator SlimDX.Vector2(Vector vec)  // explicit byte to digit conversion operator
         {
-            return new SlimDX.Vector2(vec[0], vec[1]);
+            return new SlimDX.Vector2(vec[0], vec.Length > 1 ? vec[1] : 0);
+        }
+
+        /// <summary>
+        /// Convert first tree elements to SlimDX.Vector3. If less, fill with zeros.
+        /// </summary>
+        public static explicit operator SlimDX.Vector3(Vector vec)  // explicit byte to digit conversion operator
+        {
+            return new SlimDX.Vector3(vec[0], vec.Length > 1? vec[1] : 0, vec.Length > 2 ? vec[2] : 0);
         }
 
         /// <summary>
@@ -140,5 +148,27 @@ namespace FlowSharp
 
             return prod;
         }
+    }
+
+    class Vec2 : Vector
+    {
+        public override int Length { get { return 2; } protected set { value = 2; } }
+
+        public Vec2() : base(0, 2)
+        { }
+
+        public Vec2(float x, float y) : base(new float[]{x,y})
+        { }
+
+        public Vec2(Vec2 copy) : base(copy)
+        { }
+
+        /// <summary>
+        /// Vector with dim elements set to v.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="dim"></param>
+        public Vec2(float xy) : base(xy, 2)
+        { }
     }
 }

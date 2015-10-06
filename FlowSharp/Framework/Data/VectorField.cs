@@ -63,9 +63,40 @@ namespace FlowSharp
             return Sample(index);
         }
 
-        public Vector Sample(Vector position)
+        public Vector Sample(Vector position, bool worldPosition = true)
         {
-            return Grid.Sample(this, position);
+            return Grid.Sample(this, position, worldPosition);
+        }
+
+
+        /// <summary>
+        /// Function to compute a new field based on an old one, point wise.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public delegate Vector VFFunction(Vector v);
+
+        public delegate Vector VFJFunction(Vector v, Vector du, Vector dv);
+
+        public VectorField(VectorField field, VFJFunction function)
+        {
+            int scalars = function(field.Sample(0), field.Sample(0), field.Sample(0)).Length;
+            this.Grid = field.Grid;
+            this.Scalars = new ScalarField[scalars];
+            for(int dim = 0; dim < scalars; ++dim)
+            {
+                Scalars[dim] = new ScalarField(Grid);
+            }
+
+            // Let's assume the field is always 2D... 
+            //TODO: Make nD
+            for(int x = 0; x < Size[0]; ++x)
+                for(int y = 0; y < Size[1]; ++y)
+                {
+                    Vector v = field.Sample(y * Size[0] + x);
+                    Vector pos = new Vec2(x, y);
+
+                }
         }
     }
 }
