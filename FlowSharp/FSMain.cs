@@ -9,6 +9,8 @@ namespace FlowSharp
         static VectorField velocity;
         static PointSet points;
 
+        static VectorField analytical;
+
         public static void LoadData()
         {
             // Loading the temperature variable to have a frame of reference (should be ~20-35 degree at upper levels).
@@ -35,39 +37,51 @@ namespace FlowSharp
             velocity = new VectorField(new ScalarField[] { v0, v1 });
 
 
-            Point a = new Point()
-            {
-                Position = new Vector3(5.0f, 10.0f, 0.5f),
-                Color = new Vector3(0.0f, 0.0f, 1.0f),
-                Radius = 0.015f
-            };
+            //Point a = new Point()
+            //{
+            //    Position = new Vector3(5.0f, 10.0f, 0.5f),
+            //    Color = new Vector3(0.0f, 0.0f, 1.0f),
+            //    Radius = 0.015f
+            //};
 
-            Point kaust = new Point()
-            {
-                Position = new Vector3(39.0f - 32.0f, 23.0f - 9.0f,  0.5f),
-                Color = new Vector3(0.4f, 0.0f, 0.0f),
-                Radius = 0.015f
-            };
-            points = new PointSet() { Points = new Point[] { kaust } };
+            //Point kaust = new Point()
+            //{
+            //    Position = new Vector3(39.0f - 32.0f, 23.0f - 9.0f,  0.5f),
+            //    Color = new Vector3(0.4f, 0.0f, 0.0f),
+            //    Radius = 0.015f
+            //};
+            //points = new PointSet(new Point[] { kaust } );
 
 
             //Tests.TestCP();
-            points = FieldAnalysis.ComputeCriticalPointsRectlinear2D(velocity);
-
-
+//            points = FieldAnalysis.ComputeCriticalPointsRectlinear2D(velocity);
 
             ncFile.Close();
+
+            ScalarField u = ScalarField.FromAnalyticalField(x => (float)Math.Sin(x[0] + 0.023f * x[1]) + 0.001f, new Index(20, 2), new Vector(0, 2), new Vector(1.3f, 2));
+            ScalarField v = ScalarField.FromAnalyticalField(x => (float)Math.Sin(x[1] + 0.011f * x[0]), new Index(20, 2), new Vector(0, 2), new Vector(1.3f, 2));
+            analytical = new VectorField( new ScalarField[] { u, v } );
+
+            points = FieldAnalysis.ComputeCriticalPointsRegularSubdivision23D(analytical, 5);
         }
 
         public static void CreateRenderables()
         {
-            Plane temperaturePlane = new Plane(new Vector3(-0.9f, -0.9f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, new ScalarField[] { temperature });
-            Plane velocityPlane = new Plane(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, velocity.Scalars, Plane.RenderEffect.LIC);
-            PointCloud cloud = new PointCloud(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, points);
+            Plane uvPlane = new Plane(new Vector3(-0.9f, -0.95f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, analytical.Scalars, Plane.RenderEffect.CHECKERBOARD);
+            PointCloud cloud = new PointCloud(new Vector3(-0.9f, -0.95f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, points);
 
-            Renderer.Singleton.AddRenderable(temperaturePlane);
+            Plane velocityPlane = new Plane(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, velocity.Scalars, Plane.RenderEffect.LIC);
+            PointSet cp = FieldAnalysis.ComputeCriticalPointsRegularSubdivision23D(velocity);
+            PointCloud cpCloud = new PointCloud(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, cp);
+            PointSet cells = FieldAnalysis.ValidDataPoints(analytical);
+
+            PointCloud cCloud = new PointCloud(new Vector3(-0.9f, -0.95f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, cells);
+
+            Renderer.Singleton.AddRenderable(uvPlane);
             Renderer.Singleton.AddRenderable(velocityPlane);
             Renderer.Singleton.AddRenderable(cloud);
+            Renderer.Singleton.AddRenderable(cCloud);
+            Renderer.Singleton.AddRenderable(cpCloud);
         }
     }
 }
