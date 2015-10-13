@@ -1,12 +1,8 @@
-﻿//cbuffer Globals : register(c0)
-//{
-//	float4x4 view;
-//	float4x4 projection;
-//};
-cbuffer ConstBuffer : register(b0)
+﻿cbuffer Globals : register(b0)
 {
-	float4 cColor;
-}
+	float4x4 view;
+	float4x4 projection;
+};
 
 Texture2D colormap;
 SamplerState LinSampler {
@@ -51,7 +47,7 @@ float2 EulerStep(float2 pos, float scale)
 float SimpleRandom(float2 pos)
 {
 	int2 iPos = int2(pos);
-	return frac(sin(dot(float2(iPos), float2(12.9898, 78.233))) * 43758.5453); //max((1.0 - abs(180.0 - pos.x)), 0); //
+	return frac(sin(dot(float2(iPos), float2(12.9898, 78.233))) * 43758.5453);
 }
 
 struct VS_IN
@@ -71,8 +67,10 @@ struct PS_IN
 PS_IN VS(VS_IN input)
 {
 	PS_IN output = (PS_IN)0;
-
-	output.pos = input.pos;
+	float4x4 mat;
+	mat[0] = float4(1, 0, 0, 0); mat[1] = float4(0, 1, 0, 0); mat[2] = float4(0, 0, 1, 0); mat[3] = float4(0, 0, 0, 1);
+	output.pos = mul(projection, mul(view, input.pos));
+	//output.pos /= output.pos.w;
 	output.uv = input.uv;
 
 	return output;
@@ -95,7 +93,7 @@ float4 PS_nTex_2(PS_IN input) : SV_Target
 	float v0 = field0.Sample(PointSampler, input.uv.xy, 0.0).x;
 	float v1 = field1.Sample(PointSampler, input.uv.xy, 0.0).x;
 	if (v0 == invalidNum && v1 == invalidNum)
-		return float4(0.0, 0.0, 0.0, 0.0);
+		discard;
 
 	return float4(v0*0.5 + 0.5, v1*0.5 + 0.5, 0.0, 1.0);
 }
@@ -125,14 +123,14 @@ float4 PS_LIC(PS_IN input) : SV_Target
 	// Is the value valid?
 	float2 vPos = Sample(startPos);
 	if (vPos.x == invalidNum && vPos.y == invalidNum)
-		return float4(0.4, 0.0, 0.0, 0.0);
+		discard;
 	return float4(sum, sum, sum, 1.0);
 }
 
 // A simple checkerboard to see the grid resolution.
 float4 PS_Checker(PS_IN input) : SV_Target
 {
-	return ((int)(input.uv.x * width + 0.5) + (int)(input.uv.y * height + 0.5)) % 2 == 0 ? float4(cColor.xyz, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
+	return ((int)(input.uv.x * width + 0.5) + (int)(input.uv.y * height + 0.5)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
 }
 
 BlendState SrcAlphaBlendingAdd

@@ -34,6 +34,8 @@ namespace FlowSharp
 
         public Camera Camera { get; set; }
 
+        protected TimeSpan _lastTime;
+
         protected Renderer() { }
 
         /// <summary>
@@ -42,28 +44,45 @@ namespace FlowSharp
         /// <param name="host"></param>
         public void Attach(ISceneHost host)
         {
-            this._host = host;
+            try
+            {
+                this._host = host;
 
-            // Assure that a device is set.
-            if (host.Device == null)
-                throw new Exception("Scene host device is null");
+                // Assure that a device is set.
+                if (host.Device == null)
+                    throw new Exception("Scene host device is null");
 
-            SetupRenderer();
-            FSMain.CreateRenderables();
+                SetupRenderer();
+                FSMain.CreateRenderables();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         protected void SetupRenderer()
         {
+            try
+            {
+                Renderable.Initialize(Device);
+                FieldPlane.Initialize();
+                ColorMapping.Initialize(Device);
+                TheCloud.Initialize();
+                LineBall.Initialize();
 
-            Plane.Initialize(Device);
-            ColorMapping.Initialize(Device);
-            PointCloud.Initialize(Device);
+                Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
+                Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
 
-            Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
-            Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
-
-            _renderables = new List<Renderable>();
-            Camera = new Camera(Device, ((float)_host.RenderTargetWidth)/_host.RenderTargetHeight);
+                _renderables = new List<Renderable>();
+                Camera = new Camera(Device, ((float)_host.RenderTargetWidth) / _host.RenderTargetHeight);
+                var desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Solid };
+                Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         public void Detach()
@@ -87,6 +106,8 @@ namespace FlowSharp
             {
                 System.Threading.Thread.Sleep(0);
             }
+            Camera.Update((float)timeSpan.TotalMilliseconds, Device);
+
             foreach (Renderable obj in _renderables)
                 obj.Update(timeSpan);
         }

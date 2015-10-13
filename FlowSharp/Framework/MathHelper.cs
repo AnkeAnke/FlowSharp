@@ -13,6 +13,11 @@ namespace FlowSharp
             return new SlimDX.Vector3(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
         }
 
+        public static SlimDX.Vector3 Div(SlimDX.Vector3 a, SlimDX.Vector3 b)
+        {
+            return new SlimDX.Vector3(a.X / b.X, a.Y / b.Y, a.Z / b.Z);
+        }
+
 
     }
 }

@@ -15,7 +15,35 @@ using System.IO;
 
 namespace FlowSharp
 {
-    class Plane : ColormapRenderable
+    class Plane
+    {
+        public Vector3 Origin { get; protected set; }
+        /// <summary>
+        /// Scaled x axis.
+        /// </summary>
+        public Vector3 XAxis { get; protected set; }
+        /// <summary>
+        /// Scaled y axis.
+        /// </summary>
+        public Vector3 YAxis { get; protected set; }
+        /// <summary>
+        /// Scaled y axis.
+        /// </summary>
+        public Vector3 ZAxis { get { return Vector3.Cross(YAxis, XAxis); } }
+
+        public float Scale { get { return Math.Min(XAxis.Length(), YAxis.Length()); } }
+
+        public float PointSize { get; protected set; }
+
+        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, float pointSize = 0.1f)
+        {
+            Origin = origin;
+            XAxis = xAxis * scale;
+            YAxis = yAxis * scale;
+            PointSize = pointSize;
+        }
+    }
+    class FieldPlane : ColormapRenderable
     {
         /// <summary>
         /// A number of equally sized textures. Depending on the number, a differnet mapping to color will be applied.
@@ -24,6 +52,7 @@ namespace FlowSharp
         protected int _width, _height;
         protected float _invalid;
 
+        
 
         /// <summary>
         /// Plane to display scalar/vector field data on. Condition: Fields domain is 2D.
@@ -33,28 +62,29 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, ScalarField[] fields, RenderEffect effect = RenderEffect.DEFAULT, Colormap map = Colormap.Parula)
+        public FieldPlane(Plane plane, VectorField fields, RenderEffect effect = RenderEffect.DEFAULT, Colormap map = Colormap.Parula)
         {
 #if DEBUG
             // Assert that the fields are 2 dimensional.
-            foreach(ScalarField field in fields)
+            foreach(Field field in fields.Scalars)
                 System.Diagnostics.Debug.Assert(field.Size.Length == 2);
 #endif
+
             this._effect = _planeEffect;
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
             this._width  = fields[0].Size[0];
             this._height = fields[0].Size[1];
-            this._invalid = fields[0].InvalidValue ?? float.MaxValue;
+            this._invalid = fields.InvalidValue ?? float.MaxValue;
             
             // Setting up the vertex buffer. 
-            GenerateGeometry(origin, xAxis,yAxis, scale, (RectlinearGrid)fields[0].Grid);
+            GenerateGeometry(plane, (RectlinearGrid)fields[0].Grid, fields.TimeSlice??0);
 
 
             // Generating Textures from the fields.
-            _fields = new ShaderResourceView[fields.Length];
-            for(int f = 0; f < fields.Length; ++f)
+            _fields = new ShaderResourceView[fields.Scalars.Length];
+            for(int f = 0; f < fields.Scalars.Length; ++f)
             {
                 Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);
                 _fields[f] = new ShaderResourceView(_device, tex);
@@ -94,10 +124,11 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, RectlinearGrid grid)
+        protected void GenerateGeometry(Plane plane, RectlinearGrid grid, float timeOffset)
         {
             Vector Extent = grid.Extent;
-            Vector3 maximum = origin + xAxis * Extent[0] * scale + yAxis * Extent[1] * scale;
+            Vector3 maximum = plane.Origin + plane.XAxis * Extent[0] + plane.YAxis * Extent[1];
+            Vector3 origin = plane.Origin + plane.ZAxis * timeOffset;
 
             // Offset, becaue the grid data points shall be OUTSIDE of the grid cells.
             float uMin = 1.0f / (grid.Size[0] - 1) * 0.5f;
@@ -108,13 +139,13 @@ namespace FlowSharp
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
             stream.WriteRange(new[] {
-                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(uMin, vMax, 0.0f, 1.0f),
-                new Vector4(maximum[0], maximum[1], 0.5f, 1.0f), new Vector4(uMax, vMax, 0.0f, 1.0f),
-                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(uMax, vMin, 0.0f, 1.0f),
+                new Vector4( origin[0], maximum[1], origin[2], 1.0f), new Vector4(uMin, vMax, 0.0f, 1.0f),
+                new Vector4(maximum[0], maximum[1], origin[2], 1.0f), new Vector4(uMax, vMax, 0.0f, 1.0f),
+                new Vector4(maximum[0],  origin[1], origin[2], 1.0f), new Vector4(uMax, vMin, 0.0f, 1.0f),
 
-                new Vector4( origin[0], maximum[1], 0.5f, 1.0f), new Vector4(uMin, vMax, 0.0f, 1.0f),
-                new Vector4(maximum[0],  origin[1], 0.5f, 1.0f), new Vector4(uMax, vMin, 0.0f, 1.0f),               
-                new Vector4( origin[0],  origin[1], 0.5f, 1.0f), new Vector4(uMin, vMin, 0.0f, 1.0f)
+                new Vector4( origin[0], maximum[1], origin[2], 1.0f), new Vector4(uMin, vMax, 0.0f, 1.0f),
+                new Vector4(maximum[0],  origin[1], origin[2], 1.0f), new Vector4(uMax, vMin, 0.0f, 1.0f),               
+                new Vector4( origin[0],  origin[1], origin[2], 1.0f), new Vector4(uMin, vMin, 0.0f, 1.0f)
 
             });
             stream.Position = 0;
@@ -138,8 +169,8 @@ namespace FlowSharp
 
             _planeEffect.GetVariableByName("width").AsScalar().Set(_width);
             _planeEffect.GetVariableByName("height").AsScalar().Set(_height);
-            _planeEffect.GetVariableByName("invalidNum").AsScalar().Set(_invalid);
-            
+            _planeEffect.GetVariableByName("invalidNum").AsScalar().Set(_invalid);            
+
             base.Render(device);
         }
 
@@ -151,9 +182,8 @@ namespace FlowSharp
         /// Initialize the static components.
         /// </summary>
         /// <param name="device"></param>
-        public static void Initialize(Device device)
+        public static void Initialize()
         {
-            _device = device;
             try
             {
                 var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Data/DataEffects/Plane.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
@@ -173,7 +203,7 @@ namespace FlowSharp
         /// <summary>
         /// Device for creating resources.
         /// </summary>
-        protected static Device _device;
+        //protected static Device _device;
 
         public enum RenderEffect
         {

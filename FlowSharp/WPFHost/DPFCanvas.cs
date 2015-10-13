@@ -142,12 +142,11 @@ namespace WPFHost
                 CpuAccessFlags = CpuAccessFlags.None,
                 ArraySize = 1,
             };
-            
             this.RenderTarget = new Texture2D(this.Device, colordesc);
             this.DepthStencil = new Texture2D(this.Device, depthdesc);
             this.RenderTargetView = new RenderTargetView(this.Device, this.RenderTarget);
             this.DepthStencilView = new DepthStencilView(this.Device, this.DepthStencil);
-
+            
             this.D3DSurface.SetRenderTargetDX11(this.RenderTarget);
         }
 

@@ -19,7 +19,7 @@ namespace FlowSharp
         /// <param name="device"></param>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static Texture2D GenerateTextureFromField(Device device, ScalarField field, Texture2DDescription? description = null)
+        public static Texture2D GenerateTextureFromField(Device device, Field field, Texture2DDescription? description = null)
         {
             System.Diagnostics.Debug.Assert(field.Size.Length == 2);
 
@@ -44,8 +44,7 @@ namespace FlowSharp
                 desc = (Texture2DDescription)description;
 
             // Put field data into stream/rectangle object
-            DataStream slimStream = new DataStream(field.Data, true, false);
-            DataRectangle texData = new DataRectangle(field.Size[0] * sizeof(float), slimStream);
+            DataRectangle texData = new DataRectangle(field.Size[0] * sizeof(float), field.GetDataStream());
 
             // Create texture.
             Texture2D tex = new Texture2D(device, desc, texData);

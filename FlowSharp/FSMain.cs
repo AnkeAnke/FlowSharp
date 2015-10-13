@@ -5,83 +5,149 @@ namespace FlowSharp
 {
     class FSMain
     {
-        static ScalarField temperature;
-        static VectorField velocity;
-        static PointSet points;
+        static VectorFieldUnsteady velocity;
+        static VectorField velocityT0;
+        static VectorField velocityT1;
+        //static VectorField fff;
+        static CriticalPointSet2D seedData;
+        static CriticalPointSet2D cpT0;
+        static CriticalPointSet2D cpT1;
+        static LineSet cpLinesPos, cpLinesNeg;
 
-        static VectorField analytical;
+        static PointSet<Point> colorCoded;
+
+        static CriticalPointSet2D[] allCpsSlices;
 
         public static void LoadData()
         {
-            // Loading the temperature variable to have a frame of reference (should be ~20-35 degree at upper levels).
+            int numTimeSlices = 10;
             Loader ncFile = new Loader("E:/Anke/Dev/Data/First/s1/Posterior_Diag.nc");
+            ScalarField[] u = new ScalarField[numTimeSlices];
+            Loader.SliceRange sliceU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            sliceU.SetOffset(RedSea.Dimension.MEMBER, 0);
+            sliceU.SetOffset(RedSea.Dimension.TIME, 0);
+            sliceU.SetOffset(RedSea.Dimension.CENTER_Z, 0);
 
-            Loader.SliceRange sliceT = new Loader.SliceRange(ncFile, RedSea.Variable.TEMPERATURE);
-            sliceT.SetOffset(RedSea.Dimension.MEMBER, 0);
-            sliceT.SetOffset(RedSea.Dimension.TIME, 0);
-            sliceT.SetOffset(RedSea.Dimension.CENTER_Z, 0);
-            temperature = ncFile.LoadFieldSlice(sliceT);
+            ScalarField[] v = new ScalarField[numTimeSlices];
+            Loader.SliceRange sliceV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            sliceV.SetOffset(RedSea.Dimension.MEMBER, 0);
+            sliceV.SetOffset(RedSea.Dimension.TIME, 0);
+            sliceV.SetOffset(RedSea.Dimension.CENTER_Z, 0);
 
-            Loader.SliceRange sliceV0 = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            sliceV0.SetOffset(RedSea.Dimension.MEMBER, 0);
-            sliceV0.SetOffset(RedSea.Dimension.TIME, 0);
-            sliceV0.SetOffset(RedSea.Dimension.CENTER_Z, 0);
-            ScalarField v0 = ncFile.LoadFieldSlice(sliceV0);
-
-            Loader.SliceRange sliceV1 = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            sliceV1.SetOffset(RedSea.Dimension.MEMBER, 0);
-            sliceV1.SetOffset(RedSea.Dimension.TIME, 0);
-            sliceV1.SetOffset(RedSea.Dimension.CENTER_Z, 0);
-            ScalarField v1 = ncFile.LoadFieldSlice(sliceV1);
-
-            velocity = new VectorField(new ScalarField[] { v0, v1 });
-
-
-            //Point a = new Point()
-            //{
-            //    Position = new Vector3(5.0f, 10.0f, 0.5f),
-            //    Color = new Vector3(0.0f, 0.0f, 1.0f),
-            //    Radius = 0.015f
-            //};
-
-            //Point kaust = new Point()
-            //{
-            //    Position = new Vector3(39.0f - 32.0f, 23.0f - 9.0f,  0.5f),
-            //    Color = new Vector3(0.4f, 0.0f, 0.0f),
-            //    Radius = 0.015f
-            //};
-            //points = new PointSet(new Point[] { kaust } );
-
-
-            //Tests.TestCP();
-//            points = FieldAnalysis.ComputeCriticalPointsRectlinear2D(velocity);
+            // Load first time slice.
+            u[0] = ncFile.LoadFieldSlice(sliceU);
+            v[0] = ncFile.LoadFieldSlice(sliceV);
 
             ncFile.Close();
 
-            ScalarField u = ScalarField.FromAnalyticalField(x => (float)Math.Sin(x[0] + 0.023f * x[1]) + 0.001f, new Index(20, 2), new Vector(0, 2), new Vector(1.3f, 2));
-            ScalarField v = ScalarField.FromAnalyticalField(x => (float)Math.Sin(x[1] + 0.011f * x[0]), new Index(20, 2), new Vector(0, 2), new Vector(1.3f, 2));
-            analytical = new VectorField( new ScalarField[] { u, v } );
+            for (int time = 1; time < numTimeSlices; ++time)
+            { 
+                ncFile = new Loader("E:/Anke/Dev/Data/First/s" + (time+1) + "/Posterior_Diag.nc");
+                u[time] = ncFile.LoadFieldSlice(sliceU);
+                v[time] = ncFile.LoadFieldSlice(sliceV);
+                ncFile.Close();
+            }
 
-            points = FieldAnalysis.ComputeCriticalPointsRegularSubdivision23D(analytical, 5);
+            ScalarFieldUnsteady uTime = new ScalarFieldUnsteady(u);
+            ScalarFieldUnsteady vTime = new ScalarFieldUnsteady(v);
+            velocity = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { uTime, vTime });
+
+            Console.WriteLine("Completed loading data.");
+
+
+            velocityT0 = velocity.GetTimeSlice(1);
+            velocityT1 = velocity.GetTimeSlice(8);
+
+            seedData = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocityT0, 5, 0.3f);
+
+            seedData = seedData.SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS });
+            // Critical points.
+            cpT0 = seedData.SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_NODE, CriticalPoint2D.TypeCP.REPELLING_NODE, CriticalPoint2D.TypeCP.SADDLE });
+            cpT1 = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocityT1, 5, 0.5f);
+
+            //var xSeedData = FieldAnalysis.SomePoints3D(velocity, 200);
+
+            VectorField fffPos = new VectorField(velocity, VectorFieldUnsteady.StableFFF, 3); // (vec, J) => new Vec3(Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3())));
+            VectorField fffNeg = new VectorField(velocity, VectorFieldUnsteady.StableFFFNegative, 3);
+            VectorField.Integrator intVF = new VectorField.IntegratorEuler(fffPos);
+            intVF.StepSize = 0.05f;
+            intVF.WorldPosition = false;
+
+            cpLinesPos = intVF.Integrate(seedData);
+
+            // Negative FFF integration. Reversed stabilising field.
+            //intVF.Direction = Sign.NEGATIVE;
+            intVF.Field = fffNeg;
+            cpLinesNeg = intVF.Integrate(seedData);
+            cpLinesNeg.Color = new Vector3(0.0f, 0.7f, 0.0f);
+
+
+            //PointSet cp = FieldAnalysis.ComputeCriticalPointsRegularSubdivision23D(velocityT0);
+            //PointCloud cpCloud = new PointCloud(redSea, cp);
+
+            // Compute critical points.
+            //PointSet<CriticalPoint2D> cpVelocity = FieldAnalysis.ComputeCriticalPointsRegularSubdivision23D(velocityT0, 8);
+            //PointCloud pointsCpVelocity = new PointCloud(redSea, cpVelocity);
+
+            //var xSeedData = FieldAnalysis.SomePoints3D(velocity, 200);
+            //VectorField.Integrator intVF = new VectorField.IntegratorEuler(velocity);
+            //intVF.StepSize = 0.05f;
+            //intVF.WorldPosition = false;
+
+            //cpLinesPos = intVF.Integrate(xSeedData);
+            //intVF.Direction = Sign.NEGATIVE;
+            //cpLinesNeg = intVF.Integrate(xSeedData);
+
+            colorCoded = velocity.ColorCodeArbitrary(cpLinesPos, x => new Vector3(velocity.Sample((Vec3)x, cpLinesPos.WorldPosition).ToVec2().LengthEuclidean() * 10));
+
+            // Trying integrator in 2D.
+            //            var randomPos = FieldAnalysis.SomePoints2D(velocityT0, 10);
+            //            cpLinesPos = intVF.Integrate(randomPos);
+            //            intVF.Direction = Sign.NEGATIVE;
+            //            cpLinesNeg = intVF.Integrate(randomPos);
+
+            //allCpsSlices = new CriticalPointSet2D[10];
+            //for(int i =0; i < 10; ++i)
+            //{
+            //    VectorField field = velocity.GetTimeSlice(i);
+            //    allCpsSlices[i] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(field, 5, 0.05f);
+            //}
+
+
+            Console.WriteLine("Computed all data necessary.");
         }
 
         public static void CreateRenderables()
         {
-            Plane uvPlane = new Plane(new Vector3(-0.9f, -0.95f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, analytical.Scalars, Plane.RenderEffect.CHECKERBOARD);
-            PointCloud cloud = new PointCloud(new Vector3(-0.9f, -0.95f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, points);
+            Plane redSea = new Plane(new Vector3(-10, -5, -5), Vector3.UnitX, Vector3.UnitY, 0.5f, 0.1f);
+            FieldPlane velocityPlane = new FieldPlane(redSea, velocityT0, FieldPlane.RenderEffect.LIC);
+            FieldPlane velocityPlaneT1 = new FieldPlane(redSea, velocityT1, FieldPlane.RenderEffect.LIC);
 
-            Plane velocityPlane = new Plane(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, 0.04f, velocity.Scalars, Plane.RenderEffect.LIC);
-            PointSet cp = FieldAnalysis.ComputeCriticalPointsRegularSubdivision23D(velocity);
-            PointCloud cpCloud = new PointCloud(new Vector3(-0.9f, 0.1f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, cp);
-            PointSet cells = FieldAnalysis.ValidDataPoints(analytical);
+            PointCloud<CriticalPoint2D> seeds = new PointCloud<CriticalPoint2D>(redSea, seedData);
+            Renderer.Singleton.AddRenderable(seeds);
 
-            PointCloud cCloud = new PointCloud(new Vector3(-0.9f, -0.95f, 0.5f), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, 0.04f, cells);
+            //PointCloud<CriticalPoint2D> seedsT0 = new PointCloud<CriticalPoint2D>(redSea, cpT0);
+            //Renderer.Singleton.AddRenderable(seedsT0);
 
-            Renderer.Singleton.AddRenderable(uvPlane);
+            //for(int i =0; i <10; ++i)
+            //{
+            //    PointCloud< CriticalPoint2D > cp = new PointCloud<CriticalPoint2D>(redSea, allCpsSlices[i]);
+            //    Renderer.Singleton.AddRenderable(cp);
+            //}
+
             Renderer.Singleton.AddRenderable(velocityPlane);
-            Renderer.Singleton.AddRenderable(cloud);
-            Renderer.Singleton.AddRenderable(cCloud);
-            Renderer.Singleton.AddRenderable(cpCloud);
+            Renderer.Singleton.AddRenderable(velocityPlaneT1);
+
+            PointCloud<Point> colorLine = new PointCloud<Point>(redSea, colorCoded);
+            Renderer.Singleton.AddRenderable(colorLine);
+
+            PointCloud<CriticalPoint2D> seedsT1 = new PointCloud<CriticalPoint2D>(redSea, cpT1);
+            Renderer.Singleton.AddRenderable(seedsT1);
+
+            //LineBall streamlinesPos = new LineBall(redSea, cpLinesPos);
+            //Renderer.Singleton.AddRenderable(streamlinesPos);
+            LineBall streamlinesNeg = new LineBall(redSea, cpLinesNeg);
+            Renderer.Singleton.AddRenderable(streamlinesNeg);
         }
     }
 }

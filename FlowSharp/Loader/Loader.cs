@@ -22,11 +22,13 @@ namespace FlowSharp
         /// </summary>
         protected int _numVars;
 
+        protected int _timeSlice;
+
         /// <summary>
         /// Create a Loader object and open a NetCDF file.
         /// </summary>
         /// <param name="file">Path of the file.</param>
-        public Loader(string file)
+        public Loader(string file, int timeSlice = 0)
         {
             NetCDF.nc_open(file, NetCDF.CreateMode.NC_NOWRITE, out _fileID);
             NetCDF.nc_inq_nvars(_fileID, out _numVars);
@@ -105,7 +107,7 @@ namespace FlowSharp
         public ScalarField LoadFieldSlice(SliceRange slice)
         {
             ScalarField field;
-            int[] offsets = slice.GetOffsets();
+            Index offsets = new Index(slice.GetOffsets());
 
             int[] sizeInFile = new int[offsets.Length];
             // Probably has less dimensions.
@@ -134,9 +136,16 @@ namespace FlowSharp
                 }
             }
 
+            if (slice.IsTimeDependent())
+                numDimsField++;
+
             // Generate size index for field class.
             Index fieldSize = new Index(numDimsField);
             Array.Copy(sizeField, fieldSize.Data, numDimsField);
+
+            // When the field has several time slices, add a time dimension.
+            if (slice.IsTimeDependent())
+                fieldSize[numDimsField - 1] = slice.GetNumTimeSlices();
 
             //TODO: HACK! REMOVE!
             int tmp = fieldSize[0];
@@ -149,15 +158,58 @@ namespace FlowSharp
 
             // Create scalar field instance and fill it with data.
             field = new ScalarField(grid);
-            NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets, sizeInFile, field.Data);
-            //int fill;
-            //float fillValue;
+            int sliceSize = grid.Size.Product() / slice.GetNumTimeSlices();
+            //unsafe
+            //{
+            //    fixed (float* dataPtr = field.)
+            //    {
+            //        float* offset = dataPtr + _timeSlice * sliceSize;
+            NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
+            //    }   
+            //}
 
             //HACK!
-            field.InvalidValue = field.Data[0];
+            field.InvalidValue = field[0];
 
             return field;
         }
+
+
+        //public void AddTimeFieldSlice(SliceRange slice, ScalarField field)
+        //{
+        //    int[] offsets = slice.GetOffsets();
+        //    int[] sizeInFile = new int[offsets.Length];
+            
+        //    for (int dim = 0; dim < offsets.Length; ++dim)
+        //    {
+        //        if (offsets[dim] != -1)
+        //        {
+        //            // Take one slice in this dimension only. Start = offset (keep), size = 1.
+        //            sizeInFile[dim] = 1;
+        //        }
+        //        else
+        //        {
+        //            // Fill size.
+        //            int sizeDim;
+        //            NetCDF.nc_inq_dimlen(_fileID, slice.GetDimensionID(dim), out sizeDim);
+        //            sizeInFile[dim] = sizeDim;
+
+        //            // Set offset to one. offset = 0, size = size of dimension.
+        //            offsets[dim] = 0;
+        //        }
+        //    }
+
+        //    // Fill in data.
+        //    int sliceSize = field.Size.Product() / slice.GetNumTimeSlices();
+        //    unsafe
+        //    {
+        //        fixed (float* dataPtr = field.Data)
+        //        {
+        //            float* offset = dataPtr + _timeSlice * sliceSize;
+        //            NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets, sizeInFile, offset);
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// Close the file.
@@ -178,14 +230,18 @@ namespace FlowSharp
             private RedSea.Dimension[] _presentDims;
             private int[] _dimOffsets;
             private RedSea.Variable _var;
+            private int _timeSlices;
 
             public int GetDimensionID(int index) { return (int)_presentDims[index]; }
             public int[] GetOffsets() { return _dimOffsets; }
             public RedSea.Variable GetVariable() { return _var; }
+            public bool IsTimeDependent() { return _timeSlices > 1; }
+            public int GetNumTimeSlices() { return _timeSlices; }
 
-            public SliceRange(Loader file, RedSea.Variable var)
+            public SliceRange(Loader file, RedSea.Variable var, int numTimeSlices = 1)
             {
                 _var = var;
+                _timeSlices = numTimeSlices;
 
                 // Query number of dimensions of variable.
                 int numDims;

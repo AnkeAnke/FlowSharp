@@ -15,25 +15,47 @@ using System.IO;
 
 namespace FlowSharp
 {
-    class PointCloud : Renderable
+    abstract class TheCloud : Renderable
+    {
+        protected static Effect _cloudEffect;
+
+        /// <summary>
+        /// Initialize the static components.
+        /// </summary>
+        /// <param name="device"></param>
+        public static void Initialize()
+        {
+            try
+            {
+                var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Data/DataEffects/Cloud.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
+                _cloudEffect = new Effect(_device, bytecode);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+    }
+    class PointCloud<P> : TheCloud where P : Point
     {
         /// <summary>
-        /// Plane to display scalar/vector field data on. Condition: Fields domain is 2D.
+        /// Set of points in 3D space.
         /// </summary>
         /// <param name="origin"></param>
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public PointCloud(Vector3 origin, Vector3 xAxis, Vector3 yAxis, Vector3 zAxis, float scale, PointSet points)
+        public PointCloud(Plane plane, PointSet<P> points)
         {
             this._vertexSizeBytes = 32;
             this._numVertices = points.Points.Length;
             this._topology = PrimitiveTopology.PointList;
 
             // Setting up the vertex buffer. 
-            GenerateGeometry(origin, xAxis, yAxis, zAxis, scale, points);
+            GenerateGeometry(plane, points);
 
+            Debug.Assert(_cloudEffect != null);
             this._technique = _cloudEffect.GetTechniqueByName("Render");
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
                 new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0),
@@ -49,22 +71,23 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Vector3 origin, Vector3 xAxis, Vector3 yAxis, Vector3 zAxis, float scale, PointSet points)
+        protected void GenerateGeometry(Plane plane, PointSet<P> points)
         {
-
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
+            Vector3 zAxis = plane.ZAxis;
             for (int index = 0; index < points.Points.Length; ++index )
             {
                 Point point = points.GetWorldPoint(index);
-                stream.Write(new Vector4(origin + (xAxis * point.Position[0] + yAxis * point.Position[1]) * scale, 1.0f));
+                var test = new Vector4(plane.Origin + (plane.XAxis * point.Position[0] + plane.YAxis * point.Position[1] + zAxis * point.Position[2]), 1.0f);
+                stream.Write(new Vector4(plane.Origin + (plane.XAxis * point.Position[0] + plane.YAxis * point.Position[1] + zAxis * point.Position[2]), 1.0f));
                 stream.Write(point.Color);
-                stream.Write(point.Radius);
+                stream.Write(point.Radius * plane.PointSize);
             }
             stream.Position = 0;
 
             // Create and fill buffer.
-            _vertices = new Buffer(_device, stream, new BufferDescription()
+            _vertices = new Buffer(Renderable._device, stream, new BufferDescription()
             {
                 BindFlags = BindFlags.VertexBuffer,
                 CpuAccessFlags = CpuAccessFlags.None,
@@ -77,6 +100,7 @@ namespace FlowSharp
 
         public override void Render(Device device)
         {
+            //Renderer.Singleton.Camera.UpdateResources(device);
             base.Render(device);
         }
 
@@ -84,34 +108,22 @@ namespace FlowSharp
         {
         }
 
-        /// <summary>
-        /// Initialize the static components.
-        /// </summary>
-        /// <param name="device"></param>
-        public static void Initialize(Device device)
-        {
-            _device = device;
-          
-            try {
-                var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Data/DataEffects/Cloud.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
-                _cloudEffect = new Effect(_device, bytecode);
-            }
-            catch(Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-            
-            
-        }
 
-        /// <summary>
-        /// The effects that will be used by the plane. Use technique "RenderTex"+numTextures to get the right technique.
-        /// </summary>
-        protected static Effect _cloudEffect;
+
+        ///// <summary>
+        ///// The effects that will be used by the points.
+        ///// </summary>
+        //protected static Effect _cloudEffect;
 
         /// <summary>
         /// Device for creating resources.
         /// </summary>
-        protected static Device _device;
+        //protected static Device _device;
+    }
+
+    class PointCloud : PointCloud<Point>
+    {
+        public PointCloud(Plane plane, PointSet<Point> points) : base(plane, points)
+        {}
     }
 }

@@ -1,6 +1,7 @@
-﻿cbuffer FieldConstants : register(c0)
+﻿cbuffer Globals : register(b0)
 {
-	//float radius;
+	float4x4 view;
+	float4x4 projection;
 };
 
 struct VS_IN
@@ -28,7 +29,7 @@ GS_IN VS(VS_IN input)
 {
 	GS_IN output = (GS_IN)0;
 
-	output.pos = input.pos;
+	output.pos = mul(view, input.pos);
 	output.color = input.color;
 	output.radius = input.radius;
 
@@ -43,28 +44,27 @@ void GS(point GS_IN center[1], inout TriangleStream<PS_IN> triStream)
 	float3 diag = float3(radius, radius, 0.0);
 	float3 diagNeg = float3(radius, -radius, 0.0);
 	float3 pos = center[0].pos.xyz;
-	pos.z -= 0.01;
 	PS_IN output = (PS_IN)0;
 	output.color = center[0].color;
-	
+	float wOffset = 0.000005;
 
-	output.pos = float4(pos - diag, 1);
+	output.pos = mul(projection, float4(pos - diag, 1)); output.pos.w += wOffset;
 	output.uv = float2(-1, -1);
 	triStream.Append(output);
-	output.pos = float4(pos - diagNeg, 1);
+	output.pos = mul(projection, float4(pos - diagNeg, 1)); output.pos.w += wOffset;
 	output.uv = float2(-1, 1);
 	triStream.Append(output);
-	output.pos = float4(pos + diagNeg, 1);
+	output.pos = mul(projection, float4(pos + diagNeg, 1)); output.pos.w += wOffset;
 	output.uv = float2(1, -1);
 	triStream.Append(output);
 
-	output.pos = float4(pos - diagNeg, 1);
+	output.pos = mul(projection, float4(pos - diagNeg, 1)); output.pos.w += wOffset;
 	output.uv = float2(-1, 1);
 	triStream.Append(output);
-	output.pos = float4(pos + diagNeg, 1);
+	output.pos = mul(projection, float4(pos + diagNeg, 1)); output.pos.w += wOffset;
 	output.uv = float2(1, -1);
 	triStream.Append(output);
-	output.pos = float4(pos + diag, 1);
+	output.pos = mul(projection, float4(pos + diag, 1)); output.pos.w += wOffset;
 	output.uv = float2(1, 1);
 	triStream.Append(output);
 	
@@ -73,7 +73,11 @@ void GS(point GS_IN center[1], inout TriangleStream<PS_IN> triStream)
 
 float4 PS(PS_IN input) : SV_Target
 {
-	return length(input.uv) <= 1.0 ? float4(input.color, 1.0) : float4(0,0,0,0); // input.color;
+	float len = length(input.uv);
+	if (len >= 1.0)
+		discard;
+//input.pos.w = -2.0;
+	return float4(input.color * (1.1 - len*0.8), 1.0); // input.color;
 }
 
 BlendState SrcAlphaBlendingAdd

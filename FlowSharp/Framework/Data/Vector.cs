@@ -4,35 +4,67 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using SlimDX;
 
 namespace FlowSharp
 {
+    enum SignX : int
+    {
+        POSITIVE = -1,
+        NEGATIVE = 1
+    }
+    struct Sign
+    {
+        public int Value { get; private set; }
+        public static Sign POSITIVE { get; } = new Sign(1);
+        public static Sign NEGATIVE { get; } = new Sign(-1);
+        private Sign(int x) { Value = x; }
+
+        public static explicit operator int(Sign sign)
+        { return sign.Value; }
+        public static explicit operator Vector3 (Sign sign)
+        {
+            return sign == POSITIVE ? Vector3.UnitX : Vector3.UnitZ;
+        }
+        public static Sign operator !(Sign sign)
+        {
+            return new Sign(-sign.Value);
+        }
+        public static bool operator ==(Sign a, Sign b)
+        {
+            return a.Value == b.Value;
+        }
+        public static bool operator !=(Sign a, Sign b)
+        {
+            return !(a == b);
+        }
+    }
     class Vector
     {
-        public virtual int Length { get; protected set; }
+        public virtual int Length { get { return _data.Length; } }
 
         protected float[] _data;
         public float[] Data
         {
             get { return _data; }
-            set { Debug.Assert(value.Length == Length); _data = value; }
+            set { Debug.Assert(_data == null || value.Length == Length); _data = value; }
         }
+
+        public float T { get { return _data[Length - 1]; } set { _data[Length - 1] = value; } }
 
         public Vector(int dim)
         {
-            Length = dim;
-            Data = new float[Length];
+            Data = new float[dim];
         }
 
         public Vector(float[] data)
         {
-            Length = data.Length;
             _data = (float[])data.Clone();
         }
 
         public Vector(Vector copy)
         {
-            Length = copy.Length;
             _data = (float[])copy.Data.Clone();
         }
 
@@ -43,8 +75,7 @@ namespace FlowSharp
         /// <param name="dim"></param>
         public Vector(float v, int dim)
         {
-            Length = dim;
-            _data = new float[Length];
+            _data = new float[dim];
             for (int d = 0; d < Length; ++d)
                 _data[d] = v;
         }
@@ -53,7 +84,7 @@ namespace FlowSharp
         {
             Vector prod = new Vector(a);
             for(int dim = 0; dim < a.Length; ++dim)
-                a[dim] *= b;
+                prod[dim] *= b;
 
             return prod;
         }
@@ -109,6 +140,24 @@ namespace FlowSharp
             return quot;
         }
 
+        public static Vector operator /(Vector a, float b)
+        {
+            Vector quot = new Vector(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                quot[dim] /= b;
+
+            return quot;
+        }
+
+        public static Vector operator -(Vector a)
+        {
+            Vector neg = new Vector(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                neg[dim] = -neg[dim];
+
+            return neg;
+        }
+
         /// <summary>
         /// Floor the vector.
         /// </summary>
@@ -137,6 +186,42 @@ namespace FlowSharp
         }
 
         /// <summary>
+        /// Convert first tree elements to a Vec3. If less, fill with zeros.
+        /// </summary>
+        public Vec3 ToVec3()
+        {
+            return new Vec3(this[0], Length > 1 ? this[1] : 0, Length > 2 ? this[2] : 0);
+        }
+
+        /// <summary>
+        /// Convert first two elements to a Vec2. If less, fill with zeros.
+        /// </summary>
+        public Vec2 ToVec2()
+        {
+            return new Vec2(this[0], Length > 1 ? this[1] : 0);
+        }
+
+        /// <summary>
+        /// Convert first N elements to a VecN. If less, fill with zeros.
+        /// </summary>
+        public Vector ToVec(int N)
+        {
+            Vector result = new Vector(0,N);
+            for (int dim = 0; dim < Math.Min(Length, N); ++dim)
+                result[dim] = this[dim];
+            return result;
+        }
+
+        /// <summary>
+        /// Convert to Vec3. If length is not 3, abort.
+        /// </summary>
+        public Vec3 AsVec3()
+        {
+            Debug.Assert(Length == 3);
+            return new Vec3(_data);
+        }
+
+        /// <summary>
         /// Product of all components.
         /// </summary>
         /// <returns></returns>
@@ -148,11 +233,78 @@ namespace FlowSharp
 
             return prod;
         }
+
+        public float LengthSquared()
+        {
+            float sum = 0;
+            for (int dim = 0; dim < Length; ++dim)
+                sum += _data[dim] * _data[dim];
+
+            return sum;
+        }
+
+        public float LengthEuclidean()
+        {
+            return (float)Math.Sqrt(LengthSquared());
+        }
+
+        public void Normalize()
+        {
+            float length = LengthEuclidean();
+            Debug.Assert(length != 0);
+            for (int dim = 0; dim < Length; ++dim)
+                _data[dim] /= length;
+        }
+
+        public Vector Normalized()
+        {
+            Vector norm = new Vector(this);
+            norm.Normalize();
+            return norm;
+        }
+
+        public float Max()
+        {
+            float max = _data[0];
+            for (int dim = 1; dim < Length; ++dim)
+                max = Math.Max(max, _data[dim]);
+            return max;
+        }
+
+        public float Min()
+        {
+            float min = _data[0];
+            for (int dim = 1; dim < Length; ++dim)
+                min = Math.Min(min, _data[dim]);
+            return min;
+        }
+
+        public Vector Abs()
+        {
+            Vector abs = new Vector(this);
+            for (int dim = 0; dim < Length; ++dim)
+                abs[dim] = Math.Abs(abs[dim]);
+            return abs;
+        }
+
+        /// <summary>
+        /// Returns the minimum positive value.
+        /// </summary>
+        public float MinPos()
+        {
+            float min = float.MaxValue;
+            for (int dim = 0; dim < Length; ++dim)
+                if (_data[dim] > 0 && _data[dim] < min)
+                    min = _data[dim];
+            return min;
+        }
     }
 
     class Vec2 : Vector
     {
-        public override int Length { get { return 2; } protected set { value = 2; } }
+        public float X { get { return _data[0]; } }
+        public float Y { get { return _data[1]; } }
+        public override int Length { get { return 2; } }
 
         public Vec2() : base(0, 2)
         { }
@@ -170,5 +322,63 @@ namespace FlowSharp
         /// <param name="dim"></param>
         public Vec2(float xy) : base(xy, 2)
         { }
+
+        public static explicit operator Vec3(Vec2 vec)
+        {
+            return new Vec3(vec, 0);
+        }
+    }
+
+    class Vec3 : Vector
+    {
+        public float X { get { return _data[0]; } }
+        public float Y { get { return _data[1]; } }
+        public float Z { get { return _data[2]; } }
+        public override int Length { get { return 3; }}
+
+        public Vec3() : base(0, 3)
+        { }
+
+        public Vec3(float x, float y, float z) : base(new float[] { x, y, z})
+        { }
+
+        public Vec3(Vec3 copy) : base(copy)
+        { }
+
+        public Vec3(float[] copy) : base(copy)
+        { Debug.Assert(copy.Length == 3); }
+
+        public Vec3(Vec2 a, float b) : base(new float[] { a.X, a.Y, b })
+        { }
+
+        public Vec3(float a, Vec2 b) : base(new float[] { a, b.X, b.Y })
+        { }
+
+        /// <summary>
+        /// Vector with dim elements set to v.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="dim"></param>
+        public Vec3(float xy) : base(xy, 2)
+        { }
+
+        public static Vec3 Cross(Vec3 a, Vec3 b)
+        {
+            Vec3 ret = new Vec3();
+            ret[0] = a.Y * b.Z - a.Z * b.Y;
+            ret[1] = a.Z * b.X - a.X * b.Z;
+            ret[2] = a.X * b.Y - a.Y - b.X;
+            return ret;
+        }
+
+        public static explicit operator Vec3(SlimDX.Vector3 vec)  // explicit byte to digit conversion operator
+        {
+            return new Vec3(vec.X, vec.Y, vec.Z);
+        }
+
+        public static Vec3 operator -(Vec3 a)
+        {
+            return new Vec3(-a.X, -a.Y, -a.Z);
+        }
     }
 }

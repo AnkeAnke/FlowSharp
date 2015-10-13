@@ -20,7 +20,7 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet ComputeCriticalPointsRegularAnalytical2D(VectorField field, float eps = EPS_ZERO)
+        public static PointSet<Point> ComputeCriticalPointsRegularAnalytical2D(VectorField field, float eps = EPS_ZERO)
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
@@ -53,7 +53,7 @@ namespace FlowSharp
 
                         for (int neighbor = 0; neighbor < adjacentCells.Length; ++neighbor)
                         {
-                            float data = field.Scalars[dim].Data[adjacentCells[neighbor]];
+                            float data = field.Scalars[dim][adjacentCells[neighbor]];
                             // Is the cell data valid?
                             if (data == field.Scalars[dim].InvalidValue)
                                 goto NextCell;
@@ -191,7 +191,7 @@ namespace FlowSharp
                     y++;
                 }
 
-            PointSet cpSet = new PointSet(cpList.ToArray());
+            PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray());
 
             return cpSet;
 
@@ -202,7 +202,52 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet ComputeCriticalPointsRegularSubdivision23D(VectorField field, int numDivisions = 5)
+        public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2D(VectorField field, int numDivisions = 5, float? pointSize = null)
+        {
+            // Only for rectlinear grids.
+            RectlinearGrid grid = field.Grid as RectlinearGrid;
+            Debug.Assert(grid != null);
+            Debug.Assert(grid.Size.Length == 2);
+
+            List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
+
+            Vector halfCell = new Vector(0.5f, 2);
+            Vector cSize = (field.Grid as RectlinearGrid).CellSize;
+            Vector origin = (field.Grid as RectlinearGrid).Origin;
+            //Index numCells = field.Size - new Index(1, field.Size.Length);
+            for (int x = 0; x < field.Size[0] - 1; ++x)
+                for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
+                {
+                    SubdivideCell(field, new Vec2(x, y), 0, numDivisions, cpList);
+                }
+
+            CriticalPoint2D[] points = new CriticalPoint2D[cpList.Count];
+
+            // In a 2D slice, set 3rd value to time value.
+            bool attachTimeZ = grid.Size.Length == 2 && field.TimeSlice != 0;
+            for (int index = 0; index < cpList.Count; ++index)
+            {
+                Vector3 pos = (Vector3)cpList[index];
+                if (attachTimeZ)
+                    pos.Z = (float)field.TimeSlice;
+
+                SquareMatrix J = field.SampleDerivative(cpList[index], false);
+
+                points[index] = new CriticalPoint2D(pos, J)
+                {
+                    Radius = pointSize ?? 1
+                };
+            }
+
+            return new CriticalPointSet2D(points, new Vector3((Vector2)grid.CellSize, 1.0f), (Vector3)grid.Origin);
+        }
+
+        /// <summary>
+        /// Searches for all 0-vectors in a 2 or 3D rectlinear vector field.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public static PointSet<Point> ComputeCriticalPointsRegularSubdivision23D(VectorField field, int numDivisions = 5, float? pointSize = null)
         {
             // Only for rectlinear grids.
             RectlinearGrid grid = field.Grid as RectlinearGrid;
@@ -222,17 +267,21 @@ namespace FlowSharp
                 }
 
             Point[] points = new Point[cpList.Count];
+            // In a 2D slice, set 3rd value to time value.
+            bool attachTimeZ = grid.Size.Length == 2 && field.TimeSlice != 0;
             for (int index = 0; index < cpList.Count; ++index)
             {
                 points[index] = new Point()
                 {
                     Position = (Vector3)cpList[index],
                     Color = new Vector3(1, 1, 0),
-                    Radius = 0.006f
+                    Radius = pointSize ?? 1
                 };
+                if (attachTimeZ)
+                    points[index].Position.Z = (float)field.TimeSlice;
             }
 
-            return new PointSet(points, (Vector3)grid.CellSize, (Vector3)grid.Origin);
+            return new PointSet<Point>(points, new Vector3((Vector2)grid.CellSize, 1.0f), (Vector3)grid.Origin);
         }
 
         /// <summary>
@@ -298,37 +347,113 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet ValidDataPoints(VectorField field)
+        public static PointSet<Point> ValidDataPoints(VectorField field)
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
-            Debug.Assert(field.Size.Length == 2);
+            Debug.Assert(field.NumVectorDimensions == 2 || field.NumVectorDimensions == 3);
 
             List<Point> cpList = new List<Point>(field.Size.Product());
 
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0]; ++x)
                 for (int y = 0; y < field.Size[1]; ++y)
-                {
-                    float data = field.Scalars[0].Sample(new Index(new int[] { x, y }));
-                    // Is the cell data valid?
-                    if (data == field.Scalars[0].InvalidValue)
-                        continue;
-
-
-                    Point cp = new Point()
+                    for (int z = 0; z < ((field.NumVectorDimensions == 3) ? field.Size[2] : 1); ++z)
                     {
-                        Position = new SlimDX.Vector3(x, y, 0.0f),
-                        Color = new SlimDX.Vector3(0.6f, 0.3f, 0.3f), // Debug color. 
-                        Radius = 0.003f
-                    };
-                    cpList.Add(cp);
-                }
-            RectlinearGrid rGrid = field.Grid as RectlinearGrid;
-            Vector3 cellSize = new Vector3(rGrid.CellSize[0], rGrid.CellSize[1], 0.0f);
-            Vector3 origin = new Vector3(rGrid.Origin[0], rGrid.Origin[1], 0.0f);
+                        int[] pos = (field.NumVectorDimensions == 3) ? new int[] { x, y, z } : new int[] { x, y };
+                        float data = field.Scalars[0].Sample(new Index(pos));
+                        // Is the cell data valid?
+                        if (data == field.InvalidValue)
+                            continue;
 
-            PointSet cpSet = new PointSet(cpList.ToArray(), cellSize, origin);
+                        Point cp = new Point()
+                        {
+                            Position = new SlimDX.Vector3(x, y, z),
+                            Color = new SlimDX.Vector3(0.6f, 0.3f, 0.3f), // Debug color. 
+                            Radius = 0.1f
+                        };
+                        cpList.Add(cp);
+                    }
+            RectlinearGrid rGrid = field.Grid as RectlinearGrid;
+
+            PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray(), (Vector3)rGrid.CellSize, (Vector3)rGrid.Origin);
+
+            return cpSet;
+        }
+
+        public static PointSet<Point> SomePoints2D(VectorField field, int numPoints)
+        {
+            // Only for 2D rectlinear grids.
+            Debug.Assert(field.Grid as RectlinearGrid != null);
+            Debug.Assert(field.NumVectorDimensions >= 2);
+            Random rnd = new Random();
+
+            Point[] cpList = new Point[numPoints];
+            bool attachTimeZ = field.NumVectorDimensions == 2 && field.TimeSlice != 0;
+            //Index numCells = field.Size - new Index(1, field.Size.Length);
+            for (int index = 0; index < numPoints; ++index)
+            {
+                Vector pos = new Vector(0, field.NumVectorDimensions);
+                pos[0] = (float)rnd.NextDouble() * (field.Size[0]-1);
+                pos[1] = (float)rnd.NextDouble() * (field.Size[1]-1);
+                float data = field.Scalars[0].Sample(pos, false);
+                if(data == field.InvalidValue)
+                {
+                    index--;
+                    continue;
+                }
+                Point cp = new Point()
+                {
+                    Position = (Vector3)pos,
+                    Color = new SlimDX.Vector3((float)index / numPoints, 0.0f, 0.3f), // Debug color. 
+                    Radius = 1.0f
+                };
+                if (attachTimeZ)
+                    cp.Position.Z = (float)field.TimeSlice;
+                cpList[index] = cp;
+            }
+            RectlinearGrid rGrid = field.Grid as RectlinearGrid;
+            PointSet<Point> cpSet = new PointSet<Point>(cpList, new Vector3((Vector2)rGrid.CellSize, 1.0f), (Vector3)rGrid.Origin);
+
+            return cpSet;
+        }
+
+        /// <summary>
+        /// Outputs all valid cells in the data set as points. Mostly for debugging purposes.
+        /// </summary>
+        /// <param name="field"></param>
+        /// <returns></returns>
+        public static PointSet<Point> SomePoints3D(VectorField field, int numPoints)
+        {
+            // Only for 2D rectlinear grids.
+            Debug.Assert(field.Grid as RectlinearGrid != null);
+            Debug.Assert(field.NumVectorDimensions >= 3);
+            Random rnd = new Random();
+
+            Point[] cpList = new Point[numPoints];
+            for (int index = 0; index < numPoints; ++index)
+            {
+                Vector pos = new Vector(0, field.NumVectorDimensions);
+                pos[0] = (float)rnd.NextDouble() * (field.Size[0] - 1);
+                pos[1] = (float)rnd.NextDouble() * (field.Size[1] - 1);
+                pos[2] = (float)rnd.NextDouble() * (field.Size[2] - 1);
+                float data = field.Scalars[0].Sample(pos, false);
+                if (data == field.InvalidValue)
+                {
+                    index--;
+                    continue;
+                }
+                Point cp = new Point()
+                {
+                    Position = (Vector3)pos,
+                    Color = new SlimDX.Vector3((float)index / numPoints, 0.0f, 0.3f), // Debug color. 
+                    Radius = 1.0f
+                };
+
+                cpList[index] = cp;
+            }
+            RectlinearGrid rGrid = field.Grid as RectlinearGrid;
+            PointSet<Point> cpSet = new PointSet<Point>(cpList, new Vector3((Vector2)rGrid.CellSize, 1.0f), (Vector3)rGrid.Origin);
 
             return cpSet;
         }

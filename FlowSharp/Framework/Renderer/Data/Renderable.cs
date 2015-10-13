@@ -18,6 +18,11 @@ namespace FlowSharp
     /// </summary>
     abstract class Renderable
     {
+        protected static Device _device;
+        public static void Initialize(Device device)
+        {
+            _device = device;
+        }
         /// <summary>
         /// The buffer containing the vertices to be drawn.
         /// </summary>
@@ -64,8 +69,8 @@ namespace FlowSharp
             for (int i = 0; i < _technique.Description.PassCount; ++i)
             {
                 _technique.GetPassByIndex(i).Apply(device.ImmediateContext);
-                // Just to be sure.
-                Renderer.Singleton.Camera.UpdateResources(device);
+                device.ImmediateContext.VertexShader.SetConstantBuffer(Renderer.Singleton.Camera.ConstantBuffer, 0);
+                device.ImmediateContext.GeometryShader.SetConstantBuffer(Renderer.Singleton.Camera.ConstantBuffer, 0);
 
                 context.Draw(_numVertices, 0);
             }
