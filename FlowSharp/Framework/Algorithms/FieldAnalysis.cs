@@ -196,18 +196,19 @@ namespace FlowSharp
             return cpSet;
 
         }
-
+        private static float _epsCriticalPoint;
         /// <summary>
         /// Searches for all 0-vectors in a 2 or 3D rectlinear vector field.
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2D(VectorField field, int numDivisions = 5, float? pointSize = null)
+        public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2D(VectorField field, int numDivisions = 5, float? pointSize = null, float epsCriticalPoint = 0.000001f)
         {
             // Only for rectlinear grids.
             RectlinearGrid grid = field.Grid as RectlinearGrid;
             Debug.Assert(grid != null);
             Debug.Assert(grid.Size.Length == 2);
+            _epsCriticalPoint = epsCriticalPoint;
 
             List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
 
@@ -237,6 +238,12 @@ namespace FlowSharp
                 {
                     Radius = pointSize ?? 1
                 };
+
+                //points[index+cpList.Count] = new CriticalPoint2D(pos + (field.Grid.InGrid(((Vec3)pos).ToVec2() + new Vec2(2), false)? new Vector3(2f, 2f, 0) : Vector3.Zero), J)
+                //{
+                //    Radius = pointSize*0.5f ?? 0.5f
+                //};
+                //points[index + cpList.Count].Type = points[index].Type;
             }
 
             return new CriticalPointSet2D(points, new Vector3((Vector2)grid.CellSize, 1.0f), (Vector3)grid.Origin);
@@ -294,7 +301,12 @@ namespace FlowSharp
         private static void SubdivideCell(VectorField field, Vector origin, int level, int maxLevel, List<Vector> cpList)
         {
             float cellLength = 1.0f / (1 << level);
-
+            float lengthVecCenter = field.Sample(origin + new Vector(cellLength * 0.5f, origin.Length), false).LengthEuclidean();
+            if (lengthVecCenter < _epsCriticalPoint)
+            {
+                cpList.Add(origin + new Vector(cellLength * 0.5f, origin.Length));
+                return;
+            }
             // For each dimension, check that a positive and negative value are present.
             for (int dim = 0; dim < field.Scalars.Length; ++dim)
             {

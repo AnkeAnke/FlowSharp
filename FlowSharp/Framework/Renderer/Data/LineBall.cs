@@ -60,6 +60,8 @@ namespace FlowSharp
             for (int index = 0; index < lines.Lines.Length; ++index)
             {
                 Line line = lines.GetWorldLine(index);
+                if (line.Length < 2)
+                    continue;
                 Debug.Assert(line.Length == lines.Lines[index].Length);
                 stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] + zAxis * line.Positions[0][2]), 1.0f));
                 for (int point = 1; point < line.Positions.Length - 1; ++point)

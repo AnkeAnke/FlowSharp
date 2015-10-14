@@ -17,6 +17,7 @@ namespace FlowSharp
     class Renderer : WPFHost.IScene
     {
         protected static Renderer _instance;
+        public bool Initialized = false;
         public static Renderer Singleton
         {
             get
@@ -54,6 +55,8 @@ namespace FlowSharp
 
                 SetupRenderer();
                 FSMain.CreateRenderables();
+
+                Initialized = true;
             }
             catch (Exception e)
             {
@@ -97,7 +100,8 @@ namespace FlowSharp
         public void Render()
         {
             foreach (Renderable obj in _renderables)
-                obj.Render(Device);
+                if(obj.Active)
+                    obj.Render(Device);
         }
 
         public void Update(TimeSpan timeSpan)
@@ -115,6 +119,16 @@ namespace FlowSharp
         public void AddRenderable(Renderable obj)
         {
             _renderables.Add(obj);
+        }
+
+        public void ClearRenderables()
+        {
+            _renderables.Clear();
+        }
+
+        public void AddRenderables(List<Renderable> objs)
+        {
+            _renderables = _renderables.Concat(objs).ToList();
         }
     }
 }

@@ -11,7 +11,10 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="1210" Width="1379" Margin="10,10,0,0" VerticalAlignment="Top" />
-        <ComboBox x:Name="DataTypesDropDown" HorizontalAlignment="Left" Margin="1389,199,0,0" VerticalAlignment="Top" Width="120"/>
+        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="1210" Width="1374" Margin="10,10,0,0" VerticalAlignment="Top" />
+        <ComboBox x:Name="DropDownDisplay" HorizontalAlignment="Left" Margin="1419,201,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadDisplay" SelectionChanged="OnChangeDisplay"/>
+        <ComboBox x:Name="DropDownDisplayLines" HorizontalAlignment="Left" Margin="1419,258,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadDisplayLines" SelectionChanged="OnChangeDisplayLines"/>
+        <ComboBox x:Name="DropDownSlice0" HorizontalAlignment="Left" Margin="1419,314,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadSlice0" SelectionChanged="OnChangeSlice0"/>
+        <ComboBox x:Name="DropDownSlice1" HorizontalAlignment="Left" Margin="1419,374,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadSlice1" SelectionChanged="OnChangeSlice1"/>
     </Grid>
 </Window>

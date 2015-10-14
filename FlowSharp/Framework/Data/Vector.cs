@@ -298,6 +298,15 @@ namespace FlowSharp
                     min = _data[dim];
             return min;
         }
+
+        public override string ToString()
+        {
+            string res = "[" + _data[0];
+            for (int dim = 1; dim < Length; ++dim)
+                res += ", " + _data[dim];
+            res += ']';
+            return res;
+        }
     }
 
     class Vec2 : Vector
@@ -367,7 +376,7 @@ namespace FlowSharp
             Vec3 ret = new Vec3();
             ret[0] = a.Y * b.Z - a.Z * b.Y;
             ret[1] = a.Z * b.X - a.X * b.Z;
-            ret[2] = a.X * b.Y - a.Y - b.X;
+            ret[2] = a.X * b.Y - a.Y * b.X;
             return ret;
         }
 

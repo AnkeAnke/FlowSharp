@@ -78,12 +78,18 @@ namespace FlowSharp
             return new VectorField(slices);
         }
 
-        private static float alphaStable = 100;
+        private static float alphaStable = 10;
         public static Vector StableFFF(Vector v, SquareMatrix J)
         {
             //return J[0];
             Debug.Assert(v.Length == 3 && J.Length == 3);
+            Vector x = J.Row(0).AsVec3();
+            x = J.Row(1).AsVec3();
             Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
+                     /*new Vec3(new SquareMatrix(new Vec2[] { J[1].ToVec2(), J[2].ToVec2() }).Determinant(),
+                     new SquareMatrix(new Vec2[] { J[2].ToVec2(), J[0].ToVec2() }).Determinant(),
+                     new SquareMatrix(new Vec2[] { J[0].ToVec2(), J[1].ToVec2() }).Determinant());*/
+                     //Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
             Vec3 fNorm = new Vec3(f);
             fNorm.Normalize();
 
@@ -110,7 +116,7 @@ namespace FlowSharp
 
             // Compute attracting vector field.
             Vec3 d = new Vec3();
-            SquareMatrix dMat = new SquareMatrix(new Vector[] { v.ToVec2(), J[0].ToVec2() });
+            SquareMatrix dMat = new SquareMatrix(new Vector[] { -v.ToVec2(), J[0].ToVec2() });
             d[0] = dMat.Determinant();
             dMat[1] = J[1].ToVec2();
             d[1] = dMat.Determinant();
@@ -119,7 +125,7 @@ namespace FlowSharp
 
             // Add up fields.
             Vec3 g = Vec3.Cross(fNorm, d);
-            return -f - alphaStable * g;
+            return -f + alphaStable * g;
         }
     }
     class ScalarFieldUnsteady : Field
@@ -214,7 +220,9 @@ namespace FlowSharp
 
         public override Vector SampleDerivative(Vector position, bool worldSpace = true)
         {
-            float time = position[position.Length - 1];
+            float time = position.T;
+
+            // Get spacial sample position in grid space.
             Vector samplePos = position;
             if (worldSpace)
             {
@@ -225,8 +233,9 @@ namespace FlowSharp
             Vector slicePos = new Vector(samplePos.Length - 1);
             Array.Copy(samplePos.Data, slicePos.Data, slicePos.Length);
 
+            // Sample data in current and next time slice.
             Vector valueT = _slices[(int)time].SampleDerivative(slicePos, false);
-            Vector valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices)].SampleDerivative(slicePos, false);
+            Vector valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices - 1)].SampleDerivative(slicePos, false);
             float t = time - (int)time;
             Vector spaceGrad = (1 - t) * valueT + t * valueTNext;
 

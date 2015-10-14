@@ -29,7 +29,7 @@ namespace FlowSharp
         /// <summary>
         /// Scaled y axis.
         /// </summary>
-        public Vector3 ZAxis { get { return Vector3.Cross(YAxis, XAxis); } }
+        public Vector3 ZAxis; // { get { return Vector3.Cross(YAxis, XAxis); } }
 
         public float Scale { get { return Math.Min(XAxis.Length(), YAxis.Length()); } }
 
@@ -40,6 +40,16 @@ namespace FlowSharp
             Origin = origin;
             XAxis = xAxis * scale;
             YAxis = yAxis * scale;
+            ZAxis = Vector3.Cross(YAxis, XAxis);
+            PointSize = pointSize;
+        }
+
+        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, Vector3 zAxis, float scale, float pointSize = 0.1f)
+        {
+            Origin = origin;
+            XAxis = xAxis * scale;
+            YAxis = yAxis * scale;
+            ZAxis = zAxis * scale;
             PointSize = pointSize;
         }
     }

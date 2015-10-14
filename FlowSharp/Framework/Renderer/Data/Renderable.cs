@@ -53,6 +53,7 @@ namespace FlowSharp
         /// </summary>
         protected PrimitiveTopology _topology = PrimitiveTopology.TriangleList;
 
+        public bool Active = true;
         /// <summary>
         /// Draw the object (in immediate mode).
         /// </summary>

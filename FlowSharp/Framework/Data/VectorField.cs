@@ -108,6 +108,7 @@ namespace FlowSharp
             //TODO: Make nD
             //for (int y = 0; y < Size[1]; ++y)
             //    for (int x = 0; x < Size[0]; ++x)
+            bool first = true;
             GridIndex indexIterator = new GridIndex(field.Size);
             foreach (GridIndex index in indexIterator)
             {
@@ -122,7 +123,14 @@ namespace FlowSharp
                 }
 
                 SquareMatrix J = field.SampleDerivative(index);
+                if (first)
+                {
+                    first = false;
+                    Console.WriteLine("V: " + v);
+                    Console.WriteLine("J:\n" + J[0] + '\n' + J[1] + '\n' + J[2]);
+                }
                 Vector funcValue = function(v, J);
+
                 for (int dim = 0; dim < Scalars.Length; ++dim)
                 {
                     Scalars[dim][(int)index] = funcValue[dim];
@@ -167,6 +175,10 @@ namespace FlowSharp
 
             for (int dim = 0; dim < NumVectorDimensions; ++dim)
             {
+                // Just to be sure, check thst no value was overwritten.
+                int posCpy = samplePos[dim];
+
+                // See whether a step to the right/left is possible.
                 samplePos[dim]++;
                 bool rightValid = (samplePos[dim] < Size[dim]) && Scalars[0].Sample(samplePos) != InvalidValue;
                 samplePos[dim] -= 2;
@@ -210,12 +222,13 @@ namespace FlowSharp
                         jacobian[dim] = new Vector(0, NumVectorDimensions);
                     }
                 }
+                Debug.Assert(posCpy == samplePos[dim]);
             }
 
             return jacobian;
         }
 
-        public delegate Vector3 PositionToColor(Vector3 position);
+        public delegate Vector3 PositionToColor(VectorField field, bool worldPos, Vector3 position);
         public PointSet<Point> ColorCodeArbitrary(LineSet lines, PositionToColor func)
         {
             Point[] points;
@@ -225,7 +238,7 @@ namespace FlowSharp
             {
                 foreach(Vector3 pos in line.Positions)
                 {
-                    points[idx] = new Point() { Position = pos, Color = func(pos), Radius = lines.Thickness };
+                    points[idx] = new Point() { Position = pos, Color = func(this, lines.WorldPosition, pos), Radius = lines.Thickness };
                     ++idx;
                 }
             }
@@ -251,7 +264,7 @@ namespace FlowSharp
             protected float _stepSize = 0.5f;
             protected Sign _direction = Sign.POSITIVE;
             protected bool _normalizeField = true;
-            protected float _epsCriticalPoint = 0.001f;
+            protected float _epsCriticalPoint = 0.000001f;
 
 
             public virtual VectorField Field { get { return _field; } set { _field = value; } }
@@ -412,9 +425,9 @@ namespace FlowSharp
                 if (length < EpsCriticalPoint)
                     return false;
                 if (NormalizeField)
-                    scaled /= length;
+                    scaled = scaled / length;
                 if (!WorldPosition)
-                    scaled /= Field.Grid.Scale;
+                    scaled = scaled / Field.Grid.Scale;
                 scaled *= StepSize * (int)Direction;
                 return true;
             }

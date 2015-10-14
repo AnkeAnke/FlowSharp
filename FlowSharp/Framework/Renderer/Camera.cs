@@ -101,6 +101,9 @@ namespace FlowSharp
         /// </summary>
         public void Update(float passedTimeSinceLastFrame, Device device)
         {
+            KeyboardState state = keyboard.GetCurrentState();
+            if (state.IsPressed(Key.R))
+                ResetCamera();
             // Map mouse movement to angles.
             UpdateThetaPhiFromMouse(passedTimeSinceLastFrame);
 
@@ -115,21 +118,18 @@ namespace FlowSharp
                                         (float)(System.Math.Sin(phi) * System.Math.Sin(theta2)));
             Vector3 Right = Vector3.Cross(upVec, viewDirection);
 
+            // Update.
+            // Forward movement.
+            float forward = (state.IsPressed(Key.W) ? 1.0f : 0.0f) - (state.IsPressed(Key.S) ? 1.0f : 0.0f);
+            position += forward * forwardSpeed * viewDirection;
 
-            {
-                KeyboardState state = keyboard.GetCurrentState();
-                // Forward movement.
-                float forward = (state.IsPressed(Key.W) ? 1.0f : 0.0f) - (state.IsPressed(Key.S) ? 1.0f : 0.0f);
-                position += forward * forwardSpeed * viewDirection;
+            // Side movement.
+            float side = (state.IsPressed(Key.D) ? 1.0f : 0.0f) - (state.IsPressed(Key.A) ? 1.0f : 0.0f);
+            position += side * sideSpeed * Right;
 
-                // Side movement.
-                float side = (state.IsPressed(Key.D) ? 1.0f : 0.0f) - (state.IsPressed(Key.A) ? 1.0f : 0.0f);
-                position += side * sideSpeed * Right;
-
-                // Upward movement.
-                float up = state.IsPressed(Key.Space) ? 1.0f : 0.0f;
-                position += up * upSpeed * upVec;
-            }
+            // Upward movement.
+            float up = state.IsPressed(Key.Space) ? 1.0f : 0.0f;
+            position += up * upSpeed * upVec;
 
 
             // Compute view matrix.
@@ -165,7 +165,16 @@ namespace FlowSharp
             lastMouseY = Cursor.Position.Y;
         }
 
-
+        protected void ResetCamera()
+        {
+            phi = -Math.PI / 2;
+            theta = -Math.PI / 2;
+            lastMouseX = 0;
+            lastMouseY = 0;
+            
+            viewDirection = new Vector3(0, 0, 1);
+            position = new Vector3(0, 0, -20);
+        }
 
 
 
