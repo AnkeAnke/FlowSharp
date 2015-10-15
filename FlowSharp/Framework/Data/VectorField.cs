@@ -133,6 +133,7 @@ namespace FlowSharp
 
                 for (int dim = 0; dim < Scalars.Length; ++dim)
                 {
+                    var vec = Scalars[dim];
                     Scalars[dim][(int)index] = funcValue[dim];
                 }
             }
@@ -145,7 +146,7 @@ namespace FlowSharp
 
             for (int dim = 0; dim < NumVectorDimensions; ++dim)
             {
-                float stepPos = Math.Min(Size[dim], position[dim] + 0.5f) - position[dim];
+                float stepPos = Math.Min(Size[dim]-1, position[dim] + 0.5f) - position[dim];
                 float stepMin = Math.Max(0, position[dim] - 0.5f) - position[dim];
                 Vector samplePos = new Vector(position);
                 samplePos[dim] += stepPos;

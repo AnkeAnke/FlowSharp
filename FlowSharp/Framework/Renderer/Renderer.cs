@@ -71,7 +71,7 @@ namespace FlowSharp
                 Renderable.Initialize(Device);
                 FieldPlane.Initialize();
                 ColorMapping.Initialize(Device);
-                TheCloud.Initialize();
+                PointCloud.Initialize();
                 LineBall.Initialize();
 
                 Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
@@ -129,6 +129,11 @@ namespace FlowSharp
         public void AddRenderables(List<Renderable> objs)
         {
             _renderables = _renderables.Concat(objs).ToList();
+        }
+
+        public void Remove(Renderable obj)
+        {
+            _renderables.Remove(obj);
         }
     }
 }

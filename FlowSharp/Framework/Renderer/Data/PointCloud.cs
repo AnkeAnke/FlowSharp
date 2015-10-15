@@ -15,28 +15,7 @@ using System.IO;
 
 namespace FlowSharp
 {
-    abstract class TheCloud : Renderable
-    {
-        protected static Effect _cloudEffect;
-
-        /// <summary>
-        /// Initialize the static components.
-        /// </summary>
-        /// <param name="device"></param>
-        public static void Initialize()
-        {
-            try
-            {
-                var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Data/DataEffects/Cloud.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
-                _cloudEffect = new Effect(_device, bytecode);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-        }
-    }
-    class PointCloud<P> : TheCloud where P : Point
+    class PointCloud : Renderable
     {
         /// <summary>
         /// Set of points in 3D space.
@@ -46,7 +25,7 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public PointCloud(Plane plane, PointSet<P> points)
+        public PointCloud(Plane plane, PointSet<Point> points)
         {
             this._vertexSizeBytes = 32;
             this._numVertices = points.Points.Length;
@@ -71,7 +50,7 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Plane plane, PointSet<P> points)
+        protected void GenerateGeometry(Plane plane, PointSet<Point> points)
         {
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
@@ -108,22 +87,26 @@ namespace FlowSharp
         {
         }
 
-
-
-        ///// <summary>
-        ///// The effects that will be used by the points.
-        ///// </summary>
-        //protected static Effect _cloudEffect;
+        /// <summary>
+        /// Initialize the static components.
+        /// </summary>
+        /// <param name="device"></param>
+        public static void Initialize()
+        {
+            try
+            {
+                var bytecode = ShaderBytecode.CompileFromFile("Framework/Renderer/Data/DataEffects/Cloud.fx", "fx_5_0", ShaderFlags.None, EffectFlags.None);
+                _cloudEffect = new Effect(_device, bytecode);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
 
         /// <summary>
-        /// Device for creating resources.
+        /// The effects that will be used by the points.
         /// </summary>
-        //protected static Device _device;
-    }
-
-    class PointCloud : PointCloud<Point>
-    {
-        public PointCloud(Plane plane, PointSet<Point> points) : base(plane, points)
-        {}
+        protected static Effect _cloudEffect;
     }
 }

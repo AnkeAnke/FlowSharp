@@ -202,7 +202,7 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2D(VectorField field, int numDivisions = 5, float? pointSize = null, float epsCriticalPoint = 0.000001f)
+        public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2D(VectorField field, int numDivisions = 5, float? pointSize = null, float epsCriticalPoint = 0.00000001f)
         {
             // Only for rectlinear grids.
             RectlinearGrid grid = field.Grid as RectlinearGrid;
@@ -301,12 +301,6 @@ namespace FlowSharp
         private static void SubdivideCell(VectorField field, Vector origin, int level, int maxLevel, List<Vector> cpList)
         {
             float cellLength = 1.0f / (1 << level);
-            float lengthVecCenter = field.Sample(origin + new Vector(cellLength * 0.5f, origin.Length), false).LengthEuclidean();
-            if (lengthVecCenter < _epsCriticalPoint)
-            {
-                cpList.Add(origin + new Vector(cellLength * 0.5f, origin.Length));
-                return;
-            }
             // For each dimension, check that a positive and negative value are present.
             for (int dim = 0; dim < field.Scalars.Length; ++dim)
             {
@@ -340,6 +334,12 @@ namespace FlowSharp
                 cpList.Add(origin + new Vector(cellLength * 0.5f, origin.Length));
                 return;
             }
+            //float lengthVecCenter = field.Sample(origin + new Vector(cellLength * 0.5f, origin.Length), false).LengthEuclidean();
+            //if (lengthVecCenter < _epsCriticalPoint)
+            //{
+            //    cpList.Add(origin + new Vector(cellLength * 0.5f, origin.Length));
+            //    return;
+            //}
             // Subdivide into 2^dim parts.
             for (int part = 0; part < (field.Grid as RectlinearGrid).NumAdjacentPoints(); ++part)
             {
@@ -393,7 +393,7 @@ namespace FlowSharp
             return cpSet;
         }
 
-        public static PointSet<Point> SomePoints2D(VectorField field, int numPoints)
+        public static PointSet<Point> SomePoints2D(VectorField field, int numPoints, float pointSize = 1)
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
@@ -418,7 +418,7 @@ namespace FlowSharp
                 {
                     Position = (Vector3)pos,
                     Color = new SlimDX.Vector3((float)index / numPoints, 0.0f, 0.3f), // Debug color. 
-                    Radius = 1.0f
+                    Radius = pointSize
                 };
                 if (attachTimeZ)
                     cp.Position.Z = (float)field.TimeSlice;

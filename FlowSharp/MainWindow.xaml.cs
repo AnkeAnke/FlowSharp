@@ -23,7 +23,7 @@ namespace FlowSharp
         private RedSea.Display _display;
         private RedSea.DisplayLines _displayLines;
         private int _slice0, _slice1;
-        private FieldPlane _slice1Plane;
+        //private FieldPlane _slice1Plane;
 
         public MainWindow()
         {
@@ -98,7 +98,7 @@ namespace FlowSharp
             _slice1 = (int)(comboBox.SelectedItem as int?);
             //            _slice1Plane = new...
             if (Renderer.Singleton.Initialized)
-                RedSea.Singleton.SetPreset(_slice1);
+                RedSea.Singleton.SetPreset(_display, _slice1);
         }
 
         private void UpdateRenderer()

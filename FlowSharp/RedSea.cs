@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using PointSet = FlowSharp.PointSet<FlowSharp.Point>;
 
 namespace FlowSharp
 {
@@ -69,7 +70,7 @@ namespace FlowSharp
 
         // Depending on display and slice0 setting.
         protected DisplaySet[] _displayPresets;
-        protected Renderable _slice1;
+        protected Renderable[] _slice1;
         protected Display _preset;
 
         public void SetPresets(DisplaySet[] presets)
@@ -84,20 +85,25 @@ namespace FlowSharp
         {
             Debug.Assert(Renderer.Singleton.Initialized);
             Renderer.Singleton.ClearRenderables();
+            // Check if the renderables have been created yet.
             if (_displayPresets[(int)preset] != null)
             {
-                Renderer.Singleton.AddRenderables(_displayPresets[(int)preset].CreateRenderables(slice0, lineSetting).ToList());
-                if (_slice1 != null)
-                    Renderer.Singleton.AddRenderable(_slice1);
-                _preset = preset;
+                Renderer.Singleton.AddRenderables(_displayPresets[(int)preset].CreateRenderablesSelected(slice0, lineSetting).ToList());
             }
+
+            if (_slice1 != null)
+                Renderer.Singleton.AddRenderables(_slice1.ToList());
+            _preset = preset;
         }
-        public void SetPreset(int slice1)
+        public void SetPreset(Display preset, int slice1)
         {
-            if(_slice1 != null)
-                _slice1.Active = false;
-            _slice1 = new FieldPlane(_displayPresets[(int)_preset].Plane, _displayPresets[(int)_preset].GetField(slice1), FieldPlane.RenderEffect.LIC);
-            Renderer.Singleton.AddRenderable(_slice1);
+            if (_slice1 != null)
+                foreach (Renderable obj in _slice1)
+                    Renderer.Singleton.Remove(obj);
+            if (_displayPresets[(int)preset] == null)
+                return;
+            _slice1 = _displayPresets[(int)preset].CreateRenderablesReference(slice1);
+            Renderer.Singleton.AddRenderables(_slice1.ToList());
         }
     }
 
@@ -106,13 +112,21 @@ namespace FlowSharp
         public class FieldData
         {
             public VectorField Field;
-            public CriticalPointSet2D[] Points;
+            /// <summary>
+            /// Those points will only be displayed when all properties are shown.
+            /// </summary>
+            public PointSet[] SelectedPoints;
+            /// <summary>
+            /// These points will be shown when the instance is displayed, but not selected.
+            /// </summary>
+            public PointSet[] ReferencePoints;
             public LineSet[] Lines;
             
-            public FieldData(VectorField field, CriticalPointSet2D[] points, LineSet[] lines)
+            public FieldData(VectorField field, PointSet<Point>[] selectedPoints, PointSet[] staticPoints, LineSet[] lines)
             {
                 Field = field;
-                Points = points;
+                SelectedPoints = selectedPoints;
+                ReferencePoints = staticPoints;
                 Lines = lines;
             }
 
@@ -121,7 +135,7 @@ namespace FlowSharp
                 Field = field;
             }
         }
-        private Renderable[] _staticRenderables; // Containing field plane etc.
+        private Renderable[][] _staticRenderables; // Containing field plane etc.
         private FieldData[] _rawData;
         public Plane Plane;
         public VectorField Field;
@@ -131,19 +145,31 @@ namespace FlowSharp
         public DisplaySet(FieldData[] data, Plane plane, VectorField field)
         {
             _rawData = data;
-            _staticRenderables = new Renderable[0];
+            _staticRenderables = new Renderable[data.Length][];
             Plane = plane;
             Field = field;
         }
-
-        public Renderable[] CreateRenderables(int field, RedSea.DisplayLines lineSetting, FieldPlane.RenderEffect effect = FieldPlane.RenderEffect.LIC)
+        protected void GenerateStaticRenderables()
         {
-            FieldData data = _rawData[field];
-            Renderable[] allObjects = new Renderable[1 + _staticRenderables.Length + data.Lines.Length + data.Points.Length];
+            if (_staticRenderables[0] != null)
+                return;
 
-            for(int p = 0; p < data.Points.Length; ++p)
+            for (int f = 0; f < _staticRenderables.Length; f++)
             {
-                allObjects[p] = new PointCloud<CriticalPoint2D>(Plane, data.Points[p]);
+                _staticRenderables[f] = new Renderable[1];
+                _staticRenderables[f][0] = new FieldPlane(Plane, _rawData[f].Field, FieldPlane.RenderEffect.LIC);
+            }
+        }
+        public Renderable[] CreateRenderablesSelected(int field, RedSea.DisplayLines lineSetting, FieldPlane.RenderEffect effect = FieldPlane.RenderEffect.LIC)
+        {
+            GenerateStaticRenderables();
+
+            FieldData data = _rawData[field];
+            Renderable[] allObjects = new Renderable[_staticRenderables[field].Length + data.Lines.Length + data.SelectedPoints.Length];
+
+            for(int p = 0; p < data.SelectedPoints.Length; ++p)
+            {
+                allObjects[p] = new PointCloud(Plane, data.SelectedPoints[p]);
             }
 
             // Depending on Settings, create a different renderable.
@@ -159,16 +185,38 @@ namespace FlowSharp
                 {
                     line = new LineBall(Plane, data.Lines[l]);
                 }
-                allObjects[data.Points.Length + l] = line;
+                allObjects[data.SelectedPoints.Length + l] = line;
             }
 
             // Simply copy static renderables.
-            Array.Copy(_staticRenderables, 0, allObjects, data.Points.Length + data.Lines.Length, _staticRenderables.Length);
+            Array.Copy(_staticRenderables[field], 0, allObjects, data.SelectedPoints.Length + data.Lines.Length, _staticRenderables[field].Length);
 
-            allObjects[allObjects.Length - 1] = new FieldPlane(Plane, data.Field, effect);
+            //allObjects[allObjects.Length - 1] = new FieldPlane(Plane, data.Field, effect);
 
             return allObjects;
 
+        }
+
+        public Renderable[] CreateRenderablesReference(int field, FieldPlane.RenderEffect effect = FieldPlane.RenderEffect.LIC)
+        {
+            GenerateStaticRenderables();
+            // Set the Point size to be smaller.
+            float pointSize = Plane.PointSize;
+            Plane.PointSize *= 0.5f;
+
+            FieldData data = _rawData[field];
+            Renderable[] allObjects = new Renderable[_staticRenderables[field].Length + data.ReferencePoints.Length];
+
+            for (int p = 0; p < data.ReferencePoints.Length; ++p)
+            {
+                allObjects[p] = new PointCloud(Plane, data.ReferencePoints[p]);
+            }
+
+            // Simply copy static renderables.
+            Array.Copy(_staticRenderables[field], 0, allObjects, data.ReferencePoints.Length, _staticRenderables[field].Length);
+            Plane.PointSize = pointSize;
+
+            return allObjects;
         }
     }
 }

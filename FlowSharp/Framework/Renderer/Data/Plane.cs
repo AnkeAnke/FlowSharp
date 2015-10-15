@@ -33,7 +33,7 @@ namespace FlowSharp
 
         public float Scale { get { return Math.Min(XAxis.Length(), YAxis.Length()); } }
 
-        public float PointSize { get; protected set; }
+        public float PointSize { get; set; }
 
         public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, float pointSize = 0.1f)
         {
@@ -84,8 +84,8 @@ namespace FlowSharp
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
-            this._width  = fields[0].Size[0];
-            this._height = fields[0].Size[1];
+            this._width  = fields[0].Size[0]*100;
+            this._height = fields[0].Size[1]*100;
             this._invalid = fields.InvalidValue ?? float.MaxValue;
             
             // Setting up the vertex buffer. 

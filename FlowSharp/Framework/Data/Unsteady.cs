@@ -78,7 +78,7 @@ namespace FlowSharp
             return new VectorField(slices);
         }
 
-        private static float alphaStable = 10;
+        private static float alphaStable = 0;
         public static Vector StableFFF(Vector v, SquareMatrix J)
         {
             //return J[0];
@@ -86,10 +86,6 @@ namespace FlowSharp
             Vector x = J.Row(0).AsVec3();
             x = J.Row(1).AsVec3();
             Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
-                     /*new Vec3(new SquareMatrix(new Vec2[] { J[1].ToVec2(), J[2].ToVec2() }).Determinant(),
-                     new SquareMatrix(new Vec2[] { J[2].ToVec2(), J[0].ToVec2() }).Determinant(),
-                     new SquareMatrix(new Vec2[] { J[0].ToVec2(), J[1].ToVec2() }).Determinant());*/
-                     //Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
             Vec3 fNorm = new Vec3(f);
             fNorm.Normalize();
 
@@ -104,6 +100,7 @@ namespace FlowSharp
 
             // Add up fields.
             Vec3 g = Vec3.Cross(fNorm, d);
+            return J[0].AsVec3();
             return f + alphaStable * g;
         }
 
@@ -213,7 +210,7 @@ namespace FlowSharp
             Array.Copy(samplePos.Data, slicePos.Data, slicePos.Length);
 
             float valueT = _slices[(int)time].Sample(slicePos, false);
-            float valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices)].Sample(slicePos, false);
+            float valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices-1)].Sample(slicePos, false);
             float t = time - (int)time;
             return (1 - t) * valueT + t * valueTNext;
         }

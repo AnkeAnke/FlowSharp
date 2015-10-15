@@ -237,6 +237,11 @@ namespace FlowSharp
 
             return worldPoint;
         }
+
+        public PointSet<Point> ToBasicSet()
+        {
+            return new PointSet<Point>(Points, this);
+        }
     }
 
     class CriticalPointSet2D : PointSet<CriticalPoint2D>

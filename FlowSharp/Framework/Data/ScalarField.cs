@@ -128,7 +128,7 @@ namespace FlowSharp
 
             for(int dim = 0; dim <gradient.Length; ++dim)
             {
-                float stepPos = Math.Min(Size[dim], center[dim] + 0.5f) - center[dim];
+                float stepPos = Math.Min(Size[dim] - 1, center[dim] + 0.5f) - center[dim];
                 float stepMin = center[dim] - Math.Max(0, center[dim] - 0.5f);
                 Vector samplePos = new Vector(center);
                 samplePos[dim] += stepPos;
@@ -141,6 +141,104 @@ namespace FlowSharp
             }
 
             return gradient;
+        }
+
+        /// <summary>
+        /// Get the derivative at a data point. Not checking for InvalidValue.
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <returns></returns>
+        public Vector SampleDerivative(Index pos)
+        {
+            Debug.Assert(NumDimensions == Size.Length);
+            Vector jacobian = new Vector(NumDimensions);
+
+            // For all dimensions, so please reset each time.
+            Index samplePos = new Index(pos);
+
+            for (int dim = 0; dim < NumDimensions; ++dim)
+            {
+                // Just to be sure, check thst no value was overwritten.
+                int posCpy = samplePos[dim];
+
+                // See whether a step to the right/left is possible.
+                samplePos[dim]++;
+                bool rightValid = (samplePos[dim] < Size[dim]) && Sample(samplePos) != InvalidValue;
+                samplePos[dim] -= 2;
+                bool leftValid = (samplePos[dim] >= 0) && Sample(samplePos) != InvalidValue;
+                samplePos[dim]++;
+
+                if (rightValid)
+                {
+                    if (leftValid)
+                    {
+                        // Regular case. Interpolate.
+                        samplePos[dim]++;
+                        jacobian[dim] = Sample(samplePos);
+                        samplePos[dim] -= 2;
+                        jacobian[dim] -= Sample(samplePos);
+                        jacobian[dim] *= 0.5f;
+                        samplePos[dim]++;
+                    }
+                    else
+                    {
+                        // Left border.
+                        samplePos[dim]++;
+                        jacobian[dim] = Sample(samplePos);
+                        samplePos[dim]--;
+                        jacobian[dim] -= Sample(samplePos);
+                    }
+                }
+                else
+                {
+                    if (leftValid)
+                    {
+                        // Right border.
+                        jacobian[dim] = Sample(samplePos);
+                        samplePos[dim]--;
+                        jacobian[dim] -= Sample(samplePos);
+                        samplePos[dim]++;
+                    }
+                    else
+                    {
+                        // Weird case. 
+                        jacobian[dim] = 0;
+                    }
+                }
+                Debug.Assert(posCpy == samplePos[dim]);
+            }
+
+            return jacobian;
+        }
+
+        /// <summary>
+        /// Function to compute a new field based on an old one, point wise.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public delegate float SGFunction(float v, Vector J);
+
+        public ScalarField(ScalarField field, SGFunction function)
+        {
+            _data = new float[field.Size.Product()];
+            Grid = field.Grid;
+
+            this.InvalidValue = field.InvalidValue;
+
+            GridIndex indexIterator = new GridIndex(field.Size);
+            foreach (GridIndex index in indexIterator)
+            {
+                //Vector pos = (Vector)(Index)index;
+                float s = field[(int)index];
+
+                if (s == InvalidValue)
+                {
+                    this[(int)index] = (float)InvalidValue;
+                }
+
+                Vector g = field.SampleDerivative(index);
+                this[(int)index] = function(s, g);
+            }
         }
 
         public delegate float AnalyticalField(Vector pos);

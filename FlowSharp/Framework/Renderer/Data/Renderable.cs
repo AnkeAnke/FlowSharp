@@ -54,6 +54,22 @@ namespace FlowSharp
         protected PrimitiveTopology _topology = PrimitiveTopology.TriangleList;
 
         public bool Active = true;
+
+        private int _ID;
+
+        protected Renderable()
+        {
+            _ID = GlobalIndex++;
+        }
+
+        public override bool Equals(object objRaw)
+        {
+            Renderable obj = objRaw as Renderable;
+            if (obj == null)
+                return false;
+            return obj._ID == _ID;
+        }
+
         /// <summary>
         /// Draw the object (in immediate mode).
         /// </summary>
@@ -78,6 +94,8 @@ namespace FlowSharp
         }
 
         public abstract void Update(TimeSpan totalTime);
+
+        private static int GlobalIndex = 0;
     }
 
     abstract class ColormapRenderable : Renderable
@@ -99,6 +117,18 @@ namespace FlowSharp
         {
             SetColormapResources();
             base.Render(device);
+        }
+    }
+
+    class DummyRenderable : Renderable
+    {
+        public DummyRenderable()
+        {
+            Active = false;
+        }
+
+        public override void Update(TimeSpan totalTime)
+        {
         }
     }
 }
