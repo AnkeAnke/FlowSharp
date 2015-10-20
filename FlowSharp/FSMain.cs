@@ -105,18 +105,10 @@ namespace FlowSharp
                 Console.WriteLine("Completed processing step " + time + '.');
             }
 
-            Plane redSea = new Plane(new Vector3(-10,-8, -5), Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
+            Plane redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
             mapper = new CriticalPointTracking(cps, velocity, redSea);
 
             Console.WriteLine("Computed all data necessary.");
-        }
-
-        private static Vector EigenField0(Vector v, SquareMatrix J)
-        {
-            SquareMatrix eigenvectors;
-            SquareMatrix tmp;
-            J.Eigenanalysis(out tmp, out eigenvectors);
-            return eigenvectors[tmp[0][0] > tmp[1][0] ? 0 : 1].ToVec3();
         }
 
         public static void CreateRenderables()

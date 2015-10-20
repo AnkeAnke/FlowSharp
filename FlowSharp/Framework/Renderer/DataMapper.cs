@@ -114,7 +114,7 @@ namespace FlowSharp
                     _slice0.Add(new FieldPlane(Plane, Velocity.GetTimeSlice(_currentSetting.SlicePositionMain), FieldPlane.RenderEffect.LIC));
 
                     // ~~~~~~~~ Critical Point Mapping ~~~~~~~~ \\
-                    _slice0.Add(new PointCloud(Plane, CP[_currentSetting.SlicePositionMain].ToBasicSet()));
+                    _slice0.Add(new PointCloud(Plane, CP[_currentSetting.SlicePositionMain].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet()));
                 }
 
                 // Re-compute the feature flow field. Costly operation.
