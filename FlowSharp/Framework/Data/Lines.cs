@@ -23,16 +23,38 @@ namespace FlowSharp
             protected set
             {
                 _lines = value;
-                NumPoints = 0;
-                foreach (Line line in _lines)
-                {
-                    NumPoints += Math.Max(line.Positions.Length, 2);
-                    NumExistentPoints += line.Positions.Length;
-                }
+                //NumPoints = 0;
+                //foreach (Line line in _lines)
+                //{
+                //    NumPoints += Math.Max(line.Positions.Length, 2);
+                //    NumExistentPoints += line.Positions.Length;
+                //}
             }
         }
-        public int NumPoints { get; protected set; }
-        public int NumExistentPoints { get; protected set; }
+        public int NumPoints
+        {
+            get
+            {
+                int sum = 0;
+                foreach (Line line in _lines)
+                {
+                    sum += Math.Max(line.Positions.Length, 1);
+                }
+                return sum;
+            }
+        }
+        public int NumExistentPoints
+        {
+            get
+            {
+                int sum = 0;
+                foreach (Line line in _lines)
+                {
+                    sum += line.Positions.Length;
+                }
+                return sum;
+            }
+        }
         public virtual Vector3 Color { get; set; } = SlimDX.Vector3.UnitY;
         public virtual float Thickness { get; set; } = 0.1f;
 

@@ -104,15 +104,9 @@ namespace FlowSharp
             }
             this.InvalidValue = field.InvalidValue;
 
-            // Let's assume the field is always 2D... 
-            //TODO: Make nD
-            //for (int y = 0; y < Size[1]; ++y)
-            //    for (int x = 0; x < Size[0]; ++x)
-            bool first = true;
             GridIndex indexIterator = new GridIndex(field.Size);
             foreach (GridIndex index in indexIterator)
             {
-                //Vector pos = (Vector)(Index)index;
                 Vector v = field.Sample((int)index);
 
                 if (v[0] == InvalidValue)
@@ -123,12 +117,6 @@ namespace FlowSharp
                 }
 
                 SquareMatrix J = field.SampleDerivative(index);
-                if (first)
-                {
-                    first = false;
-                    Console.WriteLine("V: " + v);
-                    Console.WriteLine("J:\n" + J[0] + '\n' + J[1] + '\n' + J[2]);
-                }
                 Vector funcValue = function(v, J);
 
                 for (int dim = 0; dim < Scalars.Length; ++dim)
@@ -229,6 +217,31 @@ namespace FlowSharp
             return jacobian;
         }
 
+        public virtual VectorField GetSlice(int posInLastDimension)
+        {
+            ScalarField[] slices = new ScalarField[this.NumVectorDimensions];
+
+            // Copy the grid - one dimension smaller!
+            RectlinearGrid grid = Grid as RectlinearGrid;
+            Index newSize = new Index(Size.Length - 1);
+            Vector newOrigin = new Vector(Size.Length - 1);
+            Vector newCell =   new Vector(Size.Length - 1);
+            Array.Copy(Size.Data, newSize.Data, newSize.Length);
+            Array.Copy(grid.Origin.Data, newOrigin.Data, newSize.Length);
+            Array.Copy(grid.CellSize.Data, newCell.Data, newSize.Length);
+
+            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell);
+            for(int i = 0; i < slices.Length; ++i)
+            {
+
+                slices[i] = new ScalarField(sliceGrid);
+                Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
+                slices[i].TimeSlice = posInLastDimension * grid.CellSize.T + grid.Origin.T;
+            }
+            sliceGrid.TimeOrigin = posInLastDimension * grid.CellSize.T + grid.Origin.T;
+            return new VectorField(slices);
+        }
+
         public delegate Vector3 PositionToColor(VectorField field, bool worldPos, Vector3 position);
         public PointSet<Point> ColorCodeArbitrary(LineSet lines, PositionToColor func)
         {
@@ -315,7 +328,9 @@ namespace FlowSharp
                     if (StepBorder(point, out next))
                         line.Points.Add((Vector3)next);
                 }
-
+                // Single points are confusing for everybody.
+                if (line.Points.Count < 2)
+                    line.Points.Clear();
                 return line;
             }
 
@@ -355,6 +370,23 @@ namespace FlowSharp
                 if (Field.Scalars[0].Sample(pos, WorldPosition) == Field.InvalidValue)
                     return Status.INVALID;
                 return Status.OK;
+            }
+
+            public enum Type
+            {
+                EULER,
+                RUNGE_KUTTA_4
+            }
+
+            public static Integrator CreateIntegrator(VectorField field, Type type)
+            {
+                switch(type)
+                {
+                    case Type.RUNGE_KUTTA_4:
+                        return new IntegratorRK4(field);
+                    default:
+                        return new IntegratorEuler(field);
+                }
             }
         }
 

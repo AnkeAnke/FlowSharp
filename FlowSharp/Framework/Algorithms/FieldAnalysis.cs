@@ -238,12 +238,6 @@ namespace FlowSharp
                 {
                     Radius = pointSize ?? 1
                 };
-
-                //points[index+cpList.Count] = new CriticalPoint2D(pos + (field.Grid.InGrid(((Vec3)pos).ToVec2() + new Vec2(2), false)? new Vector3(2f, 2f, 0) : Vector3.Zero), J)
-                //{
-                //    Radius = pointSize*0.5f ?? 0.5f
-                //};
-                //points[index + cpList.Count].Type = points[index].Type;
             }
 
             return new CriticalPointSet2D(points, new Vector3((Vector2)grid.CellSize, 1.0f), (Vector3)grid.Origin);
@@ -405,7 +399,7 @@ namespace FlowSharp
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int index = 0; index < numPoints; ++index)
             {
-                Vector pos = new Vector(0, field.NumVectorDimensions);
+                Vector pos = new Vector(0, field.Size.Length);
                 pos[0] = (float)rnd.NextDouble() * (field.Size[0]-1);
                 pos[1] = (float)rnd.NextDouble() * (field.Size[1]-1);
                 float data = field.Scalars[0].Sample(pos, false);
@@ -470,5 +464,53 @@ namespace FlowSharp
             return cpSet;
         }
 
+        public static float AlphaStableFFF = 20;
+        public static Vector StableFFF(Vector v, SquareMatrix J)
+        {
+            //return J[0];
+            Debug.Assert(v.Length == 3 && J.Length == 3);
+            Vector x = J.Row(0).AsVec3();
+            x = J.Row(1).AsVec3();
+            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
+            //f *= f.T > 0 ? 1 : -1;
+            Vec3 fNorm = new Vec3(f);
+            fNorm.Normalize();
+
+            // Compute attracting vector field.
+            Vec3 d = new Vec3();
+            //SquareMatrix dMat = new SquareMatrix(new Vector[] { v.ToVec2(), J[0].ToVec2() });
+            //d[0] = dMat.Determinant();
+            //dMat[1] = J[1].ToVec2();
+            //d[1] = dMat.Determinant();
+            //dMat[1] = J[2].ToVec2();
+            //d[2] = dMat.Determinant();
+            // d = (u · ∇v − v · ∇u)
+            d = (v[0] * J.Row(1) - v[1] * J.Row(0)).AsVec3();
+            // Add up fields.
+            Vec3 g = Vec3.Cross(fNorm, d);
+            //return J[0].AsVec3();
+            return f + AlphaStableFFF * g;
+        }
+
+        public static Vector StableFFFNegative(Vector v, SquareMatrix J)
+        {
+            Debug.Assert(v.Length == 3 && J.Length == 3);
+            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
+            Vec3 fNorm = new Vec3(f);
+            fNorm.Normalize();
+
+            // Compute attracting vector field.
+            Vec3 d = new Vec3();
+            SquareMatrix dMat = new SquareMatrix(new Vector[] { v.ToVec2(), J[0].ToVec2() });
+            d[0] = dMat.Determinant();
+            dMat[1] = J[1].ToVec2();
+            d[1] = dMat.Determinant();
+            dMat[1] = J[2].ToVec2();
+            d[2] = dMat.Determinant();
+
+            // Add up fields.
+            Vec3 g = Vec3.Cross(fNorm, d);
+            return -f + AlphaStableFFF * g;
+        }
     }
 }

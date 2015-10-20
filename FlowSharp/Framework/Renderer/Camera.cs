@@ -33,6 +33,7 @@ namespace FlowSharp
             get { return _globals.Projection; }
             set { _globals.Projection = value; _changed = true; }
         }
+        public bool Active = true;
 
         public Camera(Device device, float aspectRatio)
         {
@@ -160,7 +161,12 @@ namespace FlowSharp
                 phi += (stateKeyboard.IsPressed(Key.LeftArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
             }
 
+            lastMouseX = Cursor.Position.X;
+            lastMouseY = Cursor.Position.Y;
+        }
 
+        public void UpdateInactive()
+        {
             lastMouseX = Cursor.Position.X;
             lastMouseY = Cursor.Position.Y;
         }

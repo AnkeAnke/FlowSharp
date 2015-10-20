@@ -158,6 +158,11 @@ namespace FlowSharp
             return neg;
         }
 
+        public static float Dot(Vector a, Vector b)
+        {
+            return (a * b).Sum();
+        }
+
         /// <summary>
         /// Floor the vector.
         /// </summary>
@@ -230,6 +235,19 @@ namespace FlowSharp
             float prod = 1;
             foreach (float expansion in _data)
                 prod *= expansion;
+
+            return prod;
+        }
+
+        /// <summary>
+        /// Sum of all components.
+        /// </summary>
+        /// <returns></returns>
+        public float Sum()
+        {
+            float prod = 0;
+            foreach (float expansion in _data)
+                prod += expansion;
 
             return prod;
         }
@@ -388,6 +406,16 @@ namespace FlowSharp
         public static Vec3 operator -(Vec3 a)
         {
             return new Vec3(-a.X, -a.Y, -a.Z);
+        }
+
+        public static Vec3 operator *(Vec3 a, float b)
+        {
+            return new Vec3(a.X * b, a.Y * b, a.Z * b);
+        }
+
+        public static Vec3 operator *(float b, Vec3 a)
+        {
+            return a * b;
         }
     }
 }

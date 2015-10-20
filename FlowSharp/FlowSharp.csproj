@@ -67,6 +67,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Framework\Renderer\DataMapper.cs" />
     <Compile Include="Framework\Algorithms\FieldAnalysis.cs" />
     <Compile Include="Framework\Data\Lines.cs" />
     <Compile Include="Framework\Data\Matrix.cs" />

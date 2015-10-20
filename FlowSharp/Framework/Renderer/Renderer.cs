@@ -110,7 +110,10 @@ namespace FlowSharp
             {
                 System.Threading.Thread.Sleep(0);
             }
-            Camera.Update((float)timeSpan.TotalMilliseconds, Device);
+            if (Camera.Active)
+                Camera.Update((float)timeSpan.TotalMilliseconds, Device);
+            else
+                Camera.UpdateInactive();
 
             foreach (Renderable obj in _renderables)
                 obj.Update(timeSpan);

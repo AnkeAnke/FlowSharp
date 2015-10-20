@@ -228,7 +228,6 @@ namespace FlowSharp
             GridIndex indexIterator = new GridIndex(field.Size);
             foreach (GridIndex index in indexIterator)
             {
-                //Vector pos = (Vector)(Index)index;
                 float s = field[(int)index];
 
                 if (s == InvalidValue)

@@ -78,52 +78,7 @@ namespace FlowSharp
             return new VectorField(slices);
         }
 
-        private static float alphaStable = 0;
-        public static Vector StableFFF(Vector v, SquareMatrix J)
-        {
-            //return J[0];
-            Debug.Assert(v.Length == 3 && J.Length == 3);
-            Vector x = J.Row(0).AsVec3();
-            x = J.Row(1).AsVec3();
-            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
-            Vec3 fNorm = new Vec3(f);
-            fNorm.Normalize();
-
-            // Compute attracting vector field.
-            Vec3 d = new Vec3();
-            SquareMatrix dMat = new SquareMatrix(new Vector[] { v.ToVec2(), J[0].ToVec2() });
-            d[0] = dMat.Determinant();
-            dMat[1] = J[1].ToVec2();
-            d[1] = dMat.Determinant();
-            dMat[1] = J[2].ToVec2();
-            d[2] = dMat.Determinant();
-
-            // Add up fields.
-            Vec3 g = Vec3.Cross(fNorm, d);
-            return J[0].AsVec3();
-            return f + alphaStable * g;
-        }
-
-        public static Vector StableFFFNegative(Vector v, SquareMatrix J)
-        {
-            Debug.Assert(v.Length == 3 && J.Length == 3);
-            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
-            Vec3 fNorm = new Vec3(f);
-            fNorm.Normalize();
-
-            // Compute attracting vector field.
-            Vec3 d = new Vec3();
-            SquareMatrix dMat = new SquareMatrix(new Vector[] { -v.ToVec2(), J[0].ToVec2() });
-            d[0] = dMat.Determinant();
-            dMat[1] = J[1].ToVec2();
-            d[1] = dMat.Determinant();
-            dMat[1] = J[2].ToVec2();
-            d[2] = dMat.Determinant();
-
-            // Add up fields.
-            Vec3 g = Vec3.Cross(fNorm, d);
-            return -f + alphaStable * g;
-        }
+        public override VectorField GetSlice(int slice) { return (VectorField)GetTimeSlice(slice); }
     }
     class ScalarFieldUnsteady : Field
     {

@@ -84,8 +84,8 @@ namespace FlowSharp
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
-            this._width  = fields[0].Size[0]*100;
-            this._height = fields[0].Size[1]*100;
+            this._width  = fields[0].Size[0];
+            this._height = fields[0].Size[1];
             this._invalid = fields.InvalidValue ?? float.MaxValue;
             
             // Setting up the vertex buffer. 
@@ -93,8 +93,8 @@ namespace FlowSharp
 
 
             // Generating Textures from the fields.
-            _fields = new ShaderResourceView[fields.Scalars.Length];
-            for(int f = 0; f < fields.Scalars.Length; ++f)
+            _fields = new ShaderResourceView[effect == RenderEffect.LIC ? 2 : fields.Scalars.Length];
+            for(int f = 0; f < _fields.Length; ++f)
             {
                 Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);
                 _fields[f] = new ShaderResourceView(_device, tex);
@@ -112,7 +112,7 @@ namespace FlowSharp
             switch (effect)
             {
                 case RenderEffect.LIC:
-                    Debug.Assert(_fields.Length == 2);
+                    Debug.Assert(_fields.Length >= 2);
                     this._technique = _planeEffect.GetTechniqueByName("RenderLIC");
                     break;
                 case RenderEffect.CHECKERBOARD:
@@ -137,8 +137,8 @@ namespace FlowSharp
         protected void GenerateGeometry(Plane plane, RectlinearGrid grid, float timeOffset)
         {
             Vector Extent = grid.Extent;
-            Vector3 maximum = plane.Origin + plane.XAxis * Extent[0] + plane.YAxis * Extent[1];
-            Vector3 origin = plane.Origin + plane.ZAxis * timeOffset;
+            Vector3 maximum = plane.Origin + plane.XAxis * (Extent[0] + grid.Origin[0]) + plane.YAxis * (Extent[1] + grid.Origin[1]);
+            Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + plane.XAxis * grid.Origin[0] + plane.YAxis * grid.Origin[1];
 
             // Offset, becaue the grid data points shall be OUTSIDE of the grid cells.
             float uMin = 1.0f / (grid.Size[0] - 1) * 0.5f;

@@ -88,6 +88,26 @@ float4 PS(PS_IN input) : SV_Target
 	return float4(color * (1.1 - abs(rad.y/thickness) * 0.8), 1.0); // input.color;
 }
 
+// Simple version without geometry shader.
+struct PS_IN_SIMPLE
+{
+	float4 pos : SV_POSITION;
+};
+
+PS_IN_SIMPLE VS_Simple(VS_IN input)
+{
+	GS_IN output = (PS_IN_SIMPLE)0;
+
+	output.pos = mul(projection, mul(view, input.pos));
+
+	return output;
+}
+
+float4 PS_Simple(PS_IN_SIMPLE input) : SV_Target
+{
+	return float4(color, 1.0); // input.color;
+}
+
 BlendState SrcAlphaBlendingAdd
 {
 	BlendEnable[0] = TRUE;
@@ -107,6 +127,19 @@ technique10 Render
 		SetVertexShader(CompileShader(vs_4_0, VS()));
 		SetGeometryShader(CompileShader(gs_4_0, GS()));
 		SetPixelShader(CompileShader(ps_4_0, PS()));
+		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+
+
+}
+
+technique10 Simple
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_4_0, VS_Simple()));
+		SetGeometryShader(0);
+		SetPixelShader(CompileShader(ps_4_0, PS_Simple()));
 		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 }
