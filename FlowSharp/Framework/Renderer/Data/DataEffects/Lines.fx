@@ -50,7 +50,7 @@ void GS(line GS_IN ends[2], inout TriangleStream<PS_IN> triStream)
 
 	float2 lineUV = float2(0, length(pos1.xyz - pos0.xyz));
 	PS_IN output = (PS_IN)0;
-	float wOffset = 0.000003;
+	float wOffset = 0;// .000003;
 
 	output.len = lineUV.y;
 	output.pos = mul(projection, pos0 - diag); output.pos.w += wOffset;

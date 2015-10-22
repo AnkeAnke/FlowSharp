@@ -26,14 +26,15 @@ namespace FlowSharp
 
             Debug.Assert(indices.Length == weights.Length);
 
-            // Start with the first grid point.
-            Vector result = field.Sample(indices[0]);
-            result *= weights[0];
-
+            Vector result = new Vector(0, field.NumVectorDimensions);
             // Add the other weightes grid points.
-            for (int dim = 1; dim < indices.Length; ++dim)
+            for (int dim = 0; dim < indices.Length; ++dim)
             {
                 Vector add = field.Sample(indices[dim]);
+                if(add[0] == field.InvalidValue)
+                {
+                    return new Vector(field.InvalidValue??float.MaxValue, field.NumVectorDimensions);
+                }
                 result += add * weights[dim];
             }
 

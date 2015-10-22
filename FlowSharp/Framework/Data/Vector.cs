@@ -269,7 +269,9 @@ namespace FlowSharp
         public void Normalize()
         {
             float length = LengthEuclidean();
-            Debug.Assert(length != 0);
+            //Debug.Assert(length != 0);
+            if (length == 0)
+                return;
             for (int dim = 0; dim < Length; ++dim)
                 _data[dim] /= length;
         }

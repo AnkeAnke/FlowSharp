@@ -22,7 +22,8 @@ namespace FlowSharp
         //static LineSet[] allCPLines;
         //static PointSet<Point>[] allCPLinesPoints;
 
-        static DataMapper mapper;
+        static DataMapper mapperCP;
+        static DataMapper mapperPathCore;
         //static PointSet[] completeCPSets;
 
         public static void LoadData()
@@ -44,7 +45,7 @@ namespace FlowSharp
 
 
 
-            int numTimeSlices = 8;
+            int numTimeSlices = 10;
             Loader ncFile = new Loader("E:/Anke/Dev/Data/First/s1/Posterior_Diag.nc");
             ScalarField[] u = new ScalarField[numTimeSlices];
             Loader.SliceRange sliceU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
@@ -99,21 +100,23 @@ namespace FlowSharp
             CriticalPointSet2D[] cps = new CriticalPointSet2D[numTimeSlices];
             for (int time = 0; time < numTimeSlices; ++time)
             {
-                cps[time] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocity.GetTimeSlice(time), 8, 0.3f);
+                cps[time] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocity.GetTimeSlice(time), 5, 0.3f);
                 //cps.SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet();
 
                 Console.WriteLine("Completed processing step " + time + '.');
             }
 
             Plane redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
-            mapper = new CriticalPointTracking(cps, velocity, redSea);
+            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
+            mapperPathCore = new PathlineCoreTracking(velocity, redSea);
 
             Console.WriteLine("Computed all data necessary.");
         }
 
         public static void CreateRenderables()
         {
-            RedSea.Singleton.SetMapper(RedSea.Display.CP_TRACKING, mapper);
+            RedSea.Singleton.SetMapper(RedSea.Display.CP_TRACKING, mapperCP);
+            RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_CORES, mapperPathCore);
         }
     }
 }

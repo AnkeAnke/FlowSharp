@@ -20,6 +20,7 @@ namespace FlowSharp
         public VectorFieldUnsteady(ScalarFieldUnsteady[] fields) : base()
         {
             _scalars = fields;
+            SpreadInvalidValue();
         }
 
         /// <summary>

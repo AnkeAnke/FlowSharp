@@ -45,7 +45,8 @@ namespace FlowSharp
         public enum Display : int
         {
             NONE,
-            CP_TRACKING
+            CP_TRACKING,
+            PATHLINE_CORES
         }
 
         public enum DisplayLines : int

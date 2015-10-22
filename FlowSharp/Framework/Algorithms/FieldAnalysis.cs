@@ -213,8 +213,8 @@ namespace FlowSharp
             List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
 
             Vector halfCell = new Vector(0.5f, 2);
-            Vector cSize = (field.Grid as RectlinearGrid).CellSize;
-            Vector origin = (field.Grid as RectlinearGrid).Origin;
+            Vector cSize = grid.CellSize;
+            Vector origin = grid.Origin;
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0] - 1; ++x)
                 for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
@@ -225,12 +225,9 @@ namespace FlowSharp
             CriticalPoint2D[] points = new CriticalPoint2D[cpList.Count];
 
             // In a 2D slice, set 3rd value to time value.
-            bool attachTimeZ = grid.Size.Length == 2 && field.TimeSlice != 0;
             for (int index = 0; index < cpList.Count; ++index)
             {
                 Vector3 pos = (Vector3)cpList[index];
-                if (attachTimeZ)
-                    pos.Z = (float)field.TimeSlice;
 
                 SquareMatrix J = field.SampleDerivative(cpList[index], false);
 
@@ -239,8 +236,9 @@ namespace FlowSharp
                     Radius = pointSize ?? 1
                 };
             }
-
-            return new CriticalPointSet2D(points, new Vector3((Vector2)grid.CellSize, 1.0f), (Vector3)grid.Origin);
+            Vector3 origin3 = (Vector3)grid.Origin;
+            origin3.Z += field.TimeSlice ?? 0;
+            return new CriticalPointSet2D(points, new Vector3((Vector2)grid.CellSize, 1.0f), origin3);
         }
 
         /// <summary>
@@ -489,6 +487,8 @@ namespace FlowSharp
             // Add up fields.
             Vec3 g = Vec3.Cross(fNorm, d);
             //return J[0].AsVec3();
+            if (float.IsNaN(f[0]) || float.IsNaN(g[0]))
+                Console.WriteLine("NaN NaN?!");
             return f + AlphaStableFFF * g;
         }
 
@@ -500,17 +500,26 @@ namespace FlowSharp
             fNorm.Normalize();
 
             // Compute attracting vector field.
-            Vec3 d = new Vec3();
-            SquareMatrix dMat = new SquareMatrix(new Vector[] { v.ToVec2(), J[0].ToVec2() });
-            d[0] = dMat.Determinant();
-            dMat[1] = J[1].ToVec2();
-            d[1] = dMat.Determinant();
-            dMat[1] = J[2].ToVec2();
-            d[2] = dMat.Determinant();
+            // d = (u · ∇v − v · ∇u)
+            Vec3 d = (v[0] * J.Row(1) - v[1] * J.Row(0)).AsVec3();
 
             // Add up fields.
             Vec3 g = Vec3.Cross(fNorm, d);
             return -f + AlphaStableFFF * g;
+        }
+
+        public static Vector PathlineCore(Vector v, SquareMatrix J)
+        {
+            Debug.Assert(v.Length == 3 && J.Length == 3);
+            // FFF
+            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
+
+            // Find points where v || f
+            Vec3 result =  Vec3.Cross(f, v.AsVec3()) * 10000;
+            if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
+                Console.WriteLine("NaN NaN?!");
+
+            return result;
         }
     }
 }

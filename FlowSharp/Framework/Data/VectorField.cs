@@ -40,6 +40,7 @@ namespace FlowSharp
         public VectorField(Field[] fields)
         {
             _scalars = fields;
+            SpreadInvalidValue();
         }
 
         protected VectorField() { }
@@ -52,8 +53,9 @@ namespace FlowSharp
             Debug.Assert(index >= 0 && index < Size.Product(), "Index out of bounds: " + index + " not within [0, " + Size.Product() + ").");
             Vector vec = new Vector(NumVectorDimensions);
             for (int dim = 0; dim < NumVectorDimensions; ++dim)
+            {
                 vec[dim] = Scalars[dim][index];
-
+            }
             return vec;
         }
 
@@ -107,15 +109,19 @@ namespace FlowSharp
             GridIndex indexIterator = new GridIndex(field.Size);
             foreach (GridIndex index in indexIterator)
             {
+                if ((int)index == 6424)
+                    Console.Write("nomnom");
                 Vector v = field.Sample((int)index);
-
+                //if (float.IsInfinity(v[0]))
+                //    Console.WriteLine("NaN NaN?!");
                 if (v[0] == InvalidValue)
                 {
                     for (int dim = 0; dim < Scalars.Length; ++dim)
                         Scalars[dim][(int)index] = (float)InvalidValue;
                     continue;
                 }
-
+                //if(v[1] == InvalidValue)
+                //    Console.Write("Hrrm?!");
                 SquareMatrix J = field.SampleDerivative(index);
                 Vector funcValue = function(v, J);
 
@@ -126,13 +132,25 @@ namespace FlowSharp
                 }
             }
         }
+        /// <summary>
+        /// Make sure the invalid value is in the first scalar field if it is anywhere.
+        /// </summary>
+        protected void SpreadInvalidValue()
+        {
+            for(int pos = 0; pos < Size.Product(); ++pos)
+            {
+                for (int dim = 1; dim < Scalars.Length; ++dim)
+                    if (Scalars[dim][pos] == InvalidValue)
+                        Scalars[0][pos] = (float)InvalidValue;
+            }
+        }
 
         public SquareMatrix SampleDerivative(Vector position, bool worldPosition = true)
         {
-            Debug.Assert(NumVectorDimensions == Size.Length);
-            SquareMatrix jacobian = new SquareMatrix(NumVectorDimensions);
+            //Debug.Assert(NumVectorDimensions == Size.Length);
+            SquareMatrix jacobian = new SquareMatrix(Size.Length);
 
-            for (int dim = 0; dim < NumVectorDimensions; ++dim)
+            for (int dim = 0; dim < Size.Length; ++dim)
             {
                 float stepPos = Math.Min(Size[dim]-1, position[dim] + 0.5f) - position[dim];
                 float stepMin = Math.Max(0, position[dim] - 0.5f) - position[dim];
@@ -230,7 +248,7 @@ namespace FlowSharp
             Array.Copy(grid.Origin.Data, newOrigin.Data, newSize.Length);
             Array.Copy(grid.CellSize.Data, newCell.Data, newSize.Length);
 
-            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell);
+            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell, posInLastDimension * grid.CellSize.T + grid.Origin.T);
             for(int i = 0; i < slices.Length; ++i)
             {
 
@@ -238,7 +256,30 @@ namespace FlowSharp
                 Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
                 slices[i].TimeSlice = posInLastDimension * grid.CellSize.T + grid.Origin.T;
             }
-            sliceGrid.TimeOrigin = posInLastDimension * grid.CellSize.T + grid.Origin.T;
+            return new VectorField(slices);
+        }
+
+        public virtual VectorField GetSlicePlanarVelocity(int posInLastDimension)
+        {
+            ScalarField[] slices = new ScalarField[Size.Length - 1];
+
+            // Copy the grid - one dimension smaller!
+            RectlinearGrid grid = Grid as RectlinearGrid;
+            Index newSize = new Index(Size.Length - 1);
+            Vector newOrigin = new Vector(Size.Length - 1);
+            Vector newCell = new Vector(Size.Length - 1);
+            Array.Copy(Size.Data, newSize.Data, newSize.Length);
+            Array.Copy(grid.Origin.Data, newOrigin.Data, newSize.Length);
+            Array.Copy(grid.CellSize.Data, newCell.Data, newSize.Length);
+
+            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell);
+            for (int i = 0; i < Size.Length-1; ++i)
+            {
+
+                slices[i] = new ScalarField(sliceGrid);
+                Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
+                slices[i].TimeSlice = posInLastDimension * grid.CellSize.T + grid.Origin.T;
+            }
             return new VectorField(slices);
         }
 
@@ -278,7 +319,7 @@ namespace FlowSharp
             protected float _stepSize = 0.5f;
             protected Sign _direction = Sign.POSITIVE;
             protected bool _normalizeField = true;
-            protected float _epsCriticalPoint = 0.000001f;
+            protected float _epsCriticalPoint = 0.00000001f;
 
 
             public virtual VectorField Field { get { return _field; } set { _field = value; } }
@@ -412,14 +453,18 @@ namespace FlowSharp
             {
                 Field = field;
             }
-
+            int counter = 0;
             public override Status Step(Vector pos, out Vector stepped)
             {
+                ++counter;
                 stepped = new Vector(pos);
                 Vector dir = Field.Sample(pos, WorldPosition);
 
                 if (!ScaleAndCheckVector(dir, out dir))
                     return Status.CP;
+
+                if (float.IsNaN(dir[0]))
+                    Console.WriteLine("NaN NaN NaN NaN WATMAN!");
 
                 stepped += dir;
 

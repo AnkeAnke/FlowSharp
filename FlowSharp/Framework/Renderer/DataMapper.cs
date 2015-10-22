@@ -63,28 +63,30 @@ namespace FlowSharp
         public CriticalPointSet2D[] CP;
         public VectorField ForwardFFF, BackwardFFF;
         public Plane Plane;
-        public VectorFieldUnsteady Velocity;
+        public VectorField Velocity;
+        public VectorField[] SlicesToRender;
         //private VectorField[] _sliceFields;
 
-        private List<Renderable> _slice0;
-        private List<Renderable> _slice1;
-        private List<LineSet> _rawLines;
-        private List<Renderable> _lines;
+        protected List<Renderable> _slice0;
+        protected List<Renderable> _slice1;
+        protected List<LineSet> _rawLines;
+        protected List<Renderable> _lines;
 
-        public CriticalPointTracking(CriticalPointSet2D[] cp, VectorFieldUnsteady velocity, /*VectorField fffPos, VectorField fffNeg,*/ Plane plane)
+        public CriticalPointTracking(CriticalPointSet2D[] cp, VectorFieldUnsteady velocity, Plane plane)
         {
             Debug.Assert(cp.Length == velocity.Size.T);
             CP = cp;
-            //ForwardFFF = fffPos;
-            //BackwardFFF = fffNeg;
             Velocity = velocity;
-            //for (int slice = 0; slice < velocity.Size.T; ++slice)
-            //{
-            //    _sliceFields[slice] = velocity.GetSlice(slice);
-            //}
+            SlicesToRender = new VectorField[velocity.Size.T];
+            for (int slice = 0; slice < velocity.Size.T; ++slice)
+            {
+                SlicesToRender[slice] = velocity.GetSlice(slice);
+            }
             Mapping = TrackCP;
             Plane = plane;
         }
+
+        protected CriticalPointTracking() { }
 
         public List<Renderable> TrackCP()
         {
@@ -93,7 +95,7 @@ namespace FlowSharp
                 _currentSetting.SlicePositionReference != _lastSetting.SlicePositionReference)
             {
                 _slice1 = new List<Renderable>(2);
-                _slice1.Add(new FieldPlane(Plane, Velocity.GetTimeSlice(_currentSetting.SlicePositionReference), FieldPlane.RenderEffect.LIC));
+                _slice1.Add(new FieldPlane(Plane, SlicesToRender[_currentSetting.SlicePositionReference], FieldPlane.RenderEffect.LIC));
                 _slice1.Add(new PointCloud(Plane, CP[_currentSetting.SlicePositionReference].ToBasicSet()));
             }
 
@@ -111,7 +113,7 @@ namespace FlowSharp
                     _slice0 = new List<Renderable>(2);
 
                     // ~~~~~~~~~~~~ Field Mapping ~~~~~~~~~~~~~ \\
-                    _slice0.Add(new FieldPlane(Plane, Velocity.GetTimeSlice(_currentSetting.SlicePositionMain), FieldPlane.RenderEffect.LIC));
+                    _slice0.Add(new FieldPlane(Plane, SlicesToRender[_currentSetting.SlicePositionMain], FieldPlane.RenderEffect.LIC));
 
                     // ~~~~~~~~ Critical Point Mapping ~~~~~~~~ \\
                     _slice0.Add(new PointCloud(Plane, CP[_currentSetting.SlicePositionMain].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet()));
@@ -176,6 +178,27 @@ namespace FlowSharp
             }
     
             return _slice0.Concat(_slice1).Concat(_lines).ToList();
+        }
+    }
+
+    class PathlineCoreTracking  : CriticalPointTracking
+    {
+        public PathlineCoreTracking(VectorFieldUnsteady velocity, /*VectorField fffPos, VectorField fffNeg,*/ Plane plane)
+        {
+            Velocity = new VectorField(velocity, FieldAnalysis.PathlineCore, 3);
+            CP = new CriticalPointSet2D[velocity.Size.T];
+            for(int slice = 0; slice < velocity.Size.T; ++slice)
+            {
+                CP[slice] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(Velocity.GetSlicePlanarVelocity(slice), 5, 0.3f);
+            }
+            // Render original field.
+            SlicesToRender = new VectorField[velocity.Size.T];
+            for (int slice = 0; slice < velocity.Size.T; ++slice)
+            {
+                SlicesToRender[slice] = velocity.GetSlice(slice);
+            }
+            Mapping = TrackCP;
+            Plane = plane;
         }
     }
 

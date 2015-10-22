@@ -65,13 +65,13 @@ namespace FlowSharp
         private void LoadSlice0(object sender, RoutedEventArgs e)
         {
             DropDownSlice0.ItemsSource = Enumerable.Range(0, 10);          
-            DropDownSlice0.SelectedIndex = 0;
+            DropDownSlice0.SelectedIndex = 3;
         }
 
         private void LoadSlice1(object sender, RoutedEventArgs e)
         {
             DropDownSlice1.ItemsSource = Enumerable.Range(0, 10);
-            DropDownSlice1.SelectedIndex = 1;
+            DropDownSlice1.SelectedIndex = 5;
         }
         private void LoadIntegrator(object sender, RoutedEventArgs e)
         {
@@ -82,7 +82,7 @@ namespace FlowSharp
         private void LoadStepSize(object sender, RoutedEventArgs e)
         {
             //(sender as Slider).Minimum = 0.01;
-            (sender as Slider).Value = 0.01;
+            (sender as Slider).Value = 0.06;
         }
 
         private void OnChangeDisplay(object sender, RoutedEventArgs e)
