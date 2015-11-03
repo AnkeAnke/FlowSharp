@@ -56,7 +56,8 @@ namespace FlowSharp
             CP_TRACKING,
             PATHLINE_CORES,
             MEMBER_COMPARISON,
-            OKUBO_WEISS
+            OKUBO_WEISS,
+            FLOW_MAP_UNCERTAIN
         }
 
         public enum DisplayLines : int

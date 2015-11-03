@@ -83,7 +83,7 @@ namespace FlowSharp
                 ColorMapping.Initialize(Device);
                 PointCloud.Initialize();
                 LineBall.Initialize();
-                AlgorithmCuda.Initialize(ContextCuda, Device);
+                
 
                 Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
                 Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
@@ -94,6 +94,8 @@ namespace FlowSharp
                 Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
 
                 SetupCuda();
+                AlgorithmCuda.Initialize(ContextCuda, Device);
+                FlowMapUncertain.Initialize();
             }
             catch (Exception e)
             {

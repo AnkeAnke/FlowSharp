@@ -344,6 +344,51 @@ namespace FlowSharp
         }
     }
 
+    class FlowMapMapper : DataMapper
+    {
+        public Plane Plane;
+        private FieldPlane _currentState;
+        private FlowMapUncertain _flowMap;
+
+        public FlowMapMapper(Loader.SliceRange[] uv, Plane plane)
+        {
+            _flowMap = new FlowMapUncertain(new Int2(100, 100), uv, 0, 9);
+            Plane = plane;
+            Mapping = GetCurrentMap;
+        }
+
+        /// <summary>
+        /// If different planes were chosen, load new fields.
+        /// </summary>
+        /// <returns></returns>
+        public List<Renderable> GetCurrentMap()
+        {
+            if (_lastSetting == null ||
+                _currentSetting.SlicePositionMain != _lastSetting.SlicePositionMain)
+            {
+                if (_flowMap.CurrentTime < _currentSetting.SlicePositionMain)
+                {
+                    _flowMap.Step();
+                    _currentState = _flowMap.GetPlane(Plane);
+                }
+            }
+            if (_lastSetting == null ||
+                _currentSetting.StepSize != _lastSetting.StepSize)
+            {
+            }
+            if (_lastSetting == null ||
+                _currentSetting.Colormap != _lastSetting.Colormap ||
+                _currentSetting.Shader != _lastSetting.Shader)
+            {
+                _currentState.UsedMap = _currentSetting.Colormap;
+                _currentState.SetRenderEffect(_currentSetting.Shader);
+            }
+            List<Renderable> list = new List<Renderable>(1);
+            list.Add(_currentState);
+            return list;
+        }
+    }
+
     class EmptyMapper : DataMapper
     {
         public EmptyMapper()

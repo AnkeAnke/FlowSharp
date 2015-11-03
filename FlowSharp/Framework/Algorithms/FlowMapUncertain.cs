@@ -9,6 +9,8 @@ using SlimDX;
 using ManagedCuda.VectorTypes;
 using SlimDX.DXGI;
 using ManagedCuda.BasicTypes;
+using System.IO;
+using System.Reflection;
 
 namespace FlowSharp
 {
@@ -22,7 +24,8 @@ namespace FlowSharp
         protected int _width { get { return _ensembleGrid.Size[0]; } }
         protected int _height { get { return _ensembleGrid.Size[1]; } }
         protected int _numMembers { get { return _ensembleGrid.Size[2]; } }
-        protected int _time, _endTime;
+        protected int _endTime;
+        public int CurrentTime;
 
         protected CudaTextureArray2D _t0X, _t0Y, _t1X, _t1Y;
         public Texture2D FlowMap { get; protected set; }
@@ -30,16 +33,22 @@ namespace FlowSharp
         protected CudaGraphicsInteropResourceCollection _cudaDxMapper;
         protected static CudaKernel _advectParticlesKernel;
 
-        public void Setup(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, int endTime)
+        public FlowMapUncertain(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, int endTime)
         {
 
         }
-
-        public void SetupPixel(Int2 pos, Loader.SliceRange[] fieldEnsemble, int startTime, int endTime)
+        /// <summary>
+        /// Setup as empty map with only one value at 1.
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="fieldEnsemble"></param>
+        /// <param name="startTime"></param>
+        /// <param name="endTime"></param>
+        public FlowMapUncertain(Int2 pos, Loader.SliceRange[] fieldEnsemble, int startTime, int endTime)
         {
             // ~~~~~~~~~~~~ Load ensemble ~~~~~~~~~~~~ \\
             // Load fields first to get the grid size.
-            Loader ncFile = new Loader(RedSea.Singleton.DataFolder + startTime + RedSea.Singleton.FileName);
+            Loader ncFile = new Loader(RedSea.Singleton.DataFolder + (startTime+1) + RedSea.Singleton.FileName);
             ScalarField t0X = ncFile.LoadFieldSlice(fieldEnsemble[0]);
             ScalarField t0Y = ncFile.LoadFieldSlice(fieldEnsemble[1]);
             ncFile.Close();
@@ -51,7 +60,7 @@ namespace FlowSharp
 
             // ~~~~~~~~~~~~~~ Copy relevant data ~~~~~~~~~~~~~~ \\
             // Count up when advection was executed.
-            _time = startTime;
+            CurrentTime = startTime;
             _endTime = endTime;
             // Keep for plane creation and size reference.
             _ensembleGrid = t0X.Grid as RectlinearGrid;
@@ -119,7 +128,8 @@ namespace FlowSharp
         public void Step()
         {
             _cudaDxMapper.MapAllResources();
-            CudaDeviceVariable<Vector2> currentFlowMap = _cudaDxMapper[0].GetMappedPointer<Vector2>();
+            CudaArray2D lastFlowMap = _cudaDxMapper[0].GetMappedArray2D(0, 0);
+            CudaArray2D nextFlowMap = _cudaDxMapper[0].GetMappedArray2D(0, 0);
             // Advect from each member to each member. In each block, the same configuration is choosen.
             dim3 grid = new dim3((int)((float)_width/BLOCK_SIZE + 0.5f), (int)((float)_height/BLOCK_SIZE + 0.5f), _numMembers * _numMembers);
             // Advect a block in each member-member combination.
@@ -127,19 +137,27 @@ namespace FlowSharp
 
             _advectParticlesKernel.GridDimensions = grid;
             _advectParticlesKernel.BlockDimensions = threads;
-            _advectParticlesKernel.Run(currentFlowMap.DevicePointer, _ensembleGrid.Size[0], _ensembleGrid.Size[1], _ensembleGrid.Size[2], PARTICLE_DENSITY);
+            CudaSurfObject surf = new CudaSurfObject(nextFlowMap);
+            _advectParticlesKernel.Run(lastFlowMap.CUArray, surf.SurfObject, _ensembleGrid.Size[0], _ensembleGrid.Size[1], _ensembleGrid.Size[2], PARTICLE_DENSITY);
+            var tmp = FlowMap;
+            FlowMap = _pongFlowMap;
+            _pongFlowMap = tmp;
+
+            var 
             _cudaDxMapper.UnmapAllResources();
         }
 
         public FieldPlane GetPlane(Plane plane)
         {
-            FieldPlane flowMap = new FieldPlane(plane, _ensembleGrid, FlowMap, _ensembleGrid.Size.ToInt2(), _time, 0, FieldPlane.RenderEffect.DEFAULT);
+            FieldPlane flowMap = new FieldPlane(plane, _ensembleGrid, FlowMap, _ensembleGrid.Size.ToInt2(), CurrentTime, float.MaxValue, FieldPlane.RenderEffect.DEFAULT);
             return flowMap;
         }
 
         public static void Initialize()
         {
-            _advectParticlesKernel = _context.LoadKernelPTX("FlowMapUncertain", "FlowMapStep", new CUJITOption[] { }, null);
+             CUmodule module = _context.LoadModulePTX(      "Framework/Algorithms/Kernels/FlowMapUncertain.ptx");
+            _advectParticlesKernel = new CudaKernel("FlowMapStep", module, _context);
+            //_advectParticlesKernel = _context.LoadKernelPTX("Framework/Algorithms/Kernels/FlowMapUncertain.ptx", "FlowMapStep", new CUJITOption[] { }, null);
         }
     }
 }

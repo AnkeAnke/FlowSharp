@@ -24,16 +24,21 @@ namespace FlowSharp
 
         protected int _timeSlice;
 
+        protected static int _numOpenFiles = 0;
+
         /// <summary>
         /// Create a Loader object and open a NetCDF file.
         /// </summary>
         /// <param name="file">Path of the file.</param>
         public Loader(string file)
         {
-            NetCDF.nc_open(file, NetCDF.CreateMode.NC_NOWRITE, out _fileID);
-            NetCDF.nc_inq_nvars(_fileID, out _numVars);
-            //if (status != (int)NetCDF.ResultCode.NC_NOERR)
-            //    throw (status);
+            Debug.Assert(_numOpenFiles == 0, "Another NetCDF file is still open!");
+            NetCDF.ResultCode result = NetCDF.nc_open(file, NetCDF.CreateMode.NC_NOWRITE, out _fileID);
+            Debug.Assert(result == NetCDF.ResultCode.NC_NOERR, result.ToString());
+            result = NetCDF.nc_inq_nvars(_fileID, out _numVars);
+            Debug.Assert(result == NetCDF.ResultCode.NC_NOERR, result.ToString());
+
+            _numOpenFiles++;
         }
 
         public int GetID() { return _fileID; }
@@ -150,9 +155,12 @@ namespace FlowSharp
                 fieldSize[numDimsField - 1] = slice.GetNumTimeSlices();
 
             //TODO: HACK! REMOVE!
-            int tmp = fieldSize[0];
-            fieldSize[0] = fieldSize[1];
-            fieldSize[1] = tmp;
+            for(int dim = 0; dim < fieldSize.Length/2; ++dim)
+            {
+                int tmp = fieldSize[dim];
+                fieldSize[dim] = fieldSize[fieldSize.Length - 1 - dim];
+                fieldSize[fieldSize.Length - 1 - dim] = tmp;
+            }
 
             // Create a grid descriptor for the field. 
             // TODO: Actually load this data.
@@ -162,9 +170,18 @@ namespace FlowSharp
             field = new ScalarField(grid);
             int sliceSize = grid.Size.Product() / slice.GetNumTimeSlices();
 
-            // Get data.
-            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
-            Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR);
+            //// Get data.
+            int n = offsets.Length;
+            Int32[] off = new int[n];
+            Int32[] size = new int[n];
+            for (int i = 0; i < n; ++i)
+            {
+                off[i] = 0;
+                size[i] = sizeInFile[i];
+            }
+
+            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), off, sizeInFile, field.Data);
+            Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
 
             //HACK!
             field.InvalidValue = field[0];
@@ -178,6 +195,7 @@ namespace FlowSharp
         public void Close()
         {
             NetCDF.nc_close(_fileID);
+            _numOpenFiles--;
         }
 
         /// <summary>

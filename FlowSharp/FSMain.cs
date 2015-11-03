@@ -1,6 +1,8 @@
 ﻿using SlimDX;
 using System;
 using PointSet = FlowSharp.PointSet<FlowSharp.Point>;
+using Microsoft.Research.ScientificDataSet.NetCDF4;
+using System.Diagnostics;
 
 namespace FlowSharp
 {
@@ -26,25 +28,15 @@ namespace FlowSharp
         static DataMapper mapperPathCore;
         static DataMapper mapperComparison;
         static DataMapper mapperOW;
+        static Loader.SliceRange ensembleU, ensembleV;
+        static Plane redSea;
+        static DataMapper mapperFlowMap;
         //static PointSet[] completeCPSets;
 
         public static void LoadData()
         {
-            // Playground.
-            //SquareMatrix J = new SquareMatrix(new Vec3[] { new Vec3(-74, 3, 7), new Vec3(2, -61, 81), new Vec3(3, 6, -40) });
-            //float ux, uy, ut, vx, vy, vt;
-            //ux = J[0][0]; uy = J[1][0]; ut = J[2][0];
-            //vx = J[0][1]; vy = J[1][1]; vt = J[2][1];
-            //Vec3 correct = new Vec3(uy * vt - ut * vy, ut * vx - ux * vt, ux * vy - uy * vx);
-            //Vec3 det = new Vec3(new SquareMatrix(new Vec2[] { J[1].ToVec2(), J[2].ToVec2() }).Determinant(),
-            //         new SquareMatrix(new Vec2[] { J[2].ToVec2(), J[0].ToVec2() }).Determinant(),
-            //         new SquareMatrix(new Vec2[] { J[0].ToVec2(), J[1].ToVec2() }).Determinant());
-            //Vec3 cross = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
-            //Console.WriteLine("Correct: " + correct);
-            //Console.WriteLine("det: " + det);
-            //Console.WriteLine("Cross: " + cross);
-
-
+            Console.WriteLine("Output works.");
+            Console.WriteLine("Using " + ((IntPtr.Size == 8) ? "x64" : "x32"));
 
 
             int numTimeSlices = 10;
@@ -63,6 +55,17 @@ namespace FlowSharp
             sliceV.SetOffset(RedSea.Dimension.TIME, 0);
             sliceV.SetOffset(RedSea.Dimension.CENTER_Z, 0);
 
+            ensembleU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            ensembleU.SetOffset(RedSea.Dimension.TIME, 0);
+            ensembleU.SetOffset(RedSea.Dimension.CENTER_Z, 0);
+            ensembleV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            ensembleV.SetOffset(RedSea.Dimension.TIME, 0);
+            ensembleV.SetOffset(RedSea.Dimension.CENTER_Z, 0);
+
+            //float[] data = new float[5];
+            //NetCDF.ResultCode ncState = NetCDF.nc_get_vara_float(ncFile.GetID(), (int)sliceV.GetVariable(), new int[] { 0, 0, 0, 0, 0 }, new int[] { 1, 1, 1, 1, 1 }, data);
+            //Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
+            //Console.WriteLine(ncState.ToString());
             // Load first time slice.
             u[0] = ncFile.LoadFieldSlice(sliceU);
             v[0] = ncFile.LoadFieldSlice(sliceV);
@@ -110,11 +113,15 @@ namespace FlowSharp
                 Console.WriteLine("Completed processing step " + time + '.');
             }
 
-            Plane redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
-//            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
-//            mapperPathCore = new PathlineCoreTracking(velocity, redSea);
+            redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
+            //            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
+            //            Console.WriteLine("Found CP.")
+            //            mapperPathCore = new PathlineCoreTracking(velocity, redSea);
+            //            Console.WriteLine("Found Pathline Cores.")
             mapperComparison = new MemberComparison(new Loader.SliceRange[] { sliceU, sliceV }, redSea);
-            mapperOW = new OkuboWeiss(velocity, redSea);
+            // mapperOW = new OkuboWeiss(velocity, redSea);
+            //            Console.WriteLine("Computed Okubo-Weiss.")
+            
 
             Console.WriteLine("Computed all data necessary.");
         }
@@ -125,6 +132,8 @@ namespace FlowSharp
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_CORES, mapperPathCore);
             RedSea.Singleton.SetMapper(RedSea.Display.MEMBER_COMPARISON, mapperComparison);
             RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);
+            mapperFlowMap = new FlowMapMapper(new Loader.SliceRange[] { ensembleU, ensembleV }, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.FLOW_MAP_UNCERTAIN, mapperFlowMap);
         }
     }
 }
