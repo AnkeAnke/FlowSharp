@@ -12,6 +12,14 @@ namespace FlowSharp
     class RedSea
     {
         /// <summary>
+        /// Data folder name, in a fashion that only a number has to be added for the respective time slice.
+        /// </summary>
+        public string DataFolder;
+        /// <summary>
+        /// File name. Should contain intial '/'.
+        /// </summary>
+        public string FileName;
+        /// <summary>
         /// Relevant variables of Read Sea file.
         /// </summary>
         public enum Variable : int
@@ -46,7 +54,9 @@ namespace FlowSharp
         {
             NONE,
             CP_TRACKING,
-            PATHLINE_CORES
+            PATHLINE_CORES,
+            MEMBER_COMPARISON,
+            OKUBO_WEISS
         }
 
         public enum DisplayLines : int

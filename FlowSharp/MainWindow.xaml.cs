@@ -39,15 +39,7 @@ namespace FlowSharp
         protected override void OnInitialized(EventArgs e)
         {
             base.OnInitialized(e);
-            //DX11Display.MouseEnter += DX11Display_MouseEnter;
-            //DropDownDisplay.ItemsSource = Enum.GetValues(typeof(RedSea.Display)).Cast<RedSea.Display>();
-            //DropDownDisplayLines.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayLines)).Cast<RedSea.DisplayLines>();
-            //DropDownSlice0.ItemsSource = Enumerable.Range(0, 10);
-            //DropDownSlice1.ItemsSource = Enumerable.Range(0, 10);
-            //DropDownDisplay.SelectedIndex = 0;
-            //DropDownDisplayLines.SelectedIndex = 0;
-            //DropDownSlice0.SelectedIndex = 0;
-            //DropDownSlice1.SelectedIndex = 0;
+
         }
 
         private void LoadDisplay(object sender, RoutedEventArgs e)
@@ -73,6 +65,19 @@ namespace FlowSharp
             DropDownSlice1.ItemsSource = Enumerable.Range(0, 10);
             DropDownSlice1.SelectedIndex = 5;
         }
+
+        private void LoadMember(object sender, RoutedEventArgs e)
+        {
+            //string[] values = new string[53];
+            //values[0] = "Mean";
+            //values[1] = "Variance";
+            //for (int i = 0; i < values.Length - 2; ++i)
+            //    values[i + 2] = "Member " + i;
+            //(sender as ComboBox).Da = values;
+            (sender as ComboBox).ItemsSource = Enumerable.Range(0, 51);
+            (sender as ComboBox).SelectedIndex = 0;
+        }
+
         private void LoadIntegrator(object sender, RoutedEventArgs e)
         {
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
@@ -83,6 +88,18 @@ namespace FlowSharp
         {
             //(sender as Slider).Minimum = 0.01;
             (sender as Slider).Value = 0.06;
+        }
+
+        private void LoadShader(object sender, RoutedEventArgs e)
+        {
+            DropDownShader.ItemsSource = Enum.GetValues(typeof(FieldPlane.RenderEffect)).Cast<FieldPlane.RenderEffect>();
+            DropDownShader.SelectedIndex = (int)FieldPlane.RenderEffect.COLORMAP;
+        }
+
+        private void LoadColormap(object sender, RoutedEventArgs e)
+        {
+            DropDownColormap.ItemsSource = Enum.GetValues(typeof(Colormap)).Cast<Colormap>();
+            DropDownColormap.SelectedIndex = (int)Colormap.Parula;
         }
 
         private void OnChangeDisplay(object sender, RoutedEventArgs e)
@@ -121,6 +138,20 @@ namespace FlowSharp
             UpdateRenderer();
         }
 
+        private void OnChangeMember0(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.MemberMain = (int)(comboBox.SelectedItem as int?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeMember1(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.MemberReference = (int)(comboBox.SelectedItem as int?);
+            UpdateRenderer();
+        }
+
         private void OnChangeIntegrator(object sender, RoutedEventArgs e)
         {
             var comboBox = sender as ComboBox;
@@ -143,6 +174,28 @@ namespace FlowSharp
             UpdateRenderer();
         }
 
+        private void OnChangeVerticalLine(object sender, RoutedEventArgs e)
+        {
+            var slider = sender as Slider;
+            _mapper.CurrentSetting.LineX = (int)((slider.Value as double?) + 0.5);
+            UpdateRenderer();
+        }
+
+        private void OnChangeShader(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.Shader = (FieldPlane.RenderEffect)(comboBox.SelectedItem as FieldPlane.RenderEffect?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeColormap(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.Colormap = (Colormap)(comboBox.SelectedItem as Colormap?);
+            UpdateRenderer();
+        }
+
+
         private void UpdateRenderer()
         {
             if (Renderer.Singleton.Initialized && _mapper != null)
@@ -158,21 +211,5 @@ namespace FlowSharp
         {
             Renderer.Singleton.Camera.Active = false;
         }
-
-        //public bool EnableCamera()
-        //{
-        //    Renderer.Singleton.Camera.
-        //    return DX11Display.Focus();
-        //}
-        ///// <summary>
-        ///// The parameter should be of type RedSea.Display. Accessibility problems...
-        ///// </summary>
-        ///// <param name="disp">RedSea.Display, please!</param>
-        //public void SetToMapper(int disp)
-        //{
-        //    DropDownDisplay.SelectedIndex = (int)disp;
-        //    _mapper = RedSea.Singleton.SetMapper((RedSea.Display)disp);
-        //    UpdateRenderer();
-        //}
     }
 }

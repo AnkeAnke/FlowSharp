@@ -103,6 +103,10 @@ namespace FlowSharp
         protected Effect _effect;
         public Colormap? UsedMap { get; set; }
 
+        public float LowerBound = 0;
+        public float UpperBound = 1;
+        public float MidValue { get { return (UpperBound-LowerBound) *0.5f; } }
+
         /// <summary>
         /// When a colormap is set, set the associated texture as colormap.
         /// </summary>
@@ -111,6 +115,8 @@ namespace FlowSharp
             if (UsedMap == null)
                 return;
             _effect.GetVariableByName("colormap").AsResource().SetResource(ColorMapping.GetColormapTexture((Colormap)UsedMap));
+            _effect.GetVariableByName("minMap").AsScalar().Set(LowerBound);
+            _effect.GetVariableByName("maxMap").AsScalar().Set(UpperBound);
         }
 
         public override void Render(Device device)

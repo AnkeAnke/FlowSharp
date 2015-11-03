@@ -129,10 +129,12 @@ namespace Microsoft.Research.ScientificDataSet.NetCDF4
         {
             /// <summary>No Error</summary>
             NC_NOERR = 0,
+            /// <summary>Index exceeds dimension bound</summary>
+            NC_INVALCOORDS = -40,
             /// <summary>Invalid dimension id or name</summary>
-            NC_EBADDIM = -46,
+            NC_BADDIM = -46,
             /// <summary>Attribute not found</summary>
-            NC_ENOTATT = -43,
+            NC_NOTATT = -43,
         }
 
         /// <summary>
@@ -180,7 +182,6 @@ namespace Microsoft.Research.ScientificDataSet.NetCDF4
             NC_ENDIAN_LITTLE = 1,
             /// <summary>Big Endian</summary>
             NC_ENDIAN_BIG = 2
-
         }
     }
 }

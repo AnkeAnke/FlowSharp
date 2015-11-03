@@ -174,6 +174,12 @@ namespace FlowSharp
             return result;
         }
 
+
+        public static explicit operator Vector(float f)
+        {
+            return new Vector(f, 1);
+        }
+
         /// <summary>
         /// Convert first two elements to SlimDX.Vector2.
         /// </summary>

@@ -19,7 +19,7 @@ namespace FlowSharp
         {
             get { return Scalars[index]; }
         }
-        public FieldGrid Grid { get { return Scalars[0].Grid; } protected set { Scalars[0].Grid = value; } }
+        public virtual FieldGrid Grid { get { return Scalars[0].Grid; } protected set { Scalars[0].Grid = value; } }
         public Index Size { get { return Grid.Size; } }
 
         /// <summary>
@@ -109,11 +109,8 @@ namespace FlowSharp
             GridIndex indexIterator = new GridIndex(field.Size);
             foreach (GridIndex index in indexIterator)
             {
-                if ((int)index == 6424)
-                    Console.Write("nomnom");
                 Vector v = field.Sample((int)index);
-                //if (float.IsInfinity(v[0]))
-                //    Console.WriteLine("NaN NaN?!");
+
                 if (v[0] == InvalidValue)
                 {
                     for (int dim = 0; dim < Scalars.Length; ++dim)

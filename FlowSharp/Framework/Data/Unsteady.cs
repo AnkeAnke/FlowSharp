@@ -12,6 +12,7 @@ namespace FlowSharp
     {
         private ScalarFieldUnsteady[] _scalars;
         public override Field[] Scalars { get { return _scalars; } }
+        public ScalarFieldUnsteady[] ScalarsAsSFU { get { return _scalars; } }
         /// <summary>
         /// Number of dimensions per vector. Including one time dimension.
         /// </summary>
@@ -80,10 +81,53 @@ namespace FlowSharp
         }
 
         public override VectorField GetSlice(int slice) { return (VectorField)GetTimeSlice(slice); }
+
+        public VectorFieldUnsteady(VectorFieldUnsteady field, VFJFunction function, int outputDim)
+        {
+            int scalars = outputDim;
+            FieldGrid gridCopy = field._scalars[0].TimeSlices[0].Grid.Copy();
+            _scalars = new ScalarFieldUnsteady[outputDim];
+
+            // Reserve the space.
+            for (int comp = 0; comp < outputDim; ++comp)
+            {
+                ScalarField[] fields = new ScalarField[field.Size.T]; //(field.Grid);
+
+                for (int t = 0; t < field.Size.T; ++t)
+                    fields[t] = new ScalarField(gridCopy);
+
+                _scalars[comp] = new ScalarFieldUnsteady(fields);
+                _scalars[comp].InvalidValue = field.InvalidValue;
+            }
+            this.InvalidValue = field.InvalidValue;
+
+            // Since the time component is in the grid size as well, we do not need to account for time specially.
+            GridIndex indexIterator = new GridIndex(field.Size);
+            foreach (GridIndex index in indexIterator)
+            {
+                Vector v = field.Sample((int)index);
+
+                if (v[0] == InvalidValue)
+                {
+                    for (int dim = 0; dim < Scalars.Length; ++dim)
+                        _scalars[dim][(int)index] = (float)InvalidValue;
+                    continue;
+                }
+
+                SquareMatrix J = field.SampleDerivative(index);
+                Vector funcValue = function(v, J);
+
+                for (int dim = 0; dim < Scalars.Length; ++dim)
+                {
+                    Scalars[dim][(int)index] = funcValue[dim];
+                }
+            }
+        }
     }
     class ScalarFieldUnsteady : Field
     {
         public override int NumDimensions { get { return Size.Length - 1; } }
+        public override FieldGrid Grid { get { return _sliceGrid; } set { _sliceGrid = value; } }
         public override float? InvalidValue
         {
             get
@@ -100,7 +144,7 @@ namespace FlowSharp
         private ScalarField[] _slices;
         public ScalarField[] TimeSlices { get { return _slices; } }
         public ScalarField GetTimeSlice(int slice) { return _slices[slice]; }
-        private FieldGrid _sliceGrid { get { return _slices[0].Grid; } }
+        private FieldGrid _sliceGrid;
         public override float? TimeSlice
         {
             get
@@ -117,14 +161,14 @@ namespace FlowSharp
         {
             get
             {
-                int inSliceIndex = index % _sliceGrid.Size.Product();
-                int sliceIndex = index / _sliceGrid.Size.Product();
+                int inSliceIndex = index % (_sliceGrid.Size.Product() / _sliceGrid.Size.T);
+                int sliceIndex = index / (_sliceGrid.Size.Product() / _sliceGrid.Size.T);
                 return _slices[sliceIndex][inSliceIndex];
             }
             set
             {
-                int inSliceIndex = index % _sliceGrid.Size.Product();
-                int sliceIndex = index / _sliceGrid.Size.Product();
+                int inSliceIndex = index % (_sliceGrid.Size.Product() / _sliceGrid.Size.T);
+                int sliceIndex = index / (_sliceGrid.Size.Product() / _sliceGrid.Size.T);
                 _slices[sliceIndex][inSliceIndex] = value;
             }
         }
@@ -134,7 +178,7 @@ namespace FlowSharp
         public ScalarFieldUnsteady(ScalarField[] fields, float timeStart = 0, float timeStep = 1.0f) : base()
         {
             _slices = fields;
-            Grid = _sliceGrid.GetAsTimeGrid(fields.Length, timeStart, timeStep);
+            _sliceGrid = fields[0].Grid.GetAsTimeGrid(fields.Length, timeStart, timeStep);
             for (int slice = 0; slice < _slices.Length; ++slice)
             {
                 _slices[slice].TimeSlice = timeStart + timeStep * slice;

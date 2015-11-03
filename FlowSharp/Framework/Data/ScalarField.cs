@@ -15,7 +15,7 @@ namespace FlowSharp
         /// </summary>
         public virtual int NumDimensions { get { return Size.Length; } }
 
-        public FieldGrid Grid { get; set; }
+        public virtual FieldGrid Grid { get; set; }
         /// <summary>
         /// Number of grid edges in every dimension.
         /// </summary>
@@ -278,6 +278,40 @@ namespace FlowSharp
         public override bool IsUnsteady()
         {
             return false;
+        }
+
+        public void ComputeStatistics(out float validRegion, out float mean, out float sd)
+        {
+            int numValidCells = 0;
+            mean = 0;
+            sd = 0;
+
+            GridIndex range = new GridIndex(Size);
+            foreach(GridIndex idx in range)
+            {
+                float s = this[(int)idx];
+                if(s != InvalidValue)
+                {
+                    numValidCells++;
+                    mean += s;
+                }
+            }
+            validRegion = (float)numValidCells / Size.Product();
+            mean /= numValidCells;
+
+            // Compute standard derivative.
+            range.Reset();
+            foreach (GridIndex idx in range)
+            {
+                float s = this[(int)idx];
+                if (s != InvalidValue)
+                {
+                    float diff = s - mean;
+                    sd += diff * diff;
+                }
+            }
+            sd /= numValidCells;
+            sd = (float)Math.Sqrt(sd);
         }
 
         //class SliceRange

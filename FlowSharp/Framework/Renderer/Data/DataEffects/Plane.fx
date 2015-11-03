@@ -5,6 +5,9 @@
 };
 
 Texture2D colormap;
+float minMap;
+float maxMap;
+
 SamplerState LinSampler {
 	filter = MIN_MAG_MIP_LINEAR;
 	AddressU = Clamp;
@@ -62,7 +65,7 @@ struct PS_IN
 	float4 uv : TEXTURE;
 };
 
-// Shaders
+// ~~~~~~~~~~ Shaders ~~~~~~~~~~~ \\
 
 PS_IN VS(VS_IN input)
 {
@@ -76,17 +79,24 @@ PS_IN VS(VS_IN input)
 	return output;
 }
 
+// ~~~~~~~~~~ Colormap ~~~~~~~~~~ \\
+
 float4 PS_nTex_1(PS_IN input) : SV_Target
 {
 	float value = field0.SampleLevel(PointSampler, input.uv.xy, 0.0).x;
 	if (value == invalidNum)
-		return float4(0.4, 0.0, 0.0, 0.0);
-
-	value = (value - 20.0) / 20.0;
-
-
+		discard;
+	//value = value * 0.5 + 0.5;
+	value = (value - minMap) / (maxMap - minMap);
+	//float sign = value > 0 ? 1 : -1;
+	//float4 color = float4(value*sign, value*sign, value*sign, 1.0);
+	//if (sign > 0)
+	//	color.x = 1.0;
+	//return color;
 	return colormap.Sample(LinSampler, float2(value, 0.5));
 }
+
+// ~~~~~ Value in 2 cannels ~~~~~~ \\
 
 float4 PS_nTex_2(PS_IN input) : SV_Target
 {

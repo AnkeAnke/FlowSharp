@@ -521,5 +521,17 @@ namespace FlowSharp
 
             return result;
         }
+        public static Vector OkuboWeiss(Vector v, SquareMatrix timeJ)
+        {
+            SquareMatrix J = timeJ.ToMat2x2();
+            SquareMatrix JT = new SquareMatrix(J);
+            JT.Transpose();
+            SquareMatrix S = (J + JT) * 0.5f;
+            SquareMatrix W = (J - JT) * 0.5f;
+
+            float Q = (S.EuclideanNormSquared() - W.EuclideanNormSquared()) * 0.5f;
+
+            return (Vector)Q;
+        }
     }
 }

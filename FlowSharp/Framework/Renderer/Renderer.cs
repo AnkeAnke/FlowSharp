@@ -8,6 +8,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WPFHost;
+using ManagedCuda;
+using ManagedCuda.BasicTypes;
+using Debug = System.Diagnostics.Debug;
 
 namespace FlowSharp
 {
@@ -28,14 +31,21 @@ namespace FlowSharp
             }
         }
 
+        /// <summary>
+        /// The WPF host connected to the scene.
+        /// </summary>
         private WPFHost.ISceneHost _host;
+        /// <summary>
+        /// THe Direct3D11 device bound to the WPF render target.
+        /// </summary>
         public SlimDX.Direct3D11.Device Device { get { return _host.Device; } }
+        public ManagedCuda.CudaContext ContextCuda { get; private set; }
 
         protected List<Renderable> _renderables;
 
         public Camera Camera { get; set; }
 
-        protected TimeSpan _lastTime;
+        //protected TimeSpan _lastTime;
 
         protected Renderer() { }
 
@@ -73,6 +83,7 @@ namespace FlowSharp
                 ColorMapping.Initialize(Device);
                 PointCloud.Initialize();
                 LineBall.Initialize();
+                AlgorithmCuda.Initialize(ContextCuda, Device);
 
                 Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
                 Device.ImmediateContext.Rasterizer.SetViewports(new Viewport(0, 0, _host.RenderTargetWidth, _host.RenderTargetHeight, 0.0f, 1.0f));
@@ -81,11 +92,36 @@ namespace FlowSharp
                 Camera = new Camera(Device, ((float)_host.RenderTargetWidth) / _host.RenderTargetHeight);
                 var desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Solid };
                 Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
+
+                SetupCuda();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
+        }
+
+        protected void SetupCuda()
+        {
+            // Try to bind a CUDA context to the graphics card that WPF is working with.
+            Adapter d3dAdapter = Device.Factory.GetAdapter(0);
+            CUdevice[] cudaDevices = null;
+            try
+            {
+                // Build a CUDA context from the first adapter in the used D3D11 device.
+                cudaDevices = CudaContext.GetDirectXDevices(Device.ComPointer, CUd3dXDeviceList.All, CudaContext.DirectXVersion.D3D11);
+                Debug.Assert(cudaDevices.Length > 0);
+                Console.WriteLine("> Display Device #" + d3dAdapter
+                    + ": \"" + d3dAdapter.Description + "\" supports Direct3D11 and CUDA.\n");
+            }
+            catch (CudaException)
+            {
+                // No Cuda device found for this Direct3D11 device.
+                Console.Write("> Display Device #" + d3dAdapter
+                    + ": \"" + d3dAdapter.Description + "\" supports Direct3D11 but not CUDA.\n");
+            }
+            ContextCuda = new CudaContext(cudaDevices[0], Device.ComPointer, CUCtxFlags.BlockingSync, CudaContext.DirectXVersion.D3D11);
+            var info = ContextCuda.GetDeviceInfo();
         }
 
         public void Detach()

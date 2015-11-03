@@ -13,7 +13,7 @@ namespace FlowSharp
     /// </summary>
     class Index
     {
-        public int Length { get; protected set; }
+        public virtual int Length { get; protected set; }
 
         protected int[] _data;
         public int[] Data
@@ -262,6 +262,20 @@ namespace FlowSharp
 
             return str;
         }
+
+        public Int2 AsInt2()
+        {
+            Debug.Assert(Length == 2);
+            return new Int2(_data);
+        }
+
+        /// <summary>
+        /// Convert first two elements to an Int2. If less, fill with zeros.
+        /// </summary>
+        public Int2 ToInt2()
+        {
+            return new Int2(this[0], Length > 1 ? this[1] : 0);
+        }
     }
 
     class GridIndex : IEnumerator<Index>, IEnumerable<Index>, IEnumerable<GridIndex>, IEnumerator<GridIndex>
@@ -359,5 +373,31 @@ namespace FlowSharp
         {
             return index.Current;
         }
+    }
+
+    class Int2 : Index
+    {
+        public int X { get { return _data[0]; } }
+        public int Y { get { return _data[1]; } }
+        public override int Length { get { return 2; } }
+
+        public Int2() : base(0, 2)
+        { }
+
+        public Int2(int x, int y) : base(new int[] { x, y })
+        { }
+
+        public Int2(Int2 copy) : base(copy)
+        { }
+
+        /// <summary>
+        /// Vector with dim elements set to v.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="dim"></param>
+        public Int2(int xy) : base(xy, 2)
+        { }
+
+        public Int2(int[] data) : base(data) { }
     }
 }

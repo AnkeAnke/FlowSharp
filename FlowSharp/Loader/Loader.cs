@@ -28,7 +28,7 @@ namespace FlowSharp
         /// Create a Loader object and open a NetCDF file.
         /// </summary>
         /// <param name="file">Path of the file.</param>
-        public Loader(string file, int timeSlice = 0)
+        public Loader(string file)
         {
             NetCDF.nc_open(file, NetCDF.CreateMode.NC_NOWRITE, out _fileID);
             NetCDF.nc_inq_nvars(_fileID, out _numVars);
@@ -108,6 +108,7 @@ namespace FlowSharp
         {
             ScalarField field;
             Index offsets = new Index(slice.GetOffsets());
+            NetCDF.ResultCode ncState = NetCDF.ResultCode.NC_NOERR;
 
             int[] sizeInFile = new int[offsets.Length];
             // Probably has less dimensions.
@@ -125,7 +126,8 @@ namespace FlowSharp
                 {
                     // Fill size.
                     int sizeDim;
-                    NetCDF.nc_inq_dimlen(_fileID, slice.GetDimensionID(dim), out sizeDim);
+                    ncState = NetCDF.nc_inq_dimlen(_fileID, slice.GetDimensionID(dim), out sizeDim);
+                    Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR);
                     sizeInFile[dim] = sizeDim;
 
                     // Set offset to one. offset = 0, size = size of dimension.
@@ -159,57 +161,16 @@ namespace FlowSharp
             // Create scalar field instance and fill it with data.
             field = new ScalarField(grid);
             int sliceSize = grid.Size.Product() / slice.GetNumTimeSlices();
-            //unsafe
-            //{
-            //    fixed (float* dataPtr = field.)
-            //    {
-            //        float* offset = dataPtr + _timeSlice * sliceSize;
-            NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
-            //    }   
-            //}
+
+            // Get data.
+            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
+            Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR);
 
             //HACK!
             field.InvalidValue = field[0];
 
             return field;
         }
-
-
-        //public void AddTimeFieldSlice(SliceRange slice, ScalarField field)
-        //{
-        //    int[] offsets = slice.GetOffsets();
-        //    int[] sizeInFile = new int[offsets.Length];
-            
-        //    for (int dim = 0; dim < offsets.Length; ++dim)
-        //    {
-        //        if (offsets[dim] != -1)
-        //        {
-        //            // Take one slice in this dimension only. Start = offset (keep), size = 1.
-        //            sizeInFile[dim] = 1;
-        //        }
-        //        else
-        //        {
-        //            // Fill size.
-        //            int sizeDim;
-        //            NetCDF.nc_inq_dimlen(_fileID, slice.GetDimensionID(dim), out sizeDim);
-        //            sizeInFile[dim] = sizeDim;
-
-        //            // Set offset to one. offset = 0, size = size of dimension.
-        //            offsets[dim] = 0;
-        //        }
-        //    }
-
-        //    // Fill in data.
-        //    int sliceSize = field.Size.Product() / slice.GetNumTimeSlices();
-        //    unsafe
-        //    {
-        //        fixed (float* dataPtr = field.Data)
-        //        {
-        //            float* offset = dataPtr + _timeSlice * sliceSize;
-        //            NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets, sizeInFile, offset);
-        //        }
-        //    }
-        //}
 
         /// <summary>
         /// Close the file.
@@ -245,11 +206,13 @@ namespace FlowSharp
 
                 // Query number of dimensions of variable.
                 int numDims;
-                NetCDF.nc_inq_varndims(file.GetID(), (int)var, out numDims);
+                NetCDF.ResultCode ncState = NetCDF.nc_inq_varndims(file.GetID(), (int)var, out numDims);
+                Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR);
                 int[] dimIDs = new int[numDims];
 
                 // Query relevant dimensions.
-                NetCDF.nc_inq_vardimid(file.GetID(), (int)var, dimIDs);
+                ncState = NetCDF.nc_inq_vardimid(file.GetID(), (int)var, dimIDs);
+                Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR);
 
                 _presentDims = new RedSea.Dimension[numDims];
                 _dimOffsets = new int[numDims];

@@ -19,6 +19,23 @@ namespace FlowSharp
 #endif
             Columns = columns;
         }
+        public float Ux { get { return this[0][0]; } set { this[0][0] = value; } }
+        public float Uy { get { return this[1][0]; } set { this[1][0] = value; } }
+        public float Vx { get { return this[0][1]; } set { this[0][1] = value; } }
+        public float Vy { get { return this[1][1]; } set { this[1][1] = value; } }
+
+
+        public SquareMatrix(SquareMatrix m)
+        {
+#if DEBUG
+            foreach (Vector col in m.Columns)
+                Debug.Assert(m.Columns.Length == col.Length); // Only sqare matrices allowed.
+#endif
+            Columns = new Vector[m.Columns.Length];
+
+            for (int c = 0; c < Columns.Length; ++c)
+                Columns[c] = new Vector(m.Columns[c]);
+        }
 
         public SquareMatrix(int length)
         {
@@ -33,6 +50,12 @@ namespace FlowSharp
             set { Debug.Assert(value.Length == Length); Columns[index] = value; }
         }
 
+        public float this[Int2 index]
+        {
+            get { return this[index.X][index.Y]; }
+            set { this[index.X][index.Y] = value; }
+        }
+
         public Vector Column(int index)
         {
             return this[index];
@@ -44,6 +67,17 @@ namespace FlowSharp
             for (int x = 0; x < Length; ++x)
                 row[x] = this[x][index];
             return row;
+        }
+
+        public void Transpose()
+        {
+            for(int x = 0; x < Length; ++x)
+                for(int y = x+1; y < Length; ++y)
+                {
+                    float tmp = this[x][y];
+                    this[x][y] = this[y][x];
+                    this[y][x] = tmp;
+                }
         }
 
         public float Determinant()
@@ -63,6 +97,18 @@ namespace FlowSharp
             {
                 throw new NotImplementedException();
             }
+        }
+
+        public float EuclideanNormSquared()
+        {
+            float sum = 0;
+            foreach (Vector vec in Columns)
+                sum += vec.LengthSquared();
+            return sum;
+        }
+        public float EuclideanNorm()
+        {
+            return (float)Math.Sqrt(EuclideanNormSquared());
         }
 
         public void Eigenanalysis(out SquareMatrix eigenvalues, out SquareMatrix eigenvectors)
@@ -107,6 +153,49 @@ namespace FlowSharp
                 eigenvectors[0] = new Vec2(1, 0);
                 eigenvectors[1] = new Vec2(0, 1);
             }
+        }
+
+        public SquareMatrix ToMat2x2()
+        {
+            SquareMatrix mat = new SquareMatrix(2);
+            mat[0] = this[0].ToVec2();
+            mat[1] = (this.Length > 1) ? this[1].ToVec2() : new Vec2(0);
+
+            return mat;
+        }
+
+        public static SquareMatrix operator + (SquareMatrix a, SquareMatrix b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            SquareMatrix c = new SquareMatrix(a.Length);
+            for (int col = 0; col < c.Length; ++col)
+                c[col] = a[col] + b[col];
+
+            return c;
+        }
+
+        public static SquareMatrix operator -(SquareMatrix a, SquareMatrix b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            SquareMatrix c = new SquareMatrix(a.Length);
+            for (int col = 0; col < c.Length; ++col)
+                c[col] = a[col] - b[col];
+
+            return c;
+        }
+
+        public static SquareMatrix operator *(SquareMatrix a, float b)
+        {
+            SquareMatrix c = new SquareMatrix(a.Length);
+            for (int col = 0; col < c.Length; ++col)
+                c[col] = a[col] * b;
+
+            return c;
+        }
+
+        public static SquareMatrix operator *(float a, SquareMatrix b)
+        {
+            return b * a;
         }
     }
 }
