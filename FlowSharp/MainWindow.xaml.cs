@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -123,6 +124,20 @@ namespace FlowSharp
             
         }
 
+        private void LoadColormapView(object sender, RoutedEventArgs e)
+        {
+            BitmapImage b = new BitmapImage();
+            b.BeginInit();
+            string dir = Directory.GetCurrentDirectory();
+            b.UriSource = new Uri(dir + "/Framework/Renderer/Resources/Colormap" + "Parula" + ".png"); 
+            b.EndInit();
+
+            // ... Get Image reference from sender.
+            var image = sender as Image;
+            // ... Assign Source.
+            image.Source = b;
+        }
+
         #region OnChangeValue
         // ~~~~~~~~~~ On change callbacks ~~~~~~~~~~~ \\
         private void OnChangeDisplay(object sender, RoutedEventArgs e)
@@ -217,7 +232,19 @@ namespace FlowSharp
         private void OnChangeColormap(object sender, RoutedEventArgs e)
         {
             var comboBox = sender as ComboBox;
-            _mapper.CurrentSetting.Colormap = (Colormap)(comboBox.SelectedItem as Colormap?);
+            Colormap map = (Colormap)(comboBox.SelectedItem as Colormap?);
+            _mapper.CurrentSetting.Colormap = map;
+
+            // Load a new image. It is already in the VRAM, but small.
+            BitmapImage b = new BitmapImage();
+            b.BeginInit();
+            string dir = Directory.GetCurrentDirectory();
+            b.UriSource = new Uri(dir + "/Framework/Renderer/Resources/Colormap" + map.ToString() + ".png");
+            b.EndInit();
+
+            // ... Assign Source.
+            ColormapView.Source = b;
+
             UpdateRenderer();
         }
 

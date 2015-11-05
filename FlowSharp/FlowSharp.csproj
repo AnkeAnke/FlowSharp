@@ -181,6 +181,9 @@
     <None Include="Framework\Renderer\Data\DataEffects\Lines.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Content Include="Framework\Renderer\Resources\ColormapCircular.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Framework\Renderer\Resources\ColormapHeatstep.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

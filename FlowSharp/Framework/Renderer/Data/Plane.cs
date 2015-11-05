@@ -112,8 +112,8 @@ namespace FlowSharp
             switch (effect)
             {
                 case RenderEffect.LIC:
-                    Debug.Assert(_fields.Length >= 2);
-                    this._technique = _planeEffect.GetTechniqueByName("RenderLIC");
+                    //Debug.Assert(_fields.Length >= 2);
+                    this._technique = _planeEffect.GetTechniqueByName("RenderLIC" + _fields.Length);
                     break;
                 case RenderEffect.CHECKERBOARD:
                     this._technique = _planeEffect.GetTechniqueByName("RenderChecker");
@@ -150,6 +150,25 @@ namespace FlowSharp
                 new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0),
                 new InputElement("TEXTURE", 0, Format.R32G32B32A32_Float, 16, 0)
             });
+        }
+
+        /// <summary>
+        /// Add one field given as texture.
+        /// </summary>
+        /// <param name="field"></param>
+        public void AddScalar(Texture2D field)
+        {
+            ShaderResourceView[] cpy = _fields;
+            _fields = new ShaderResourceView[_fields.Length + 1];
+            Array.Copy(cpy, _fields, cpy.Length);
+
+            _fields[cpy.Length] = new ShaderResourceView(_device, field);
+        }
+
+        public void ChangeScalar(int pos, Texture2D field)
+        {
+            Debug.Assert(pos < _fields.Length && pos > 0);
+            _fields[pos] = new ShaderResourceView(_device, field);
         }
 
         /// <summary>

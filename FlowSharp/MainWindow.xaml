@@ -42,14 +42,28 @@
         </StackPanel>
         <ComboBox x:Name="DropDownMember1" HorizontalAlignment="Left" Margin="1504,279,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadMember" SelectionChanged="OnChangeMember1"/>
         <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="1365,219,0,0" TextWrapping="Wrap" Text="Time Slice" VerticalAlignment="Top" Width="120"/>
-        
+
         <ComboBox x:Name="DropDownShader" HorizontalAlignment="Left" Margin="1365,816,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadShader" SelectionChanged="OnChangeShader"/>
         <ComboBox x:Name="DropDownColormap" HorizontalAlignment="Left" Margin="1504,816,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadColormap" SelectionChanged="OnChangeColormap"/>
-        <StackPanel x:Name="WindowWidthBlock" HorizontalAlignment="Right" Height="86" Margin="0,862,18,0" VerticalAlignment="Top" Width="259">
-            <TextBlock x:Name="WindowWidth" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Width" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="windowWidth" Maximum="1" Minimum ="0" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.01" LargeChange="0.05" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
-            <TextBox Text="{Binding Value, ElementName=windowWidth, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Width="40" />
+
+        <Image Name="ColormapView" HorizontalAlignment="Left" Margin="1365,843,0,0" VerticalAlignment="Top" Width="259" Height="24" Stretch="Fill" Loaded="LoadColormapView">
+            <!--<Image.RenderTransform>
+                <TransformGroup>
+                    --><!--<ScaleTransform ScaleX="1.0"/>--><!--
+                    <ScaleTransform>
+                        <ScaleTransform.ScaleX>
+                            <Binding ElementName="WindowWidth" Path="Value" Mode="OneWay"/>
+                        </ScaleTransform.ScaleX>
+                    </ScaleTransform>
+                </TransformGroup>
+            </Image.RenderTransform>-->
+        </Image>
+        <StackPanel x:Name="WindowWidthBlock" HorizontalAlignment="Right" Height="86" Margin="0,889,18,0" VerticalAlignment="Top" Width="259">
+            <TextBlock x:Name="WindowWidthText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Width" VerticalAlignment="Top" Width="163" FontSize="10"/>
+            <Slider x:Name="WindowWidth" Maximum="1" Minimum ="0" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.01" LargeChange="0.05" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
+            <TextBox Text="{Binding Value, ElementName=WindowWidth, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Width="40" />
         </StackPanel>
+
 
     </Grid>
 </Window>

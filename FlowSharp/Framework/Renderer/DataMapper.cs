@@ -40,24 +40,24 @@ namespace FlowSharp
                 set {this[Element.LineSetting] = (int)value; }
             }
             [FieldOffset(4)]
-            public int SliceTimeMain = 0;
+            public int SliceTimeMain;
             [FieldOffset(8)]
-            public int SliceTimeReference = 1;
+            public int SliceTimeReference;
             [FieldOffset(12)]
-            public float AlphaStable = 0;
+            public float AlphaStable;
             [FieldOffset(16)]
-            public float StepSize = 1;
+            public float StepSize;
             public VectorField.Integrator.Type IntegrationType
             {
                 get { return (VectorField.Integrator.Type)this[Element.IntegrationType]; }
                 set {this[Element.IntegrationType] = (int)value; }
             }
             [FieldOffset(24)]
-            public int LineX = 0;
+            public int LineX;
             [FieldOffset(28)]
-            public int MemberMain = 0;
+            public int MemberMain;
             [FieldOffset(32)]
-            public int MemberReference = 0;
+            public int MemberReference;
             public Colormap Colormap
             {
                 get { return (Colormap)this[Element.Colormap]; }
@@ -69,7 +69,7 @@ namespace FlowSharp
                 set { this[Element.Shader] = (int)value; }
             }
             [FieldOffset(44)]
-            public float WindowWidth = 1;
+            public float WindowWidth;
 
             // The real data.
             [FieldOffset(0)]
@@ -335,7 +335,7 @@ namespace FlowSharp
                 VectorField field = new VectorField(uv);
                 _grid = field.Grid as RectlinearGrid;
 
-                _fields[0] = new FieldPlane(Plane, field, FieldPlane.RenderEffect.LIC);
+                _fields[0] = new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
                 _fields[0].SetToSubrangeFloat(Plane, _grid as RectlinearGrid, Vector2.Zero, extent);
             }
@@ -363,7 +363,7 @@ namespace FlowSharp
 
                 VectorField field = new VectorField(uv);
 
-                _fields[1] = new FieldPlane(Plane, field, FieldPlane.RenderEffect.LIC);
+                _fields[1] = new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap);
                 _fields[1].SetToSubrangeFloat(Plane, _grid, new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX-1) / _grid.Size[0], 1));
             }
             else if (_currentSetting.LineX != _lastSetting.LineX)
@@ -372,12 +372,15 @@ namespace FlowSharp
             }
 
             // Set mapping values.
-            _fields[0].UpperBound = _currentSetting.WindowWidth;
-            _fields[0].UsedMap = _currentSetting.Colormap;
+            _fields[0].LowerBound = -_currentSetting.WindowWidth / 2;
+            _fields[0].UpperBound = _currentSetting.WindowWidth/2;
             _fields[0].SetRenderEffect(_currentSetting.Shader);
-            _fields[1].UpperBound = _currentSetting.WindowWidth;
-            _fields[1].UsedMap = _currentSetting.Colormap;
+            _fields[0].UsedMap = _currentSetting.Colormap;
+
+            _fields[1].LowerBound = -_currentSetting.WindowWidth / 2;
+            _fields[1].UpperBound = _currentSetting.WindowWidth / 2;
             _fields[1].SetRenderEffect(_currentSetting.Shader);
+            _fields[1].UsedMap = _currentSetting.Colormap;
 
             return _fields.ToList<Renderable>();
         }
@@ -476,12 +479,14 @@ namespace FlowSharp
         public Plane Plane;
         private FieldPlane _currentState;
         private FlowMapUncertain _flowMap;
+        private VectorFieldUnsteady _velocity;
 
-        public FlowMapMapper(Loader.SliceRange[] uv, Plane plane)
+        public FlowMapMapper(Loader.SliceRange[] uv, Plane plane, VectorFieldUnsteady velocity)
         {
             _flowMap = new FlowMapUncertain(new Int2(300, 50), uv, 0, 9);
             Plane = plane;
             Mapping = GetCurrentMap;
+            _velocity = velocity;
         }
 
         /// <summary>
@@ -502,8 +507,10 @@ namespace FlowSharp
                 while(_flowMap.CurrentTime < _currentSetting.SliceTimeMain)
                     _flowMap.Step(_currentSetting.StepSize);
 
+                //_currentState = new FieldPlane(Plane, _velocity.GetTimeSlice(_currentSetting.SliceTimeMain));
+                //_currentState.AddScalar(_flowMap.FlowMap); //.GetPlane(Plane);
                 _currentState = _flowMap.GetPlane(Plane);
-                
+
             }
             if (_lastSetting == null ||
                 _currentSetting.StepSize != _lastSetting.StepSize)
@@ -517,7 +524,7 @@ namespace FlowSharp
                 _currentState.SetRenderEffect(_currentSetting.Shader);
             }
             if(_lastSetting == null ||
-                _lastSetting.StepSize != _currentSetting.WindowWidth)
+                _lastSetting.WindowWidth != _currentSetting.WindowWidth)
             {
                 _currentState.LowerBound = 0;
                 _currentState.UpperBound = _currentSetting.WindowWidth;
@@ -532,7 +539,7 @@ namespace FlowSharp
             {
                 case Setting.Element.Colormap:
                 case Setting.Element.WindowWidth:
-                    return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
+                    //return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
                 case Setting.Element.SliceTimeMain:
                 case Setting.Element.Shader:
                 case Setting.Element.StepSize:

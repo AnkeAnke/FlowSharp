@@ -86,6 +86,7 @@ namespace FlowSharp
     public enum Colormap
     {
         Parula = 0,
-        Heatstep = 1
+        Heatstep = 1,
+        Circular
     }
 }
