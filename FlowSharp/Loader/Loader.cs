@@ -115,19 +115,21 @@ namespace FlowSharp
             Index offsets = new Index(slice.GetOffsets());
             NetCDF.ResultCode ncState = NetCDF.ResultCode.NC_NOERR;
 
-            int[] sizeInFile = new int[offsets.Length];
+            //int[] sizeInFile = new int[offsets.Length];
+            int[] sizeInFile = slice.GetLengths();
             // Probably has less dimensions.
             int[] sizeField = new int[offsets.Length];
             int numDimsField = 0;
             //int currDimSlice = 0;
             for (int dim = 0; dim < offsets.Length; ++dim)
             {
-                if (offsets[dim] != -1)
+
+                if(offsets[dim] != -1 && sizeInFile[dim] > 1)
                 {
-                    // Take one slice in this dimension only. Start = offset (keep), size = 1.
-                    sizeInFile[dim] = 1;
+                    sizeField[numDimsField++] = sizeInFile[dim];
                 }
-                else
+                // Include whole dimension.
+                else if(offsets[dim] == -1)
                 {
                     // Fill size.
                     int sizeDim;
@@ -154,7 +156,7 @@ namespace FlowSharp
             if (slice.IsTimeDependent())
                 fieldSize[numDimsField - 1] = slice.GetNumTimeSlices();
 
-            //TODO: HACK! REMOVE!
+            // Change order of dimensions, so that fastest dimension is at the end.
             for(int dim = 0; dim < fieldSize.Length/2; ++dim)
             {
                 int tmp = fieldSize[dim];
@@ -170,17 +172,8 @@ namespace FlowSharp
             field = new ScalarField(grid);
             int sliceSize = grid.Size.Product() / slice.GetNumTimeSlices();
 
-            //// Get data.
-            int n = offsets.Length;
-            Int32[] off = new int[n];
-            Int32[] size = new int[n];
-            for (int i = 0; i < n; ++i)
-            {
-                off[i] = 0;
-                size[i] = sizeInFile[i];
-            }
-
-            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), off, sizeInFile, field.Data);
+            // Get data. x64 dll fails here...
+            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
             Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
 
             //HACK!
@@ -208,11 +201,13 @@ namespace FlowSharp
             /// </summary>
             private RedSea.Dimension[] _presentDims;
             private int[] _dimOffsets;
+            private int[] _dimLengths;
             private RedSea.Variable _var;
             private int _timeSlices;
 
             public int GetDimensionID(int index) { return (int)_presentDims[index]; }
             public int[] GetOffsets() { return _dimOffsets; }
+            public int[] GetLengths() { return _dimLengths; }
             public RedSea.Variable GetVariable() { return _var; }
             public bool IsTimeDependent() { return _timeSlices > 1; }
             public int GetNumTimeSlices() { return _timeSlices; }
@@ -234,6 +229,7 @@ namespace FlowSharp
 
                 _presentDims = new RedSea.Dimension[numDims];
                 _dimOffsets = new int[numDims];
+                _dimLengths = new int[numDims];
 
                 // Fill arrays.
                 for (int dim = 0; dim < numDims; ++dim)
@@ -243,6 +239,7 @@ namespace FlowSharp
 
                     // "Activate" all dimensions.
                     _dimOffsets[dim] = -1;
+                    _dimLengths[dim] = -1;
                 }
             }
 
@@ -251,7 +248,7 @@ namespace FlowSharp
             /// </summary>
             /// <param name="dim"></param>
             /// <param name="slice"></param>
-            public void SetOffset(RedSea.Dimension dim, int slice)
+            public void SetMember(RedSea.Dimension dim, int slice)
             {
                 // Search for position of dimension in present dimensions.
                 int dimPos = -1;
@@ -269,6 +266,29 @@ namespace FlowSharp
                     return;
 
                 _dimOffsets[dimPos] = slice;
+                // We only chose one element.
+                _dimLengths[dimPos] = 1;
+            }
+
+            public void SetRange(RedSea.Dimension dim, int start, int length)
+            {
+                // Search for position of dimension in present dimensions.
+                int dimPos = -1;
+                for (int pos = 0; pos < _presentDims.Length; ++pos)
+                {
+                    if (_presentDims[pos] == dim)
+                    {
+                        dimPos = pos;
+                        break;
+                    }
+                }
+
+                // Dimension found?
+                if (dimPos == -1)
+                    return;
+
+                _dimOffsets[dimPos] = start;
+                _dimLengths[dimPos] = length;
             }
         }
     }

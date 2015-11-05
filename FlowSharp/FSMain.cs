@@ -45,22 +45,24 @@ namespace FlowSharp
             Loader ncFile = new Loader(RedSea.Singleton.DataFolder + 1 + RedSea.Singleton.FileName);
             ScalarField[] u = new ScalarField[numTimeSlices];
             Loader.SliceRange sliceU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            sliceU.SetOffset(RedSea.Dimension.MEMBER, 0); // Average
-            sliceU.SetOffset(RedSea.Dimension.TIME, 0);
-            sliceU.SetOffset(RedSea.Dimension.CENTER_Z, 0);
+            sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
+            sliceU.SetMember(RedSea.Dimension.TIME, 0);
+            sliceU.SetMember(RedSea.Dimension.CENTER_Z, 0);
 
             ScalarField[] v = new ScalarField[numTimeSlices];
             Loader.SliceRange sliceV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            sliceV.SetOffset(RedSea.Dimension.MEMBER, 0);
-            sliceV.SetOffset(RedSea.Dimension.TIME, 0);
-            sliceV.SetOffset(RedSea.Dimension.CENTER_Z, 0);
+            sliceV.SetMember(RedSea.Dimension.MEMBER, 0);
+            sliceV.SetMember(RedSea.Dimension.TIME, 0);
+            sliceV.SetMember(RedSea.Dimension.CENTER_Z, 0);
 
             ensembleU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            ensembleU.SetOffset(RedSea.Dimension.TIME, 0);
-            ensembleU.SetOffset(RedSea.Dimension.CENTER_Z, 0);
+            ensembleU.SetMember(RedSea.Dimension.TIME, 0);
+            ensembleU.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            ensembleU.SetRange(RedSea.Dimension.MEMBER, 2, 50);
             ensembleV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            ensembleV.SetOffset(RedSea.Dimension.TIME, 0);
-            ensembleV.SetOffset(RedSea.Dimension.CENTER_Z, 0);
+            ensembleV.SetMember(RedSea.Dimension.TIME, 0);
+            ensembleV.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            ensembleV.SetRange(RedSea.Dimension.MEMBER, 2, 50);
 
             //float[] data = new float[5];
             //NetCDF.ResultCode ncState = NetCDF.nc_get_vara_float(ncFile.GetID(), (int)sliceV.GetVariable(), new int[] { 0, 0, 0, 0, 0 }, new int[] { 1, 1, 1, 1, 1 }, data);

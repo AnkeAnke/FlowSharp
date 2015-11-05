@@ -83,16 +83,10 @@ PS_IN VS(VS_IN input)
 
 float4 PS_nTex_1(PS_IN input) : SV_Target
 {
-	float value = field0.SampleLevel(PointSampler, input.uv.xy, 0.0).x;
+	float value = field0.SampleLevel(LinSampler, input.uv.xy, 0.0).x;
 	if (value == invalidNum)
 		discard;
-	//value = value * 0.5 + 0.5;
 	value = (value - minMap) / (maxMap - minMap);
-	//float sign = value > 0 ? 1 : -1;
-	//float4 color = float4(value*sign, value*sign, value*sign, 1.0);
-	//if (sign > 0)
-	//	color.x = 1.0;
-	//return color;
 	return colormap.Sample(LinSampler, float2(value, 0.5));
 }
 

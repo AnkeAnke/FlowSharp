@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using SlimDX;
+using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
@@ -25,30 +26,81 @@ namespace FlowSharp
             _lastSetting = new Setting(_currentSetting);
         }
 
+        public abstract bool IsUsed(Setting.Element element);
+
         /// <summary>
-        /// A class encapsulating all settings that are currently possible via WPF.
+        /// A class encapsulating all settings that are currently possible via WPF. "Union" with an int field.
         /// </summary>
+        [StructLayout(LayoutKind.Explicit)] 
         public class Setting
         {
-            public RedSea.DisplayLines LineSetting = RedSea.DisplayLines.LINE;
-            public int SlicePositionMain = 0;
-            public int SlicePositionReference = 1;
+            public RedSea.DisplayLines LineSetting
+            {
+                get { return (RedSea.DisplayLines)this[Element.LineSetting]; }
+                set {this[Element.LineSetting] = (int)value; }
+            }
+            [FieldOffset(4)]
+            public int SliceTimeMain = 0;
+            [FieldOffset(8)]
+            public int SliceTimeReference = 1;
+            [FieldOffset(12)]
             public float AlphaStable = 0;
+            [FieldOffset(16)]
             public float StepSize = 1;
-            public VectorField.Integrator.Type IntegrationType = VectorField.Integrator.Type.EULER;
+            public VectorField.Integrator.Type IntegrationType
+            {
+                get { return (VectorField.Integrator.Type)this[Element.IntegrationType]; }
+                set {this[Element.IntegrationType] = (int)value; }
+            }
+            [FieldOffset(24)]
             public int LineX = 0;
+            [FieldOffset(28)]
             public int MemberMain = 0;
+            [FieldOffset(32)]
             public int MemberReference = 0;
-            public Colormap Colormap = Colormap.Parula;
-            public FieldPlane.RenderEffect Shader = FieldPlane.RenderEffect.COLORMAP;
+            public Colormap Colormap
+            {
+                get { return (Colormap)this[Element.Colormap]; }
+                set { this[Element.Colormap] = (int)value; }
+            }
+            public FieldPlane.RenderEffect Shader
+            {
+                get { return (FieldPlane.RenderEffect)this[Element.Shader]; }
+                set { this[Element.Shader] = (int)value; }
+            }
+            [FieldOffset(44)]
+            public float WindowWidth = 1;
 
-            //public RedSea.Display SetFunction;
+            // The real data.
+            [FieldOffset(0)]
+            private int[] _data = new int[Enum.GetValues(typeof(Element)).Length];
+            public int this[Element idx]
+            {
+                get { return _data[(int)idx]; }
+                set { _data[(int)idx] = value; }
+            }
+
+            public enum Element : int
+            {
+                LineSetting = 0,
+                SliceTimeMain,
+                SliceTimeReference,
+                AlphaStable,
+                StepSize,
+                IntegrationType,
+                LineX,
+                MemberMain,
+                MemberReference,
+                Colormap,
+                Shader,
+                WindowWidth
+            }
 
             public Setting(Setting cpy)
             {
                 LineSetting = cpy.LineSetting;
-                SlicePositionMain = cpy.SlicePositionMain;
-                SlicePositionReference = cpy.SlicePositionReference;
+                SliceTimeMain = cpy.SliceTimeMain;
+                SliceTimeReference = cpy.SliceTimeReference;
                 AlphaStable = cpy.AlphaStable;
                 IntegrationType = cpy.IntegrationType;
                 LineX = cpy.LineX;
@@ -56,6 +108,7 @@ namespace FlowSharp
                 MemberReference = cpy.MemberReference;
                 Colormap = cpy.Colormap;
                 Shader = cpy.Shader;
+                WindowWidth = cpy.WindowWidth;
             }
 
             public Setting() { }
@@ -82,6 +135,7 @@ namespace FlowSharp
         protected List<Renderable> _slice1;
         protected List<LineSet> _rawLines;
         protected List<Renderable> _lines;
+        protected FieldPlane[] _planes = new FieldPlane[2];
 
         public CriticalPointTracking(CriticalPointSet2D[] cp, VectorFieldUnsteady velocity, Plane plane)
         {
@@ -101,33 +155,37 @@ namespace FlowSharp
 
         public List<Renderable> TrackCP()
         {
+
             // The reference slice was changed. Update the field and its critical points.
             if (_lastSetting == null ||
-                _currentSetting.SlicePositionReference != _lastSetting.SlicePositionReference)
+                _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference)
             {
                 _slice1 = new List<Renderable>(2);
-                _slice1.Add(new FieldPlane(Plane, SlicesToRender[_currentSetting.SlicePositionReference], FieldPlane.RenderEffect.LIC));
-                _slice1.Add(new PointCloud(Plane, CP[_currentSetting.SlicePositionReference].ToBasicSet()));
+                _planes[0] = new FieldPlane(Plane, SlicesToRender[_currentSetting.SliceTimeReference], FieldPlane.RenderEffect.LIC);
+                _slice1.Add(_planes[0]);
+                _slice1.Add(new PointCloud(Plane, CP[_currentSetting.SliceTimeReference].ToBasicSet()));
             }
 
+            
             // Something mayor changed. Re-integrate.
             bool mapLines = false;
             if (_lastSetting == null ||
                 _currentSetting.AlphaStable != _lastSetting.AlphaStable || 
-                _currentSetting.SlicePositionMain != _lastSetting.SlicePositionMain || 
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain || 
                 _currentSetting.IntegrationType != _lastSetting.IntegrationType || 
                 _currentSetting.StepSize != _lastSetting.StepSize)
             {
-                if (_lastSetting == null || _currentSetting.SlicePositionMain != _lastSetting.SlicePositionMain)
+                if (_lastSetting == null || _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
                 {
                     // Clear the slice mapping.
                     _slice0 = new List<Renderable>(2);
 
                     // ~~~~~~~~~~~~ Field Mapping ~~~~~~~~~~~~~ \\
-                    _slice0.Add(new FieldPlane(Plane, SlicesToRender[_currentSetting.SlicePositionMain], FieldPlane.RenderEffect.LIC));
+                    _planes[1] = new FieldPlane(Plane, SlicesToRender[_currentSetting.SliceTimeMain], FieldPlane.RenderEffect.LIC);
+                    _slice0.Add(_planes[1]);
 
                     // ~~~~~~~~ Critical Point Mapping ~~~~~~~~ \\
-                    _slice0.Add(new PointCloud(Plane, CP[_currentSetting.SlicePositionMain].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet()));
+                    _slice0.Add(new PointCloud(Plane, CP[_currentSetting.SliceTimeMain].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet()));
                 }
 
                 // Re-compute the feature flow field. Costly operation.
@@ -147,12 +205,12 @@ namespace FlowSharp
                 intVF.WorldPosition = false;
 
                 // Integrate the forward field.
-                LineSet cpLinesPos = intVF.Integrate(CP[_currentSetting.SlicePositionMain], false);
+                LineSet cpLinesPos = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false);
 
                 // Negative FFF integration. Reversed stabilising field.
                 //intVF.Direction = Sign.NEGATIVE;
                 intVF.Field = BackwardFFF;
-                var cpLinesNeg = intVF.Integrate(CP[_currentSetting.SlicePositionMain], false);
+                var cpLinesNeg = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false);
                 cpLinesNeg.Color = new Vector3(0, 0.8f, 0);
 
                 // Add the data to the list.
@@ -187,8 +245,32 @@ namespace FlowSharp
                         break;
                 }
             }
-    
+
+            // Set mapping values.
+            _planes[0].UpperBound = _currentSetting.WindowWidth;
+            _planes[0].UsedMap = _currentSetting.Colormap;
+            _planes[0].SetRenderEffect(_currentSetting.Shader);
+            _planes[1].UpperBound = _currentSetting.WindowWidth;
+            _planes[1].UsedMap = _currentSetting.Colormap;
+            _planes[1].SetRenderEffect(_currentSetting.Shader);
+
             return _slice0.Concat(_slice1).Concat(_lines).ToList();
+        }
+
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch(element)
+            {
+                case Setting.Element.Colormap:
+                case Setting.Element.WindowWidth:
+                    return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
+                case Setting.Element.LineX:
+                case Setting.Element.MemberMain:
+                case Setting.Element.MemberReference:
+                    return false;
+                default:
+                    return true;
+            }
         }
     }
 
@@ -237,13 +319,13 @@ namespace FlowSharp
         {
             if (_lastSetting == null || 
                 _currentSetting.MemberMain != _lastSetting.MemberMain ||
-                _currentSetting.SlicePositionMain != _lastSetting.SlicePositionMain)
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
             {
                 ScalarField[] uv = new ScalarField[2];
-                string main = RedSea.Singleton.DataFolder + (_currentSetting.SlicePositionMain + 1) + RedSea.Singleton.FileName;
+                string main = RedSea.Singleton.DataFolder + (_currentSetting.SliceTimeMain + 1) + RedSea.Singleton.FileName;
                 // Read in the data.
-                _ranges[0].SetOffset(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
-                _ranges[1].SetOffset(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
+                _ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
+                _ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
 
                 Loader ncFile = new Loader(main);
                 uv[0] = ncFile.LoadFieldSlice(_ranges[0]);
@@ -265,13 +347,13 @@ namespace FlowSharp
 
             if (_lastSetting == null || 
                 _currentSetting.MemberReference != _lastSetting.MemberReference ||
-                _currentSetting.SlicePositionReference != _lastSetting.SlicePositionReference)
+                _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference)
             {
                 ScalarField[] uv = new ScalarField[2];
-                string main = RedSea.Singleton.DataFolder + (_currentSetting.SlicePositionReference+ 1) + RedSea.Singleton.FileName;
+                string main = RedSea.Singleton.DataFolder + (_currentSetting.SliceTimeReference+ 1) + RedSea.Singleton.FileName;
                 // Read in the data.                
-                _ranges[0].SetOffset(RedSea.Dimension.MEMBER, _currentSetting.MemberReference);
-                _ranges[1].SetOffset(RedSea.Dimension.MEMBER, _currentSetting.MemberReference);
+                _ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberReference);
+                _ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberReference);
 
                 Loader ncFile = new Loader(main);
                 Loader.SliceRange sliceU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
@@ -289,7 +371,32 @@ namespace FlowSharp
                 _fields[1].SetToSubrangeFloat(Plane, _grid, new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX-1) / _grid.Size[0], 1));
             }
 
+            // Set mapping values.
+            _fields[0].UpperBound = _currentSetting.WindowWidth;
+            _fields[0].UsedMap = _currentSetting.Colormap;
+            _fields[0].SetRenderEffect(_currentSetting.Shader);
+            _fields[1].UpperBound = _currentSetting.WindowWidth;
+            _fields[1].UsedMap = _currentSetting.Colormap;
+            _fields[1].SetRenderEffect(_currentSetting.Shader);
+
             return _fields.ToList<Renderable>();
+        }
+
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.Colormap:
+                case Setting.Element.WindowWidth:
+                    return (_currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT);
+                case Setting.Element.AlphaStable:
+                case Setting.Element.IntegrationType:
+                case Setting.Element.LineSetting:
+                case Setting.Element.StepSize:
+                    return false;
+                default:
+                    return true;
+            }
         }
     }
 
@@ -320,9 +427,9 @@ namespace FlowSharp
         public List<Renderable> GetTimeSlice()
         {
             if (_lastSetting == null ||
-                _currentSetting.SlicePositionMain != _lastSetting.SlicePositionMain)
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
             {
-                VectorField sliceOW = _fieldOW.GetTimeSlice(_currentSetting.SlicePositionMain);
+                VectorField sliceOW = _fieldOW.GetTimeSlice(_currentSetting.SliceTimeMain);
                 _fieldSlice = new FieldPlane(Plane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
             }
             if (_lastSetting == null ||
@@ -339,8 +446,28 @@ namespace FlowSharp
                 _fieldSlice.SetRenderEffect(_currentSetting.Shader);
             }
             List<Renderable> list = new List<Renderable>(1);
+
+            // Set mapping.
+            _fieldSlice.UpperBound = _currentSetting.WindowWidth;
+            _fieldSlice.UsedMap = _currentSetting.Colormap;
+            _fieldSlice.SetRenderEffect(_currentSetting.Shader);
             list.Add(_fieldSlice);
             return list;
+        }
+
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.Colormap:
+                case Setting.Element.WindowWidth:
+                    return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
+                case Setting.Element.SliceTimeMain:
+                case Setting.Element.Shader:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 
@@ -352,7 +479,7 @@ namespace FlowSharp
 
         public FlowMapMapper(Loader.SliceRange[] uv, Plane plane)
         {
-            _flowMap = new FlowMapUncertain(new Int2(100, 100), uv, 0, 9);
+            _flowMap = new FlowMapUncertain(new Int2(300, 50), uv, 0, 9);
             Plane = plane;
             Mapping = GetCurrentMap;
         }
@@ -364,13 +491,19 @@ namespace FlowSharp
         public List<Renderable> GetCurrentMap()
         {
             if (_lastSetting == null ||
-                _currentSetting.SlicePositionMain != _lastSetting.SlicePositionMain)
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
             {
-                if (_flowMap.CurrentTime < _currentSetting.SlicePositionMain)
+                if (_lastSetting == null || _currentSetting.SliceTimeMain < _flowMap.CurrentTime)
                 {
-                    _flowMap.Step();
-                    _currentState = _flowMap.GetPlane(Plane);
+                    _flowMap.SetupPoint(new Int2(300, 50), _currentSetting.SliceTimeMain);
                 }
+
+                // Integrate to the desired time step.
+                while(_flowMap.CurrentTime < _currentSetting.SliceTimeMain)
+                    _flowMap.Step(_currentSetting.StepSize);
+
+                _currentState = _flowMap.GetPlane(Plane);
+                
             }
             if (_lastSetting == null ||
                 _currentSetting.StepSize != _lastSetting.StepSize)
@@ -383,9 +516,30 @@ namespace FlowSharp
                 _currentState.UsedMap = _currentSetting.Colormap;
                 _currentState.SetRenderEffect(_currentSetting.Shader);
             }
+            if(_lastSetting == null ||
+                _lastSetting.StepSize != _currentSetting.WindowWidth)
+            {
+                _currentState.LowerBound = 0;
+                _currentState.UpperBound = _currentSetting.WindowWidth;
+            }
             List<Renderable> list = new List<Renderable>(1);
             list.Add(_currentState);
             return list;
+        }
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.Colormap:
+                case Setting.Element.WindowWidth:
+                    return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
+                case Setting.Element.SliceTimeMain:
+                case Setting.Element.Shader:
+                case Setting.Element.StepSize:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 
@@ -395,6 +549,11 @@ namespace FlowSharp
         {
             Mapping = (() => new List<Renderable>(0));
             _currentSetting = new Setting();
+        }
+        // We want to be able to make all settings before loading other data.
+        public override bool IsUsed(Setting.Element element)
+        {
+            return true;
         }
     }
 }
