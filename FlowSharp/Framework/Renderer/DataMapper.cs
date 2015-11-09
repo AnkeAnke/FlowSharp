@@ -74,6 +74,7 @@ namespace FlowSharp
             // The real data.
             [FieldOffset(0)]
             private int[] _data = new int[Enum.GetValues(typeof(Element)).Length];
+            public int[] Data { get { return _data; } }
             public int this[Element idx]
             {
                 get { return _data[(int)idx]; }
@@ -98,6 +99,7 @@ namespace FlowSharp
 
             public Setting(Setting cpy)
             {
+                //Array.Copy(cpy.Data, _data, cpy.Data.Length);
                 LineSetting = cpy.LineSetting;
                 SliceTimeMain = cpy.SliceTimeMain;
                 SliceTimeReference = cpy.SliceTimeReference;
@@ -107,6 +109,7 @@ namespace FlowSharp
                 MemberMain = cpy.MemberMain;
                 MemberReference = cpy.MemberReference;
                 Colormap = cpy.Colormap;
+                StepSize = cpy.StepSize;
                 Shader = cpy.Shader;
                 WindowWidth = cpy.WindowWidth;
             }
@@ -128,7 +131,12 @@ namespace FlowSharp
         public VectorField ForwardFFF, BackwardFFF;
         public Plane Plane;
         public VectorField Velocity;
-        public VectorField[] SlicesToRender;
+        public VectorField[] SlicesToRender
+        {
+            get;
+            set;
+        }
+        
         //private VectorField[] _sliceFields;
 
         protected List<Renderable> _slice0;
@@ -200,22 +208,23 @@ namespace FlowSharp
                 _rawLines = new List<LineSet>(2);
                 // Setup an integrator.
                 VectorField.Integrator intVF = VectorField.Integrator.CreateIntegrator(ForwardFFF, _currentSetting.IntegrationType);
-                intVF.MaxNumSteps = 1000;
+                intVF.MaxNumSteps = 10000;
                 intVF.StepSize = _currentSetting.StepSize;
                 intVF.WorldPosition = false;
+                intVF.NormalizeField = true;
 
                 // Integrate the forward field.
                 LineSet cpLinesPos = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false);
 
                 // Negative FFF integration. Reversed stabilising field.
                 //intVF.Direction = Sign.NEGATIVE;
-                intVF.Field = BackwardFFF;
-                var cpLinesNeg = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false);
-                cpLinesNeg.Color = new Vector3(0, 0.8f, 0);
+//                intVF.Field = BackwardFFF;
+//                var cpLinesNeg = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false);
+//                cpLinesNeg.Color = new Vector3(0, 0.8f, 0);
 
                 // Add the data to the list.
                 _rawLines.Add(cpLinesPos);
-                _rawLines.Add(cpLinesNeg);
+//                _rawLines.Add(cpLinesNeg);
                 mapLines = true;
             }
 
@@ -288,7 +297,7 @@ namespace FlowSharp
             SlicesToRender = new VectorField[velocity.Size.T];
             for (int slice = 0; slice < velocity.Size.T; ++slice)
             {
-                SlicesToRender[slice] = velocity.GetSlice(slice);
+                SlicesToRender[slice] = Velocity.GetSlice(slice);
             }
             Mapping = TrackCP;
             Plane = plane;
@@ -483,7 +492,7 @@ namespace FlowSharp
 
         public FlowMapMapper(Loader.SliceRange[] uv, Plane plane, VectorFieldUnsteady velocity)
         {
-            _flowMap = new FlowMapUncertain(new Int2(300, 50), uv, 0, 9);
+            _flowMap = new FlowMapUncertain(new Int2(120, 40), uv, 0, 9);
             Plane = plane;
             Mapping = GetCurrentMap;
             _velocity = velocity;
@@ -500,16 +509,15 @@ namespace FlowSharp
             {
                 if (_lastSetting == null || _currentSetting.SliceTimeMain < _flowMap.CurrentTime)
                 {
-                    _flowMap.SetupPoint(new Int2(300, 50), _currentSetting.SliceTimeMain);
+                    _flowMap.SetupPoint(new Int2(130, 30), _currentSetting.SliceTimeMain);
                 }
 
                 // Integrate to the desired time step.
                 while(_flowMap.CurrentTime < _currentSetting.SliceTimeMain)
                     _flowMap.Step(_currentSetting.StepSize);
 
-                //_currentState = new FieldPlane(Plane, _velocity.GetTimeSlice(_currentSetting.SliceTimeMain));
-                //_currentState.AddScalar(_flowMap.FlowMap); //.GetPlane(Plane);
-                _currentState = _flowMap.GetPlane(Plane);
+                 //.GetPlane(Plane);
+                //_currentState = _flowMap.GetPlane(Plane);
 
             }
             if (_lastSetting == null ||
@@ -518,10 +526,25 @@ namespace FlowSharp
             }
             if (_lastSetting == null ||
                 _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader)
+                _currentSetting.Shader != _lastSetting.Shader ||
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
             {
-                _currentState.UsedMap = _currentSetting.Colormap;
-                _currentState.SetRenderEffect(_currentSetting.Shader);
+                switch(_currentSetting.Shader)
+                {
+                    case FieldPlane.RenderEffect.LIC:
+                        var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
+                        tmp.TimeSlice = null;
+                        _currentState = new FieldPlane(Plane, tmp, _currentSetting.Shader, _currentSetting.Colormap);
+                        _currentState.AddScalar(_flowMap.FlowMap);
+                        break;
+                    default:
+                        _currentState = _flowMap.GetPlane(Plane);
+                        _currentState.UsedMap = _currentSetting.Colormap;
+                        _currentState.SetRenderEffect(_currentSetting.Shader);
+                        break;
+                }
+                _currentState.LowerBound = 0;
+                _currentState.UpperBound = _currentSetting.WindowWidth;
             }
             if(_lastSetting == null ||
                 _lastSetting.WindowWidth != _currentSetting.WindowWidth)

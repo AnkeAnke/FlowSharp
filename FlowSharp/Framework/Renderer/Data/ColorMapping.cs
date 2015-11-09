@@ -87,6 +87,7 @@ namespace FlowSharp
     {
         Parula = 0,
         Heatstep = 1,
-        Circular
+        Circular,
+        Red
     }
 }

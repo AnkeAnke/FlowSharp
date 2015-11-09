@@ -76,12 +76,14 @@ namespace FlowSharp
         {
             DropDownSlice0.ItemsSource = Enumerable.Range(0, 10);          
             DropDownSlice0.SelectedIndex = 3;
+            _mapper.CurrentSetting.SliceTimeMain = DropDownSlice0.SelectedIndex;
         }
 
         private void LoadSlice1(object sender, RoutedEventArgs e)
         {
             DropDownSlice1.ItemsSource = Enumerable.Range(0, 10);
             DropDownSlice1.SelectedIndex = 5;
+            _mapper.CurrentSetting.SliceTimeReference = DropDownSlice1.SelectedIndex;
         }
 
         private void LoadMember(object sender, RoutedEventArgs e)
@@ -107,7 +109,7 @@ namespace FlowSharp
         {
             //(sender as Slider).Minimum = 0.01;
             (sender as Slider).Value = 1.0;// 0.06;
-            
+            _mapper.CurrentSetting.StepSize = (float)(sender as Slider).Value;
         }
 
         private void LoadShader(object sender, RoutedEventArgs e)
@@ -272,6 +274,8 @@ namespace FlowSharp
         private void ActivateCamera(object sender, MouseEventArgs e)
         {
             Renderer.Singleton.Camera.Active = true;
+            //foreach (FrameworkElement elem in _windowObjects)
+                DX11Display.Focus();
         }
 
         private void DeactivateCamera(object sender, MouseEventArgs e)

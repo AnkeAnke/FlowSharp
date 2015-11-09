@@ -61,8 +61,9 @@ namespace FlowSharp
         protected ShaderResourceView[] _fields;
         protected int _width, _height;
         protected float _invalid;
+        public FieldPlane.RenderEffect Effect;
 
-        
+
 
         /// <summary>
         /// Plane to display scalar/vector field data on. Condition: Fields domain is 2D.
@@ -79,7 +80,7 @@ namespace FlowSharp
             foreach(Field field in fields.Scalars)
                 System.Diagnostics.Debug.Assert(field.Size.Length == 2);
 #endif
-
+            this.Effect = effect;
             this._effect = _planeEffect;
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
@@ -118,12 +119,16 @@ namespace FlowSharp
                 case RenderEffect.CHECKERBOARD:
                     this._technique = _planeEffect.GetTechniqueByName("RenderChecker");
                     break;
+                case RenderEffect.CHECKERBOARD_COLORMAP:
+                    this._technique = _planeEffect.GetTechniqueByName("RenderCheckerTex" + _fields.Length);
+                    break;
                 case RenderEffect.COLORMAP:
                 default:
                     this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fields.Length);
                     break;
                 
             }
+            Effect = effect;
 
         }
 
@@ -163,6 +168,8 @@ namespace FlowSharp
             Array.Copy(cpy, _fields, cpy.Length);
 
             _fields[cpy.Length] = new ShaderResourceView(_device, field);
+
+            SetRenderEffect(Effect);
         }
 
         public void ChangeScalar(int pos, Texture2D field)
@@ -318,9 +325,10 @@ namespace FlowSharp
         public enum RenderEffect
         {
             DEFAULT = 0,
-            LIC = 1,
-            CHECKERBOARD = 2,
-            COLORMAP = 3
+            COLORMAP,
+            LIC,
+            CHECKERBOARD,
+            CHECKERBOARD_COLORMAP
         }
     }
 }

@@ -245,7 +245,7 @@ namespace FlowSharp
             Array.Copy(grid.Origin.Data, newOrigin.Data, newSize.Length);
             Array.Copy(grid.CellSize.Data, newCell.Data, newSize.Length);
 
-            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell, posInLastDimension * grid.CellSize.T + grid.Origin.T);
+            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell);
             for(int i = 0; i < slices.Length; ++i)
             {
 

@@ -23,7 +23,7 @@
         </StackPanel>-->
         <StackPanel x:Name="StepSizeBlock" HorizontalAlignment="Right" Height="85" Margin="0,551,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="StepSizeText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Step Size for Integration" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="step" Maximum="1.0" Minimum ="0.001" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.01" AutoToolTipPlacement="BottomRight" AutoToolTipPrecision="3" Loaded="LoadStepSize" PreviewMouseUp="OnChangeStepSize"/>
+            <Slider x:Name="step" Maximum="3.0" Minimum ="0.001" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.01" AutoToolTipPlacement="BottomRight" AutoToolTipPrecision="3" Loaded="LoadStepSize" PreviewMouseUp="OnChangeStepSize"/>
             <TextBox Text="{Binding ElementName=step, Path=Value, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Width="40" />
         </StackPanel>
         <StackPanel x:Name="AlphaBlock" HorizontalAlignment="Right" Height="86" Margin="0,450,18,0" VerticalAlignment="Top" Width="259">
@@ -60,7 +60,7 @@
         </Image>
         <StackPanel x:Name="WindowWidthBlock" HorizontalAlignment="Right" Height="86" Margin="0,889,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="WindowWidthText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Width" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="WindowWidth" Maximum="1" Minimum ="0" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.01" LargeChange="0.05" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
+            <Slider x:Name="WindowWidth" Maximum="10" Minimum ="0" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
             <TextBox Text="{Binding Value, ElementName=WindowWidth, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Width="40" />
         </StackPanel>
 

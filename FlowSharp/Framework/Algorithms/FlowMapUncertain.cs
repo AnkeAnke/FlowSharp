@@ -158,14 +158,15 @@ namespace FlowSharp
             CudaArray2D lastFlowMap = _cudaDxMapper[0].GetMappedArray2D(0, 0);
 
             // Advect from each member to each member. In each block, the same configuration is choosen.
-            dim3 grid = new dim3((int)((float)_width/BLOCK_SIZE + 0.5f), (int)((float)_height/BLOCK_SIZE + 0.5f), _numMembers * _numMembers);
+            dim3 grid = new dim3((int)((float)_width/BLOCK_SIZE + 0.5f), (int)((float)_height/BLOCK_SIZE + 0.5f), _numMembers);
 
             // Advect a block in each member-member combination.
             dim3 threads = new dim3(BLOCK_SIZE, BLOCK_SIZE);
 
             _advectParticlesKernel.GridDimensions = grid;
             _advectParticlesKernel.BlockDimensions = threads;
-            _advectParticlesKernel.Run(_pongFlowMap.DevicePointer, _width, _height, _numMembers, PARTICLE_DENSITY, stepSize, 0.000001f, _texInvalidValue/5);
+            // (float* mapT1, const int width, const int height, const int numMembers, /*float timeScale, */ float stepSize, float minDensity, float invalid)
+            _advectParticlesKernel.Run(_pongFlowMap.DevicePointer, _width, _height, _numMembers, stepSize, 0.000001f, _texInvalidValue);
 
             
 
@@ -210,7 +211,7 @@ namespace FlowSharp
 
         public FieldPlane GetPlane(Plane plane)
         {
-            FieldPlane flowMap = new FieldPlane(plane, _ensembleGrid, FlowMap, _ensembleGrid.Size.ToInt2(), CurrentTime, float.MaxValue, FieldPlane.RenderEffect.DEFAULT);
+            FieldPlane flowMap = new FieldPlane(plane, _ensembleGrid, FlowMap, _ensembleGrid.Size.ToInt2(), 0, float.MaxValue, FieldPlane.RenderEffect.DEFAULT);
             return flowMap;
         }
 

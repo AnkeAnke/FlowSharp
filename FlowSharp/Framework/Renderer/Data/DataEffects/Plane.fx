@@ -87,7 +87,7 @@ float4 PS_nTex_1(PS_IN input) : SV_Target
 	float value = field0.SampleLevel(PointSampler, input.uv.xy, 0.0).x;
 	if (value == invalidNum)
 		discard;
-	value = (value - minMap) / (maxMap - minMap);
+	value = saturate((value - minMap) / (maxMap - minMap));
 	return colormap.Sample(LinSampler, float2(value, 0.5));
 }
 
@@ -101,8 +101,8 @@ float4 PS_nTex_2(PS_IN input) : SV_Target
 	if (v0 == invalidNum && v1 == invalidNum)
 		discard;
 
-	v0 = (v0 - minMap) / (maxMap - minMap);
-	v1 = (v1 - minMap) / (maxMap - minMap);
+	v0 = saturate((v0 - minMap) / (maxMap - minMap));
+	v1 = saturate((v1 - minMap) / (maxMap - minMap));
 
 	return float4(v0, v1, 0.0, 1.0);
 }
@@ -116,9 +116,9 @@ float4 PS_nTex_3(PS_IN input) : SV_Target
 	if (v0 == invalidNum && v1 == invalidNum)
 	discard;
 
-	v0 = (v0 - minMap) / (maxMap - minMap);
-	v1 = (v1 - minMap) / (maxMap - minMap);
-	v2 = (v2 - minMap) / (maxMap - minMap);
+	v0 = saturate((v0 - minMap) / (maxMap - minMap));
+	v1 = saturate((v1 - minMap) / (maxMap - minMap));
+	v2 = saturate((v2 - minMap) / (maxMap - minMap));
 
 	return float4(v0, v1, v2, 1.0);
 }
@@ -169,10 +169,10 @@ float4 PS_LIC_3(PS_IN input) : SV_Target
 {
 	float4 LIC = PS_LIC_2(input);
 
-	float value = field2.SampleLevel(PointSampler, input.uv.xy, 0.0).x;
+	float value = field2.Sample(PointSampler, input.uv.xy).x;
 	// Discarding should have been done by the LIC shader.
 
-	value = (value - minMap) / (maxMap - minMap);
+	value = saturate((value - minMap) / (maxMap - minMap));
 	float4 scalar = colormap.Sample(LinSampler, float2(value, 0.5));
 
 	return LIC * (1 - value) + scalar * value;
@@ -182,6 +182,19 @@ float4 PS_LIC_3(PS_IN input) : SV_Target
 float4 PS_Checker(PS_IN input) : SV_Target
 {
 	return ((int)(input.uv.x * width + 0.5) + (int)(input.uv.y * height + 0.5)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
+}
+
+float4 PS_Checker_Tex_1(PS_IN input) : SV_Target
+{
+	float4 board = ((int)(input.uv.x * width + 0.5) + (int)(input.uv.y * height + 0.5)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
+
+	float value = field0.Sample(PointSampler, input.uv.xy).x;
+	// Discarding should have been done by the LIC shader.
+
+	value = saturate((value - minMap) / (maxMap - minMap));
+	float4 scalar = colormap.Sample(LinSampler, float2(value, 0.5));
+
+	return board * (1 - value) + scalar * value;
 }
 
 BlendState SrcAlphaBlendingAdd
@@ -264,6 +277,17 @@ technique10 RenderChecker
 		SetGeometryShader(0);
 		SetVertexShader(CompileShader(vs_4_0, VS()));
 		SetPixelShader(CompileShader(ps_4_0, PS_Checker()));
+		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+}
+
+technique10 RenderCheckerTex1
+{
+	pass P0
+	{
+		SetGeometryShader(0);
+		SetVertexShader(CompileShader(vs_4_0, VS()));
+		SetPixelShader(CompileShader(ps_4_0, PS_Checker_Tex_1()));
 		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 }
