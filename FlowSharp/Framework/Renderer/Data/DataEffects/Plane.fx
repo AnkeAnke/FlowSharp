@@ -156,7 +156,7 @@ float4 PS_LIC_2(PS_IN input) : SV_Target
 
 		for (int i = 0; i < NUM_STEPS_LIC; ++i)
 		{
-			pos = EulerStep(pos, float(sign) * 0.5 * height /200);
+			pos = EulerStep(pos, float(sign) * 20 / NUM_STEPS_LIC);
 			sum += SimpleRandom(pos) * smoothstep(1, NUM_STEPS_LIC, i);
 		}
 	}

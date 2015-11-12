@@ -48,78 +48,70 @@ namespace FlowSharp
             sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
             sliceU.SetMember(RedSea.Dimension.TIME, 0);
             sliceU.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            //sliceU.SetRange(RedSea.Dimension.GRID_X, 2, 100);
+            //sliceU.SetRange(RedSea.Dimension.CENTER_Y, 20, 50);
 
             ScalarField[] v = new ScalarField[numTimeSlices];
             Loader.SliceRange sliceV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
             sliceV.SetMember(RedSea.Dimension.MEMBER, 0);
             sliceV.SetMember(RedSea.Dimension.TIME, 0);
             sliceV.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            //sliceV.SetRange(RedSea.Dimension.CENTER_X, 0, 448);
+            //sliceV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
 
             ensembleU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
             ensembleU.SetMember(RedSea.Dimension.TIME, 0);
             ensembleU.SetMember(RedSea.Dimension.CENTER_Z, 0);
             ensembleU.SetRange(RedSea.Dimension.MEMBER, 2, 50);
+            //ensembleU.SetRange(RedSea.Dimension.GRID_X, 100, 160);
+            //ensembleU.SetRange(RedSea.Dimension.CENTER_Y, 10, 70);
             ensembleV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
             ensembleV.SetMember(RedSea.Dimension.TIME, 0);
             ensembleV.SetMember(RedSea.Dimension.CENTER_Z, 0);
             ensembleV.SetRange(RedSea.Dimension.MEMBER, 2, 50);
+            //ensembleV.SetRange(RedSea.Dimension.CENTER_X, 100, 160);
+            //ensembleV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
 
             //float[] data = new float[5];
             //NetCDF.ResultCode ncState = NetCDF.nc_get_vara_float(ncFile.GetID(), (int)sliceV.GetVariable(), new int[] { 0, 0, 0, 0, 0 }, new int[] { 1, 1, 1, 1, 1 }, data);
             //Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
             //Console.WriteLine(ncState.ToString());
             // Load first time slice.
-            u[0] = ncFile.LoadFieldSlice(sliceU);
-            v[0] = ncFile.LoadFieldSlice(sliceV);
+//            u[0] = ncFile.LoadFieldSlice(sliceU);
+//            v[0] = ncFile.LoadFieldSlice(sliceV);
 
             ncFile.Close();
 
-            for (int time = 1; time < numTimeSlices; ++time)
-            {
-                ncFile = new Loader(RedSea.Singleton.DataFolder + (time + 1) + RedSea.Singleton.FileName);
-                u[time] = ncFile.LoadFieldSlice(sliceU);
-                v[time] = ncFile.LoadFieldSlice(sliceV);
-                ncFile.Close();
-            }
-
-            ScalarFieldUnsteady uTime = new ScalarFieldUnsteady(u);
-            ScalarFieldUnsteady vTime = new ScalarFieldUnsteady(v);
-            velocity = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { uTime, vTime });
-            //Random rnd = new Random(732623);
-
-            //ScalarField[] uRnd = new ScalarField[numTimeSlices];
-            //ScalarField[] vRnd = new ScalarField[numTimeSlices];
-            //float size = 8;
-            //uRnd[0] = ScalarField.FromAnalyticalField(x => (float)Math.Sin(x[0])/*(float)rnd.NextDouble() - 0.5f*/, new Index(numTimeSlices, 2), new Vector(- size/2, 2), new Vector(size / (numTimeSlices-1), 2));
-            //vRnd[0] = ScalarField.FromAnalyticalField(x => (float)Math.Cos(x[1])/*(float)rnd.NextDouble() - 0.5f*/, new Index(numTimeSlices, 2), new Vector(- size/2, 2), new Vector(size / (numTimeSlices-1), 2));
-
             //for (int time = 1; time < numTimeSlices; ++time)
             //{
-            //    uRnd[time] = new ScalarField(uRnd[time - 1], (s, g) => (s + (float)rnd.NextDouble()) - 0.5f);
-            //    vRnd[time] = new ScalarField(vRnd[time - 1], (s, g) => (s + (float)rnd.NextDouble()) - 0.5f);
-            //}                                                               
+            //    ncFile = new Loader(RedSea.Singleton.DataFolder + (time + 1) + RedSea.Singleton.FileName);
+            //    u[time] = ncFile.LoadFieldSlice(sliceU);
+            //    v[time] = ncFile.LoadFieldSlice(sliceV);
+            //    ncFile.Close();
+            //}
 
-            //ScalarFieldUnsteady uRndTime = new ScalarFieldUnsteady(uRnd, 0, 1);
-            //ScalarFieldUnsteady vRndTime = new ScalarFieldUnsteady(vRnd, 0, 1);
-            //velocity = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { uRndTime, vRndTime });
-            //((RectlinearGrid)velocity.Grid).CellSize.T = 0.3f;
-
+            //ScalarFieldUnsteady uTime = new ScalarFieldUnsteady(u);
+            //ScalarFieldUnsteady vTime = new ScalarFieldUnsteady(v);
+            //velocity = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { uTime, vTime });
+            velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, 10);
+            // Scale the field from m/s to (0.1 degree per 3 days).
+            velocity.ScaleToGrid(new Vec2(25.92f));
             Console.WriteLine("Completed loading data.");
 
             CriticalPointSet2D[] cps = new CriticalPointSet2D[numTimeSlices];
             for (int time = 0; time < numTimeSlices; ++time)
             {
 //                cps[time] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocity.GetTimeSlice(time), 5, 0.3f);
-                //cps.SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet();
+//                cps[time].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet();
 
                 Console.WriteLine("Completed processing step " + time + '.');
             }
 
-            redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
-            //            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
-            //            Console.WriteLine("Found CP.")
-            //            mapperPathCore = new PathlineCoreTracking(velocity, redSea);
-            //            Console.WriteLine("Found Pathline Cores.")
+            redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX*0.1f, Vector3.UnitY*0.1f, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
+//            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
+            Console.WriteLine("Found CP.");
+            //mapperPathCore = new PathlineCoreTracking(velocity, redSea);
+            //Console.WriteLine("Found Pathline Cores.");
             mapperComparison = new MemberComparison(new Loader.SliceRange[] { sliceU, sliceV }, redSea);
             // mapperOW = new OkuboWeiss(velocity, redSea);
             //            Console.WriteLine("Computed Okubo-Weiss.")

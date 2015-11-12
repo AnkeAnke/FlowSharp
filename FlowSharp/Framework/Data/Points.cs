@@ -161,23 +161,10 @@ namespace FlowSharp
         }
     }
 
-    abstract class GeometryData
-    {
-        /// <summary>
-        /// Are the promitives saved in world position or grid position?
-        /// </summary>
-        public bool WorldPosition;
-        protected SlimDX.Vector3 _cellSize;
-        protected SlimDX.Vector3 _origin;
-
-        public SlimDX.Vector3? CellSize{ get{ return WorldPosition? null : (SlimDX.Vector3?)_cellSize; } }
-        public SlimDX.Vector3? Origin { get { return WorldPosition ? null : (SlimDX.Vector3?)_origin; } }
-    }
-
     /// <summary>
     /// Object containing multiple points.
     /// </summary>
-    class PointSet<P> : GeometryData where P : Point
+    class PointSet<P> where P : Point
     {
         public P[] Points;
         public int Length { get { return Points.Length; } }
@@ -186,70 +173,17 @@ namespace FlowSharp
         public PointSet(P[] points)
         {
             Points = points;
-            WorldPosition = true;
-        }
-
-        public PointSet(P[] points, SlimDX.Vector3 cellSize, SlimDX.Vector3 origin)
-        {
-            Points = points;
-            WorldPosition = false;
-            _cellSize = cellSize;
-            _origin = origin;
-        }
-
-        public PointSet(P[] points, GeometryData data)
-        {
-            Points = points;
-            WorldPosition = data.WorldPosition;
-            if (!WorldPosition)
-            {
-                _origin = (Vector3)data.Origin;
-                _cellSize = (Vector3)data.CellSize;
-            }
-        }
-
-        public Point GetWorldPoint(int index)
-        {
-            if (WorldPosition)
-                return Points[index];
-
-            Point worldPoint = new Point()
-            {
-                Position = MathHelper.Mult(Points[index].Position, _cellSize) + _origin,
-                Color = Points[index].Color,
-                Radius = Points[index].Radius
-            };
-
-            return worldPoint;
-        }
-
-        public Point GetGridPoint(int index)
-        {
-            if (!WorldPosition)
-                return Points[index];
-
-            Point worldPoint = new Point()
-            {
-                Position = MathHelper.Div(Points[index].Position - _origin, _cellSize),
-                Color = Points[index].Color,
-                Radius = Points[index].Radius
-            };
-
-            return worldPoint;
         }
 
         public PointSet<Point> ToBasicSet()
         {
-            return new PointSet<Point>(Points, this);
+            return new PointSet<Point>(Points);
         }
     }
 
     class CriticalPointSet2D : PointSet<CriticalPoint2D>
     {
         public CriticalPointSet2D(CriticalPoint2D[] points) : base(points)
-        { }
-
-        public CriticalPointSet2D(CriticalPoint2D[] points, SlimDX.Vector3 cellSize, SlimDX.Vector3 origin) : base(points, cellSize, origin)
         { }
 
         public CriticalPointSet2D SelectTypes(CriticalPoint2D.TypeCP[] selection)
@@ -268,10 +202,7 @@ namespace FlowSharp
             }
 
             // Return subset.
-            if (WorldPosition)
-                return new CriticalPointSet2D(cpList.ToArray());
-            else
-                return new CriticalPointSet2D(cpList.ToArray(), (Vector3)CellSize, (Vector3)Origin);
+            return new CriticalPointSet2D(cpList.ToArray());
         }
     }
 }

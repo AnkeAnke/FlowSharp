@@ -18,6 +18,7 @@ namespace FlowSharp
     class Plane
     {
         public Vector3 Origin { get; protected set; }
+        //public void AddOffsetZ(float offset) { Origin = Origin + Vector3.UnitZ * offset; }
         /// <summary>
         /// Scaled x axis.
         /// </summary>
@@ -52,13 +53,35 @@ namespace FlowSharp
             ZAxis = zAxis * scale;
             PointSize = pointSize;
         }
+
+        public Plane(Plane cpy, Vector3 offset)
+        {
+            Origin = cpy.Origin
+                + offset.X * cpy.XAxis
+                + offset.Y * cpy.YAxis
+                + offset.Z * cpy.ZAxis;
+            XAxis = cpy.XAxis;
+            YAxis = cpy.YAxis;
+            ZAxis = cpy.ZAxis;
+            PointSize = cpy.PointSize;
+        }
+
+        public Plane(Plane cpy)
+        {
+            Origin = cpy.Origin;
+            XAxis = cpy.XAxis;
+            YAxis = cpy.YAxis;
+            ZAxis = cpy.ZAxis;
+            PointSize = cpy.PointSize;
+        }
     }
     class FieldPlane : ColormapRenderable
     {
         /// <summary>
         /// A number of equally sized textures. Depending on the number, a differnet mapping to color will be applied.
         /// </summary>
-        protected ShaderResourceView[] _fields;
+        protected ShaderResourceView[] _fieldTextures;
+        protected VectorField _field;
         protected int _width, _height;
         protected float _invalid;
         public FieldPlane.RenderEffect Effect;
@@ -88,17 +111,18 @@ namespace FlowSharp
             this._width  = fields[0].Size[0];
             this._height = fields[0].Size[1];
             this._invalid = fields.InvalidValue ?? float.MaxValue;
+            this._field = fields;
             
             // Setting up the vertex buffer. 
             GenerateGeometry(plane, (RectlinearGrid)fields[0].Grid, fields.TimeSlice??0);
 
 
             // Generating Textures from the fields.
-            _fields = new ShaderResourceView[effect == RenderEffect.LIC ? 2 : fields.Scalars.Length];
-            for(int f = 0; f < _fields.Length; ++f)
+            _fieldTextures = new ShaderResourceView[effect == RenderEffect.LIC_LENGTH ? fields.Scalars.Length + 1 : fields.Scalars.Length];
+            for(int f = 0; f < _field.NumVectorDimensions; ++f)
             {
                 Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);
-                _fields[f] = new ShaderResourceView(_device, tex);
+                _fieldTextures[f] = new ShaderResourceView(_device, tex);
             }
 
             this.SetRenderEffect(effect);
@@ -110,21 +134,35 @@ namespace FlowSharp
 
         public void SetRenderEffect(RenderEffect effect)
         {
+            // Ad length texture.
+            if(effect == RenderEffect.LIC_LENGTH && Effect != RenderEffect.LIC_LENGTH && _field != null)
+            {
+                VectorField length = new VectorField(_field, FieldAnalysis.VFLength, 1, false);
+                this.AddScalar(length[0] as ScalarField);
+            }
+            // Remove length texture?
+            else if (effect != RenderEffect.LIC_LENGTH && Effect == RenderEffect.LIC_LENGTH && _field != null)
+            {
+                ShaderResourceView[] cpy = _fieldTextures;
+                _fieldTextures = new ShaderResourceView[cpy.Length - 1];
+                Array.Copy(cpy, _fieldTextures, _fieldTextures.Length);
+            }
             switch (effect)
             {
                 case RenderEffect.LIC:
+                case RenderEffect.LIC_LENGTH:
                     //Debug.Assert(_fields.Length >= 2);
-                    this._technique = _planeEffect.GetTechniqueByName("RenderLIC" + _fields.Length);
+                    this._technique = _planeEffect.GetTechniqueByName("RenderLIC" + _fieldTextures.Length);
                     break;
                 case RenderEffect.CHECKERBOARD:
                     this._technique = _planeEffect.GetTechniqueByName("RenderChecker");
                     break;
                 case RenderEffect.CHECKERBOARD_COLORMAP:
-                    this._technique = _planeEffect.GetTechniqueByName("RenderCheckerTex" + _fields.Length);
+                    this._technique = _planeEffect.GetTechniqueByName("RenderCheckerTex" + _fieldTextures.Length);
                     break;
                 case RenderEffect.COLORMAP:
                 default:
-                    this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fields.Length);
+                    this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fieldTextures.Length);
                     break;
                 
             }
@@ -147,8 +185,8 @@ namespace FlowSharp
 
 
             // Generating Textures from the fields.
-            _fields = new ShaderResourceView[1];
-            _fields[0] = new ShaderResourceView(_device, field);
+            _fieldTextures = new ShaderResourceView[1];
+            _fieldTextures[0] = new ShaderResourceView(_device, field);
 
             this.SetRenderEffect(effect);
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
@@ -163,19 +201,35 @@ namespace FlowSharp
         /// <param name="field"></param>
         public void AddScalar(Texture2D field)
         {
-            ShaderResourceView[] cpy = _fields;
-            _fields = new ShaderResourceView[_fields.Length + 1];
-            Array.Copy(cpy, _fields, cpy.Length);
+            ShaderResourceView[] cpy = _fieldTextures;
+            _fieldTextures = new ShaderResourceView[_fieldTextures.Length + 1];
+            Array.Copy(cpy, _fieldTextures, cpy.Length);
 
-            _fields[cpy.Length] = new ShaderResourceView(_device, field);
+            _fieldTextures[cpy.Length] = new ShaderResourceView(_device, field);
+
+            SetRenderEffect(Effect);
+        }
+
+        /// <summary>
+        /// Add one field given as texture.
+        /// </summary>
+        /// <param name="field"></param>
+        public void AddScalar(ScalarField field)
+        {
+            ShaderResourceView[] cpy = _fieldTextures;
+            _fieldTextures = new ShaderResourceView[_fieldTextures.Length + 1];
+            Array.Copy(cpy, _fieldTextures, cpy.Length);
+
+            Texture2D tex = ColorMapping.GenerateTextureFromField(_device, field);
+            _fieldTextures[cpy.Length] = new ShaderResourceView(_device, tex);
 
             SetRenderEffect(Effect);
         }
 
         public void ChangeScalar(int pos, Texture2D field)
         {
-            Debug.Assert(pos < _fields.Length && pos > 0);
-            _fields[pos] = new ShaderResourceView(_device, field);
+            Debug.Assert(pos < _fieldTextures.Length && pos > 0);
+            _fieldTextures[pos] = new ShaderResourceView(_device, field);
         }
 
         /// <summary>
@@ -187,7 +241,7 @@ namespace FlowSharp
         /// <param name="scale"></param>
         protected void GenerateGeometry(Plane plane, RectlinearGrid grid, float timeOffset)
         {
-            SetToSubrange(plane, grid, Vector3.Zero, (Vector3)grid.Extent, timeOffset);
+            SetToSubrange(plane, grid, Vector3.Zero, (Vector3)(Vector)grid.Size, timeOffset);
             //Vector Extent = grid.Extent;
             //Vector3 maximum = plane.Origin + plane.XAxis * (Extent[0] + grid.Origin[0]) + plane.YAxis * (Extent[1] + grid.Origin[1]);
             //Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + plane.XAxis * grid.Origin[0] + plane.YAxis * grid.Origin[1];
@@ -226,7 +280,7 @@ namespace FlowSharp
 
         public void SetToSubrangeFloat(Plane plane, RectlinearGrid grid, Vector2 minBox, Vector2 extent, float timeOffset = 0)
         {
-            SetToSubrange(plane, grid, new Vector3(minBox[0] * grid.Extent[0], minBox[1] * grid.Extent[1], 0), new Vector3(grid.Extent[0] * extent[0], grid.Extent[1] * extent[1], 0), timeOffset);
+            SetToSubrange(plane, grid, new Vector3(minBox[0] * grid.Size[0], minBox[1] * grid.Size[1], 0), new Vector3(grid.Size[0] * extent[0], grid.Size[1] * extent[1], 0), timeOffset);
         }
 
         /// <summary>
@@ -234,14 +288,17 @@ namespace FlowSharp
         /// </summary>
         /// <param name="plane"></param>
         /// <param name="grid"></param>
-        /// <param name="minBox">Minimal values of the box in world space.</param>
-        /// <param name="extentBox">Extent of the range in world space.</param>
+        /// <param name="minBox">Minimal values of the box. Minimum: (0,0)</param>
+        /// <param name="extentBox">Extent of the subplane. Maximum: Size of the Grid.</param>
         /// <param name="timeOffset"></param>
         public void SetToSubrange(Plane plane, RectlinearGrid grid, Vector3 minBox, Vector3 extentBox, float timeOffset = 0)
         {
-            Vector extent = grid.Extent;
-            Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + plane.XAxis * grid.Origin[0] + plane.YAxis * grid.Origin[1] + minBox * plane.Scale;
-            Vector3 maximum = origin + extentBox * plane.Scale;
+            Vector extent = (Vector)grid.Size;
+            Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + minBox[0] * plane.XAxis + minBox[1] * plane.YAxis;
+            Vector3 maximum = origin 
+                + extentBox[0] * plane.XAxis 
+                + extentBox[1] * plane.YAxis 
+                + extentBox[2] * plane.ZAxis;
 
             // Offset, becaue the grid data points shall be OUTSIDE of the grid cells. [x]
             float uMin = 1.0f / (grid.Size[0] - 1) * 0.5f;
@@ -281,8 +338,8 @@ namespace FlowSharp
 
         public override void Render(Device device)
         {
-            for(int fieldNr = 0; fieldNr < _fields.Length; ++fieldNr)
-                _planeEffect.GetVariableByName("field" + fieldNr).AsResource().SetResource(_fields[fieldNr]);
+            for(int fieldNr = 0; fieldNr < _fieldTextures.Length; ++fieldNr)
+                _planeEffect.GetVariableByName("field" + fieldNr).AsResource().SetResource(_fieldTextures[fieldNr]);
 
             _planeEffect.GetVariableByName("width").AsScalar().Set(_width);
             _planeEffect.GetVariableByName("height").AsScalar().Set(_height);
@@ -327,6 +384,7 @@ namespace FlowSharp
             DEFAULT = 0,
             COLORMAP,
             LIC,
+            LIC_LENGTH,
             CHECKERBOARD,
             CHECKERBOARD_COLORMAP
         }

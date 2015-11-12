@@ -11,12 +11,12 @@ using SlimDX.DXGI;
 using ManagedCuda.BasicTypes;
 using System.IO;
 using System.Reflection;
-
+using SliceRange = FlowSharp.Loader.SliceRange;
 namespace FlowSharp
 {
     class FlowMapUncertain : AlgorithmCuda
     {
-        public static int BLOCK_SIZE { get; } = 30;
+        public static int BLOCK_SIZE { get; } = 15;
         public static float PARTICLE_DENSITY = 0.1f;
 
         protected Loader.SliceRange[] _ensembleRanges;
@@ -175,7 +175,7 @@ namespace FlowSharp
             grid.z = 1;
             _copyMapDataKernel.GridDimensions = grid;
             _copyMapDataKernel.BlockDimensions = threads;
-            _copyMapDataKernel.Run(surf.SurfObject, _pongFlowMap.DevicePointer, _width);
+            _copyMapDataKernel.Run(surf.SurfObject, _pongFlowMap.DevicePointer, _width, _height);
 
             _cudaDxMapper.UnmapAllResources();
         }
@@ -222,6 +222,37 @@ namespace FlowSharp
             _advectParticlesKernel = new CudaKernel("FlowMapStep", module, _context);
             _copyMapDataKernel = new CudaKernel("FlowMapUpdate", module, _context);
             //_advectParticlesKernel = _context.LoadKernelPTX("Framework/Algorithms/Kernels/FlowMapUncertain.ptx", "FlowMapStep", new CUJITOption[] { }, null);
+        }
+
+        public void ChangeRange(Int2 min, Int2 max, Int2 point)
+        {
+            _ensembleRanges[0].SetRange(RedSea.Dimension.GRID_X, min.X, max.X);
+            _ensembleRanges[0].SetRange(RedSea.Dimension.CENTER_Y, min.Y, max.Y);
+
+            _ensembleRanges[1].SetRange(RedSea.Dimension.CENTER_X, min.X, max.X);
+            _ensembleRanges[1].SetRange(RedSea.Dimension.GRID_Y, min.Y, max.Y);
+
+            SetupPoint(point, CurrentTime);
+        }
+
+        public void CompleteRange(Int2 point)
+        {
+            _ensembleRanges[0].SetToComplete(RedSea.Dimension.GRID_X);
+            _ensembleRanges[0].SetToComplete(RedSea.Dimension.CENTER_Y);
+
+            _ensembleRanges[1].SetToComplete(RedSea.Dimension.CENTER_X);
+            _ensembleRanges[1].SetToComplete(RedSea.Dimension.GRID_Y);
+
+            SetupPoint(point, CurrentTime);
+        }
+
+        public VectorFieldUnsteady LoadMeanField()
+        {
+            SliceRange[] mean = new SliceRange[] { new SliceRange(_ensembleRanges[0]), new SliceRange(_ensembleRanges[1]) };
+            mean[0].SetMember(RedSea.Dimension.MEMBER, 0);
+            mean[1].SetMember(RedSea.Dimension.MEMBER, 0);
+
+            return Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, mean, 0, 10);
         }
     }
 }

@@ -53,9 +53,9 @@ namespace FlowSharp
         public enum Display : int
         {
             NONE,
-            CP_TRACKING,
-            PATHLINE_CORES,
             MEMBER_COMPARISON,
+            CP_TRACKING,
+            PATHLINE_CORES,            
             OKUBO_WEISS,
             FLOW_MAP_UNCERTAIN
         }
@@ -68,7 +68,7 @@ namespace FlowSharp
         public static VectorField.PositionToColor[] DisplayLineFunctions = new VectorField.PositionToColor[]
         {
             null,
-            (f, world, x) => new Vector3(f.Sample((Vec3)x, world).ToVec2().LengthEuclidean() * 10)
+            (f, x) => new Vector3(f.Sample((Vec3)x).ToVec2().LengthEuclidean() * 10)
         };
 
         private static RedSea _instance;
@@ -104,6 +104,17 @@ namespace FlowSharp
         {
             Renderer.Singleton.ClearRenderables();
             _mappers[(int)_currentMapper].UpdateMapping();
+        }
+
+        public void UpdateSelection()
+        {
+            _mappers[(int)_currentMapper].UpdateSelection();
+        }
+
+        public void EndSelection()
+        {
+            _mappers[(int)_currentMapper].OnRelease();
+            Update();
         }
 
         //    // Depending on display and slice0 setting.

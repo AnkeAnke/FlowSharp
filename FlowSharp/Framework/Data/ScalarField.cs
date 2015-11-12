@@ -20,12 +20,12 @@ namespace FlowSharp
         /// Number of grid edges in every dimension.
         /// </summary>
         public Index Size { get { return Grid.Size; } }
-        private float? _timeSlice = null;
-        public virtual float? TimeSlice
-        {
-            get { return _timeSlice; }
-            set { _timeSlice = value; }
-        }
+        //private float? _timeSlice = null;
+        public virtual float? TimeSlice { get { return Grid.TimeOrigin; } set { Grid.TimeOrigin = value; } }
+        //{
+        //    get { return _timeSlice; }
+        //    set { _timeSlice = value; }
+        //}
 
         public abstract float this[int index]
         { get; set; }
@@ -45,9 +45,9 @@ namespace FlowSharp
         /// <returns></returns>
         public abstract float Sample(Index gridPosition);
 
-        public abstract float Sample(Vector position, bool worldSpace = true);
+        public abstract float Sample(Vector position);
 
-        public abstract Vector SampleDerivative(Vector position, bool worldPosition = true);
+        public abstract Vector SampleDerivative(Vector position);
 
         public abstract DataStream GetDataStream();
         /// <summary>
@@ -115,15 +115,13 @@ namespace FlowSharp
             return _data[index];
         }
 
-        public override float Sample(Vector position, bool worldSpace = true)
+        public override float Sample(Vector position)
         {
-            return Grid.Sample(this, position, worldSpace);
+            return Grid.Sample(this, position);
         }
 
-        public override Vector SampleDerivative(Vector position, bool worldPosition = true)
+        public override Vector SampleDerivative(Vector center)
         {
-
-            Vector center = worldPosition ? Grid.ToGridPosition(position) : new Vector(position);
             Vector gradient = new Vector(0, Size.Length);
 
             for(int dim = 0; dim <gradient.Length; ++dim)
@@ -132,10 +130,10 @@ namespace FlowSharp
                 float stepMin = center[dim] - Math.Max(0, center[dim] - 0.5f);
                 Vector samplePos = new Vector(center);
                 samplePos[dim] += stepPos;
-                gradient[dim] = Sample(samplePos, false);
+                gradient[dim] = Sample(samplePos);
 
                 samplePos[dim] += stepMin - stepPos;
-                gradient[dim] -= Sample(samplePos, false);
+                gradient[dim] -= Sample(samplePos);
 
                 gradient[dim] /= (stepPos - stepMin);
             }
@@ -246,7 +244,7 @@ namespace FlowSharp
         {
             Debug.Assert(size.Length == origin.Length && size.Length == cellSize.Length);
 
-            RectlinearGrid grid = new RectlinearGrid(size, origin, cellSize);
+            RectlinearGrid grid = new RectlinearGrid(size);
             ScalarField field = new ScalarField(grid);
 
             for(int idx = 0; idx < size.Product(); ++idx)

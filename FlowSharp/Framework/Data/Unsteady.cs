@@ -21,6 +21,16 @@ namespace FlowSharp
         public VectorFieldUnsteady(ScalarFieldUnsteady[] fields) : base()
         {
             _scalars = fields;
+        }
+
+        public virtual void ScaleToGrid(Vector scale)
+        {
+            Debug.Assert(Scalars.Length == scale.Length);
+            for (int dim = 0; dim < Scalars.Length; ++dim)
+            {
+                ScalarFieldUnsteady field = _scalars[dim];
+                field.ScaleToGrid(scale[dim]);
+            }
             SpreadInvalidValue();
         }
 
@@ -60,9 +70,9 @@ namespace FlowSharp
             return Sample(index);
         }
 
-        public override Vector Sample(Vector position, bool worldPosition = true)
+        public override Vector Sample(Vector position)
         {
-            Vector result = Grid.Sample(this, position, worldPosition);
+            Vector result = Grid.Sample(this, position);
             // Work against the small numerical deviations here.
             Debug.Assert(Math.Abs(result.T - 1) < 0.1f);
             result[NumVectorDimensions - 1] = 1;
@@ -145,22 +155,24 @@ namespace FlowSharp
         public ScalarField[] TimeSlices { get { return _slices; } }
         public ScalarField GetTimeSlice(int slice) { return _slices[slice]; }
         private FieldGrid _sliceGrid;
-        public override float? TimeSlice
-        {
-            get
-            {
-                return Grid.TimeOrigin;
-            }
+        protected bool _operationsAllowed = false;
+        //public override float? TimeSlice
+        //{
+        //    get
+        //    {
+        //        return Grid.TimeOrigin;
+        //    }
 
-            set
-            {
-                Grid.TimeOrigin = value;
-            }
-        }
+        //    set
+        //    {
+        //        Grid.TimeOrigin = value;
+        //    }
+        //}
         public override float this[int index]
         {
             get
             {
+                Debug.Assert(_operationsAllowed, "The field data is not scaled to its grid yet.");
                 int inSliceIndex = index % (_sliceGrid.Size.Product() / _sliceGrid.Size.T);
                 int sliceIndex = index / (_sliceGrid.Size.Product() / _sliceGrid.Size.T);
                 return _slices[sliceIndex][inSliceIndex];
@@ -185,8 +197,15 @@ namespace FlowSharp
             }
         }
 
+        public void ScaleToGrid(float dimwiseScale)
+        {
+            //TODO!!
+            _operationsAllowed = true;
+        }
+
         public override float Sample(Index gridPosition)
         {
+            Debug.Assert(_operationsAllowed, "The field data is not scaled to its grid yet.");
             int slice = gridPosition[gridPosition.Length - 1];
             Debug.Assert(slice >= 0 && slice < _slices.Length);
 
@@ -196,43 +215,39 @@ namespace FlowSharp
             return _slices[slice].Sample(slicePos);
         }
 
-        public override float Sample(Vector position, bool worldSpace = true)
+        public override float Sample(Vector position)
         {
+            Debug.Assert(_operationsAllowed, "The field data is not scaled to its grid yet.");
             float time = position[position.Length - 1];
             Vector samplePos = position;
-            if (worldSpace)
-            {
-                samplePos = Grid.ToGridPosition(position);
-            }
+
             Debug.Assert(time >= 0 && time < _slices.Length);
 
             Vector slicePos = new Vector(samplePos.Length - 1);
             Array.Copy(samplePos.Data, slicePos.Data, slicePos.Length);
 
-            float valueT = _slices[(int)time].Sample(slicePos, false);
-            float valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices-1)].Sample(slicePos, false);
+            float valueT = _slices[(int)time].Sample(slicePos);
+            float valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices-1)].Sample(slicePos);
             float t = time - (int)time;
             return (1 - t) * valueT + t * valueTNext;
         }
 
-        public override Vector SampleDerivative(Vector position, bool worldSpace = true)
+        public override Vector SampleDerivative(Vector position)
         {
+            Debug.Assert(_operationsAllowed, "The field data is not scaled to its grid yet.");
             float time = position.T;
 
             // Get spacial sample position in grid space.
             Vector samplePos = position;
-            if (worldSpace)
-            {
-                samplePos = Grid.ToGridPosition(position);
-            }
+
             Debug.Assert(time >= 0 && time < _slices.Length);
 
             Vector slicePos = new Vector(samplePos.Length - 1);
             Array.Copy(samplePos.Data, slicePos.Data, slicePos.Length);
 
             // Sample data in current and next time slice.
-            Vector valueT = _slices[(int)time].SampleDerivative(slicePos, false);
-            Vector valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices - 1)].SampleDerivative(slicePos, false);
+            Vector valueT = _slices[(int)time].SampleDerivative(slicePos);
+            Vector valueTNext = _slices[Math.Min((int)time + 1, NumTimeSlices - 1)].SampleDerivative(slicePos);
             float t = time - (int)time;
             Vector spaceGrad = (1 - t) * valueT + t * valueTNext;
 
@@ -246,6 +261,7 @@ namespace FlowSharp
 
         public override DataStream GetDataStream()
         {
+            Debug.Assert(_operationsAllowed, "The field data is not scaled to its grid yet.");
             DataStream stream = new DataStream(Size.Product(), true, true);
             for (int slice = 0; slice < _slices.Length; ++slice)
             {

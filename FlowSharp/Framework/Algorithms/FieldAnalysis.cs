@@ -20,182 +20,180 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet<Point> ComputeCriticalPointsRegularAnalytical2D(VectorField field, float eps = EPS_ZERO)
-        {
-            // Only for 2D rectlinear grids.
-            Debug.Assert(field.Grid as RectlinearGrid != null);
-            Debug.Assert(field.Size.Length == 2);
+        //public static PointSet<Point> ComputeCriticalPointsRegularAnalytical2D(VectorField field, float eps = EPS_ZERO)
+        //{
+        //    // Only for 2D rectlinear grids.
+        //    Debug.Assert(field.Grid as RectlinearGrid != null);
+        //    Debug.Assert(field.Size.Length == 2);
 
-            List<Point> cpList = new List<Point>(field.Size.Product() / 10); // Rough guess.
-            // DEBUG
-            cpList.Add(new Point()
-            {
-                Position = new Vector3(0, 0, 0),
-                Color = new Vector3(1, 1, 0)
-            });
-            Vector halfCell = new Vector(0.5f, 2);
-            Vector cSize = (field.Grid as RectlinearGrid).CellSize;
-            Vector origin = (field.Grid as RectlinearGrid).Origin;
-            //Index numCells = field.Size - new Index(1, field.Size.Length);
-            for (int x = 0; x < field.Size[0] - 1; ++x)
-                for (int y = 0; y < field.Size[1] - 1;) // Doing the y++ down at the end.
-                {
-                    // Get neighbors.
-                    float[] cellWeights;
-                    Vector cellCenter = new Vector(new float[] { 0.5f + x, 0.5f + y });
-                    // Use the neighbor function of the grid data type.
-                    int[] adjacentCells = field.Grid.FindAdjacentIndices(cellCenter, out cellWeights, false);
+        //    List<Point> cpList = new List<Point>(field.Size.Product() / 10); // Rough guess.
+        //    // DEBUG
+        //    cpList.Add(new Point()
+        //    {
+        //        Position = new Vector3(0, 0, 0),
+        //        Color = new Vector3(1, 1, 0)
+        //    });
+        //    Vector halfCell = new Vector(0.5f, 2);
+        //    //Index numCells = field.Size - new Index(1, field.Size.Length);
+        //    for (int x = 0; x < field.Size[0] - 1; ++x)
+        //        for (int y = 0; y < field.Size[1] - 1;) // Doing the y++ down at the end.
+        //        {
+        //            // Get neighbors.
+        //            float[] cellWeights;
+        //            Vector cellCenter = new Vector(new float[] { 0.5f + x, 0.5f + y });
+        //            // Use the neighbor function of the grid data type.
+        //            int[] adjacentCells = field.Grid.FindAdjacentIndices(cellCenter, out cellWeights);
 
-                    for (int dim = 0; dim < 2; ++dim)
-                    {
-                        bool pos = false;
-                        bool neg = false;
+        //            for (int dim = 0; dim < 2; ++dim)
+        //            {
+        //                bool pos = false;
+        //                bool neg = false;
 
-                        for (int neighbor = 0; neighbor < adjacentCells.Length; ++neighbor)
-                        {
-                            float data = field.Scalars[dim][adjacentCells[neighbor]];
-                            // Is the cell data valid?
-                            if (data == field.Scalars[dim].InvalidValue)
-                                goto NextCell;
-                            if (data > 0)
-                                pos = true;
-                            else if (data < 0)
-                                neg = true;
-                            else
-                            {
-                                neg = true;
-                                pos = true;
-                            }
-                        }
-                        // If no 0 can be achieved in this cell, go on to next cell.
-                        if (!pos || !neg)
-                        {
-                            goto NextCell;
-                        }
-                    }
+        //                for (int neighbor = 0; neighbor < adjacentCells.Length; ++neighbor)
+        //                {
+        //                    float data = field.Scalars[dim][adjacentCells[neighbor]];
+        //                    // Is the cell data valid?
+        //                    if (data == field.Scalars[dim].InvalidValue)
+        //                        goto NextCell;
+        //                    if (data > 0)
+        //                        pos = true;
+        //                    else if (data < 0)
+        //                        neg = true;
+        //                    else
+        //                    {
+        //                        neg = true;
+        //                        pos = true;
+        //                    }
+        //                }
+        //                // If no 0 can be achieved in this cell, go on to next cell.
+        //                if (!pos || !neg)
+        //                {
+        //                    goto NextCell;
+        //                }
+        //            }
 
-                    //DEBUG:
-                    Vector3 color;
+        //            //DEBUG:
+        //            Vector3 color;
 
-                    // Now, compute the position. Possible since the function is only quadratic!
-                    Vector p00 = field.Sample(adjacentCells[0]);
-                    Vector p10 = field.Sample(adjacentCells[1]);
-                    Vector p01 = field.Sample(adjacentCells[2]);
-                    Vector p11 = field.Sample(adjacentCells[3]);
-                    Vector a = p10 - p00;
-                    Vector b = p01 - p00;
-                    Vector c = p00 - p01 - p10 + p11;
-                    Vector d = p00;
+        //            // Now, compute the position. Possible since the function is only quadratic!
+        //            Vector p00 = field.Sample(adjacentCells[0]);
+        //            Vector p10 = field.Sample(adjacentCells[1]);
+        //            Vector p01 = field.Sample(adjacentCells[2]);
+        //            Vector p11 = field.Sample(adjacentCells[3]);
+        //            Vector a = p10 - p00;
+        //            Vector b = p01 - p00;
+        //            Vector c = p00 - p01 - p10 + p11;
+        //            Vector d = p00;
 
-                    // The two points that will be found.
-                    float[] valS = new float[2];
-                    float[] valT = new float[2];
+        //            // The two points that will be found.
+        //            float[] valS = new float[2];
+        //            float[] valT = new float[2];
 
-                    // Degenerated linear case?
-                    if (Math.Abs(c[0]) < eps || Math.Abs(c[1]) < eps)
-                    {
-                        // Degenerated double-linear case?
-                        if (Math.Abs(c[0]) < eps && Math.Abs(c[1]) < eps)
-                        {
-                            float abi = 1 / (a[1] * b[0] - a[0] * b[1]);
-                            // Only one solution.
-                            valT = new float[1]; valS = new float[1];
-                            valT[0] = (a[0] * d[1] - a[1] * d[0]) * abi;
-                            valS[0] = -(b[0] * valT[0] / a[0] + d[0] / a[0]);
-                            // DEBUG
-                            //valT[0] = 0.5f; valS[0] = 0.5f;
-                            color = new Vector3(1, 0, 0);
+        //            // Degenerated linear case?
+        //            if (Math.Abs(c[0]) < eps || Math.Abs(c[1]) < eps)
+        //            {
+        //                // Degenerated double-linear case?
+        //                if (Math.Abs(c[0]) < eps && Math.Abs(c[1]) < eps)
+        //                {
+        //                    float abi = 1 / (a[1] * b[0] - a[0] * b[1]);
+        //                    // Only one solution.
+        //                    valT = new float[1]; valS = new float[1];
+        //                    valT[0] = (a[0] * d[1] - a[1] * d[0]) * abi;
+        //                    valS[0] = -(b[0] * valT[0] / a[0] + d[0] / a[0]);
+        //                    // DEBUG
+        //                    //valT[0] = 0.5f; valS[0] = 0.5f;
+        //                    color = new Vector3(1, 0, 0);
 
-                            goto WritePoints;
-                        }
-                        // Dimension in which the solution is linear.
-                        int lD = Math.Abs(c[0]) < eps ? 0 : 1;
-                        int qD = 1 - lD;
+        //                    goto WritePoints;
+        //                }
+        //                // Dimension in which the solution is linear.
+        //                int lD = Math.Abs(c[0]) < eps ? 0 : 1;
+        //                int qD = 1 - lD;
 
-                        if (b[lD] == 0)
-                            goto NextCell;
+        //                if (b[lD] == 0)
+        //                    goto NextCell;
 
-                        float cbi = 1 / (c[qD] * b[lD]);
-                        // Values for PQ formula.
-                        float pPQ = d[lD] / b[lD] + a[qD] / c[qD] + a[lD] * b[qD] * cbi;
-                        pPQ /= 2;
-                        float qPQ = d[lD] * (a[qD] + a[lD]) * cbi;
+        //                float cbi = 1 / (c[qD] * b[lD]);
+        //                // Values for PQ formula.
+        //                float pPQ = d[lD] / b[lD] + a[qD] / c[qD] + a[lD] * b[qD] * cbi;
+        //                pPQ /= 2;
+        //                float qPQ = d[lD] * (a[qD] + a[lD]) * cbi;
 
-                        float root = pPQ * pPQ - qPQ;
-                        Debug.Assert(root >= 0);
+        //                float root = pPQ * pPQ - qPQ;
+        //                Debug.Assert(root >= 0);
 
-                        root = (float)Math.Sqrt(root);
+        //                root = (float)Math.Sqrt(root);
 
-                        valT[0] = pPQ + root;
-                        valT[1] = pPQ - root;
+        //                valT[0] = pPQ + root;
+        //                valT[1] = pPQ - root;
 
-                        valS[0] = -(b[lD] * valT[0] / a[lD] + d[lD] / a[lD]);
-                        valS[1] = -(b[lD] * valT[1] / a[lD] + d[lD] / a[lD]);
+        //                valS[0] = -(b[lD] * valT[0] / a[lD] + d[lD] / a[lD]);
+        //                valS[1] = -(b[lD] * valT[1] / a[lD] + d[lD] / a[lD]);
 
-                        color = new Vector3(0, 1, 0);
+        //                color = new Vector3(0, 1, 0);
 
-                        goto WritePoints; // Don't need this. Still here, for better readability.
-                    }
-                    else
-                    {
-                        // Both dimensions are quadratic.
-                        float denom = 1 / (a[0] * c[1] - a[1] * c[0]);
-                        Debug.Assert(denom != 0);
-                        float pPQ = (a[0] * b[1] - a[1] * b[0]) + (c[1] * d[0] - c[0] * d[1]);
-                        pPQ *= denom * 0.5f;
-                        float qPQ = (b[1] * d[0] - b[0] * d[1]) * denom;
+        //                goto WritePoints; // Don't need this. Still here, for better readability.
+        //            }
+        //            else
+        //            {
+        //                // Both dimensions are quadratic.
+        //                float denom = 1 / (a[0] * c[1] - a[1] * c[0]);
+        //                Debug.Assert(denom != 0);
+        //                float pPQ = (a[0] * b[1] - a[1] * b[0]) + (c[1] * d[0] - c[0] * d[1]);
+        //                pPQ *= denom * 0.5f;
+        //                float qPQ = (b[1] * d[0] - b[0] * d[1]) * denom;
 
-                        float root = pPQ * pPQ - qPQ;
-                        if (root < 0)
-                            goto NextCell;
-                        root = (float)Math.Sqrt(root);
-                        valS[0] = (pPQ + root);
-                        valS[1] = (pPQ - root);
+        //                float root = pPQ * pPQ - qPQ;
+        //                if (root < 0)
+        //                    goto NextCell;
+        //                root = (float)Math.Sqrt(root);
+        //                valS[0] = (pPQ + root);
+        //                valS[1] = (pPQ - root);
 
-                        valT[0] = -(a[0] * valS[0] + d[0]) / (b[0] + c[0] * valS[0]);
-                        valT[1] = -(a[0] * valS[1] + d[0]) / (b[0] + c[0] * valS[1]);
+        //                valT[0] = -(a[0] * valS[0] + d[0]) / (b[0] + c[0] * valS[0]);
+        //                valT[1] = -(a[0] * valS[1] + d[0]) / (b[0] + c[0] * valS[1]);
 
-                        color = new Vector3(0, 0, 1);
-                    }
+        //                color = new Vector3(0, 0, 1);
+        //            }
 
-                    // Check whether the points lay in the cell. Write those to the point set.
-                    WritePoints:
-                    for (int p = 0; p < valS.Length; ++p)
-                    {
-                        //Continue when not inside.
-                        //if (valS[p] < 0 || valS[p] >= 1 || valT[p] < 0 || valT[p] >= 1)
-                        //    continue;
+        //            // Check whether the points lay in the cell. Write those to the point set.
+        //            WritePoints:
+        //            for (int p = 0; p < valS.Length; ++p)
+        //            {
+        //                //Continue when not inside.
+        //                //if (valS[p] < 0 || valS[p] >= 1 || valT[p] < 0 || valT[p] >= 1)
+        //                //    continue;
 
-                        Point cp = new Point()
-                        {
-                            Position = new Vector3(origin[0] + (0.5f + x) * cSize[0], origin[1] + (0.5f + y) * cSize[1], 0.0f), //new Vector3(origin[0] + (valS[p] + x) * cSize[0], origin[1] + (valT[p] + y) * cSize[1], 0.0f),
-                            Color = color, //new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
-                            Radius = 0.002f
-                        };
-                        cpList.Add(cp);
+        //                Point cp = new Point()
+        //                {
+        //                    Position = new Vector3(origin[0] + (0.5f + x) * cSize[0], origin[1] + (0.5f + y) * cSize[1], 0.0f), //new Vector3(origin[0] + (valS[p] + x) * cSize[0], origin[1] + (valT[p] + y) * cSize[1], 0.0f),
+        //                    Color = color, //new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
+        //                    Radius = 0.002f
+        //                };
+        //                cpList.Add(cp);
 
-                        //Continue when not inside.
-                        if (valS[p] < 0 || valS[p] >= 1 || valT[p] < 0 || valT[p] >= 1)
-                            continue;
+        //                //Continue when not inside.
+        //                if (valS[p] < 0 || valS[p] >= 1 || valT[p] < 0 || valT[p] >= 1)
+        //                    continue;
 
-                        cp = new Point()
-                        {
-                            Position = new Vector3(origin[0] + (valS[p] + x) * cSize[0], origin[1] + (valT[p] + y) * cSize[1], 0.0f),
-                            Color = color, //new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
-                            Radius = 0.006f
-                        };
-                        cpList.Add(cp);
-                    }
+        //                cp = new Point()
+        //                {
+        //                    Position = new Vector3(origin[0] + (valS[p] + x) * cSize[0], origin[1] + (valT[p] + y) * cSize[1], 0.0f),
+        //                    Color = color, //new SlimDX.Vector3(0.01f, 0.001f, 0.6f), // Debug color. 
+        //                    Radius = 0.006f
+        //                };
+        //                cpList.Add(cp);
+        //            }
 
-                    NextCell:
-                    y++;
-                }
+        //            NextCell:
+        //            y++;
+        //        }
 
-            PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray());
+        //    PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray());
 
-            return cpSet;
+        //    return cpSet;
 
-        }
+        //}
         private static float _epsCriticalPoint;
         /// <summary>
         /// Searches for all 0-vectors in a 2 or 3D rectlinear vector field.
@@ -213,8 +211,6 @@ namespace FlowSharp
             List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
 
             Vector halfCell = new Vector(0.5f, 2);
-            Vector cSize = grid.CellSize;
-            Vector origin = grid.Origin;
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0] - 1; ++x)
                 for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
@@ -228,17 +224,16 @@ namespace FlowSharp
             for (int index = 0; index < cpList.Count; ++index)
             {
                 Vector3 pos = (Vector3)cpList[index];
+                pos.Z += field.TimeSlice ?? 0;
 
-                SquareMatrix J = field.SampleDerivative(cpList[index], false);
+                SquareMatrix J = field.SampleDerivative(cpList[index]);
 
                 points[index] = new CriticalPoint2D(pos, J)
                 {
                     Radius = pointSize ?? 1
                 };
             }
-            Vector3 origin3 = (Vector3)grid.Origin;
-            origin3.Z += field.TimeSlice ?? 0;
-            return new CriticalPointSet2D(points, new Vector3((Vector2)grid.CellSize, 1.0f), origin3);
+            return new CriticalPointSet2D(points);
         }
 
         /// <summary>
@@ -256,8 +251,6 @@ namespace FlowSharp
             List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
 
             Vector halfCell = new Vector(0.5f, 2);
-            Vector cSize = (field.Grid as RectlinearGrid).CellSize;
-            Vector origin = (field.Grid as RectlinearGrid).Origin;
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0] - 1; ++x)
                 for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
@@ -280,7 +273,7 @@ namespace FlowSharp
                     points[index].Position.Z = (float)field.TimeSlice;
             }
 
-            return new PointSet<Point>(points, new Vector3((Vector2)grid.CellSize, 1.0f), (Vector3)grid.Origin);
+            return new PointSet<Point>(points);
         }
 
         /// <summary>
@@ -308,7 +301,7 @@ namespace FlowSharp
                         position[axis] += (neighbor & (1 << axis)) > 0 ? cellLength : 0;
                     }
 
-                    float value = field.Scalars[dim].Sample(position, false);
+                    float value = field.Scalars[dim].Sample(position);
                     if (value == field.Scalars[dim].InvalidValue)
                         return;
                     if (value >= 0)
@@ -380,7 +373,7 @@ namespace FlowSharp
                     }
             RectlinearGrid rGrid = field.Grid as RectlinearGrid;
 
-            PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray(), (Vector3)rGrid.CellSize, (Vector3)rGrid.Origin);
+            PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray());
 
             return cpSet;
         }
@@ -400,7 +393,7 @@ namespace FlowSharp
                 Vector pos = new Vector(0, field.Size.Length);
                 pos[0] = (float)rnd.NextDouble() * (field.Size[0]-1);
                 pos[1] = (float)rnd.NextDouble() * (field.Size[1]-1);
-                float data = field.Scalars[0].Sample(pos, false);
+                float data = field.Scalars[0].Sample(pos);
                 if(data == field.InvalidValue)
                 {
                     index--;
@@ -417,7 +410,7 @@ namespace FlowSharp
                 cpList[index] = cp;
             }
             RectlinearGrid rGrid = field.Grid as RectlinearGrid;
-            PointSet<Point> cpSet = new PointSet<Point>(cpList, new Vector3((Vector2)rGrid.CellSize, 1.0f), (Vector3)rGrid.Origin);
+            PointSet<Point> cpSet = new PointSet<Point>(cpList);
 
             return cpSet;
         }
@@ -441,7 +434,7 @@ namespace FlowSharp
                 pos[0] = (float)rnd.NextDouble() * (field.Size[0] - 1);
                 pos[1] = (float)rnd.NextDouble() * (field.Size[1] - 1);
                 pos[2] = (float)rnd.NextDouble() * (field.Size[2] - 1);
-                float data = field.Scalars[0].Sample(pos, false);
+                float data = field.Scalars[0].Sample(pos);
                 if (data == field.InvalidValue)
                 {
                     index--;
@@ -457,7 +450,7 @@ namespace FlowSharp
                 cpList[index] = cp;
             }
             RectlinearGrid rGrid = field.Grid as RectlinearGrid;
-            PointSet<Point> cpSet = new PointSet<Point>(cpList, new Vector3((Vector2)rGrid.CellSize, 1.0f), (Vector3)rGrid.Origin);
+            PointSet<Point> cpSet = new PointSet<Point>(cpList);
 
             return cpSet;
         }
@@ -465,12 +458,10 @@ namespace FlowSharp
         public static float AlphaStableFFF = 20;
         public static Vector StableFFF(Vector v, SquareMatrix J)
         {
-            //return J[0];
             Debug.Assert(v.Length == 3 && J.Length == 3);
-            Vector x = J.Row(0).AsVec3();
-            x = J.Row(1).AsVec3();
+
             Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
-            //f *= f.T > 0 ? 1 : -1;
+
             Vec3 fNorm = new Vec3(f);
             fNorm.Normalize();
 
@@ -486,7 +477,7 @@ namespace FlowSharp
             d = (v[0] * J.Row(1) - v[1] * J.Row(0)).AsVec3();
             // Add up fields.
             Vec3 g = Vec3.Cross(fNorm, d);
-            //return J[0].AsVec3();
+
             if (float.IsNaN(f[0]) || float.IsNaN(g[0]))
                 Console.WriteLine("NaN NaN?!");
             return f + AlphaStableFFF * g;
@@ -532,6 +523,11 @@ namespace FlowSharp
             float Q = (S.EuclideanNormSquared() - W.EuclideanNormSquared()) * 0.5f;
 
             return (Vector)Q;
+        }
+
+        public static Vector VFLength(Vector v, SquareMatrix J)
+        {
+            return (Vector)v.LengthEuclidean();
         }
     }
 }

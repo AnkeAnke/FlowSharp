@@ -145,16 +145,16 @@ namespace FlowSharp
                 }
             }
 
-            if (slice.IsTimeDependent())
-                numDimsField++;
+            //if (slice.IsTimeDependent())
+            //    numDimsField++;
 
             // Generate size index for field class.
             Index fieldSize = new Index(numDimsField);
             Array.Copy(sizeField, fieldSize.Data, numDimsField);
 
             // When the field has several time slices, add a time dimension.
-            if (slice.IsTimeDependent())
-                fieldSize[numDimsField - 1] = slice.GetNumTimeSlices();
+            //if (slice.IsTimeDependent())
+            //    fieldSize[numDimsField - 1] = slice.GetNumTimeSlices();
 
             // Change order of dimensions, so that fastest dimension is at the end.
             for(int dim = 0; dim < fieldSize.Length/2; ++dim)
@@ -166,18 +166,33 @@ namespace FlowSharp
 
             // Create a grid descriptor for the field. 
             // TODO: Actually load this data.
-            RectlinearGrid grid = new RectlinearGrid(fieldSize, new Vector(0.0f, fieldSize.Length), new Vector(0.1f, fieldSize.Length));
+            RectlinearGrid grid = new RectlinearGrid(fieldSize);//, new Vector(0.0f, fieldSize.Length), new Vector(0.1f, fieldSize.Length));
 
             // Create scalar field instance and fill it with data.
             field = new ScalarField(grid);
-            int sliceSize = grid.Size.Product() / slice.GetNumTimeSlices();
+            int sliceSize = grid.Size.Product();// / slice.GetNumTimeSlices();
 
             // Get data. x64 dll fails here...
             ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
             Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
 
-            //HACK!
-            field.InvalidValue = field[0];
+            // Read in invalid value.
+            float[] invalidval = new float[1];
+            ncState = NetCDF.nc_get_att_float(_fileID, (int)slice.GetVariable(), "_FillValue", invalidval);
+
+            field.InvalidValue = invalidval[0];
+
+            //// Scale the data such that a vector (1,1) travels 1 grid cell exactly! Without this, no operations are allowed.
+            //switch (slice.GetVariable())
+            //{
+            //    case RedSea.Variable.VELOCITY_X:
+            //    case RedSea.Variable.VELOCITY_Y:
+            //        //field.ScaleToGrid(new Vector(0.1f, fieldSize.Length));
+            //        break;
+            //    default:
+            //        field.UseRawData();
+            //        break;
+            //}
 
             return field;
         }
@@ -203,19 +218,15 @@ namespace FlowSharp
             private int[] _dimOffsets;
             private int[] _dimLengths;
             private RedSea.Variable _var;
-            private int _timeSlices;
 
             public int GetDimensionID(int index) { return (int)_presentDims[index]; }
             public int[] GetOffsets() { return _dimOffsets; }
             public int[] GetLengths() { return _dimLengths; }
             public RedSea.Variable GetVariable() { return _var; }
-            public bool IsTimeDependent() { return _timeSlices > 1; }
-            public int GetNumTimeSlices() { return _timeSlices; }
 
-            public SliceRange(Loader file, RedSea.Variable var, int numTimeSlices = 1)
+            public SliceRange(Loader file, RedSea.Variable var)
             {
                 _var = var;
-                _timeSlices = numTimeSlices;
 
                 // Query number of dimensions of variable.
                 int numDims;
@@ -243,6 +254,22 @@ namespace FlowSharp
                 }
             }
 
+            public SliceRange(SliceRange range)
+            {
+                _var = range._var;
+
+                int numDims = range._presentDims.Length;
+                _presentDims = new RedSea.Dimension[numDims];
+                _dimOffsets = new int[numDims];
+                _dimLengths = new int[numDims];
+
+
+                Array.Copy(range._presentDims, _presentDims, numDims);
+                Array.Copy(range._dimOffsets, _dimOffsets, numDims);
+                Array.Copy(range._dimLengths, _dimLengths, numDims);
+            }
+
+
             /// <summary>
             /// Only include this slice of the data in this dimension.
             /// </summary>
@@ -262,8 +289,7 @@ namespace FlowSharp
                 }
 
                 // Dimension found?
-                if (dimPos == -1)
-                    return;
+                Debug.Assert(dimPos != -1, "Dimension not present, cannot be set!");
 
                 _dimOffsets[dimPos] = slice;
                 // We only chose one element.
@@ -284,12 +310,55 @@ namespace FlowSharp
                 }
 
                 // Dimension found?
-                if (dimPos == -1)
-                    return;
+                Debug.Assert(dimPos != -1, "Dimension not present, cannot be set!");
 
                 _dimOffsets[dimPos] = start;
                 _dimLengths[dimPos] = length;
             }
+
+            public void SetToComplete(RedSea.Dimension dim)
+            {
+                // Search for position of dimension in present dimensions.
+                int dimPos = -1;
+                for (int pos = 0; pos < _presentDims.Length; ++pos)
+                {
+                    if (_presentDims[pos] == dim)
+                    {
+                        dimPos = pos;
+                        break;
+                    }
+                }
+
+                // Dimension found?
+                Debug.Assert(dimPos != -1, "Dimension not present, cannot be set!");
+
+                _dimOffsets[dimPos] = -1;
+            }
+        }
+
+        public static VectorFieldUnsteady LoadTimeSeries(string path, string filename, SliceRange[] vars, int starttime, int timelength)
+        {
+            ScalarField[][] slices = new ScalarField[vars.Length][];
+            for (int var = 0; var < vars.Length; ++var)
+                slices[var] = new ScalarField[timelength];
+
+
+            Loader ncFile;
+            for (int time = starttime; time < starttime + timelength; ++time)
+            {
+                ncFile = new Loader(path + (time + 1) + filename);
+                for(int var = 0; var < vars.Length; ++var)
+                {
+                    slices[var][time] = ncFile.LoadFieldSlice(vars[var]);
+                }
+                ncFile.Close();
+            }
+
+            ScalarFieldUnsteady[] scalars = new ScalarFieldUnsteady[vars.Length];
+            for (int var = 0; var < vars.Length; ++var)
+                scalars[var] = new ScalarFieldUnsteady(slices[var], starttime);
+
+            return new VectorFieldUnsteady(scalars);
         }
     }
 }

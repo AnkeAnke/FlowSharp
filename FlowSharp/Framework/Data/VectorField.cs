@@ -79,9 +79,9 @@ namespace FlowSharp
             return Sample(index);
         }
 
-        public virtual Vector Sample(Vector position, bool worldPosition = true)
+        public virtual Vector Sample(Vector position)
         {
-            return Grid.Sample(this, position, worldPosition);
+            return Grid.Sample(this, position);
         }
 
 
@@ -94,7 +94,7 @@ namespace FlowSharp
 
         public delegate Vector VFJFunction(Vector v, SquareMatrix J);
 
-        public VectorField(VectorField field, VFJFunction function, int outputDim)
+        public VectorField(VectorField field, VFJFunction function, int outputDim, bool needJacobian = true)
         {
             int scalars = outputDim;/*function(field.Sample(0), field.SampleDerivative(new Vector(0, field.Size.Length))).Length;*/
             _scalars = new ScalarField[scalars];
@@ -117,9 +117,8 @@ namespace FlowSharp
                         Scalars[dim][(int)index] = (float)InvalidValue;
                     continue;
                 }
-                //if(v[1] == InvalidValue)
-                //    Console.Write("Hrrm?!");
-                SquareMatrix J = field.SampleDerivative(index);
+
+                SquareMatrix J = needJacobian? field.SampleDerivative(index) : null;
                 Vector funcValue = function(v, J);
 
                 for (int dim = 0; dim < Scalars.Length; ++dim)
@@ -129,6 +128,7 @@ namespace FlowSharp
                 }
             }
         }
+
         /// <summary>
         /// Make sure the invalid value is in the first scalar field if it is anywhere.
         /// </summary>
@@ -142,7 +142,7 @@ namespace FlowSharp
             }
         }
 
-        public SquareMatrix SampleDerivative(Vector position, bool worldPosition = true)
+        public SquareMatrix SampleDerivative(Vector position)
         {
             //Debug.Assert(NumVectorDimensions == Size.Length);
             SquareMatrix jacobian = new SquareMatrix(Size.Length);
@@ -153,10 +153,10 @@ namespace FlowSharp
                 float stepMin = Math.Max(0, position[dim] - 0.5f) - position[dim];
                 Vector samplePos = new Vector(position);
                 samplePos[dim] += stepPos;
-                jacobian[dim] = Sample(samplePos, false);
+                jacobian[dim] = Sample(samplePos);
 
                 samplePos[dim] += stepMin - stepPos;
-                jacobian[dim] -= Sample(samplePos, false);
+                jacobian[dim] -= Sample(samplePos);
 
                 jacobian[dim] /= (stepPos - stepMin);
             }
@@ -239,19 +239,15 @@ namespace FlowSharp
             // Copy the grid - one dimension smaller!
             RectlinearGrid grid = Grid as RectlinearGrid;
             Index newSize = new Index(Size.Length - 1);
-            Vector newOrigin = new Vector(Size.Length - 1);
-            Vector newCell =   new Vector(Size.Length - 1);
             Array.Copy(Size.Data, newSize.Data, newSize.Length);
-            Array.Copy(grid.Origin.Data, newOrigin.Data, newSize.Length);
-            Array.Copy(grid.CellSize.Data, newCell.Data, newSize.Length);
 
-            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell);
+            FieldGrid sliceGrid = new RectlinearGrid(newSize);
             for(int i = 0; i < slices.Length; ++i)
             {
 
                 slices[i] = new ScalarField(sliceGrid);
                 Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
-                slices[i].TimeSlice = posInLastDimension * grid.CellSize.T + grid.Origin.T;
+                slices[i].TimeSlice = posInLastDimension;
             }
             return new VectorField(slices);
         }
@@ -263,24 +259,20 @@ namespace FlowSharp
             // Copy the grid - one dimension smaller!
             RectlinearGrid grid = Grid as RectlinearGrid;
             Index newSize = new Index(Size.Length - 1);
-            Vector newOrigin = new Vector(Size.Length - 1);
-            Vector newCell = new Vector(Size.Length - 1);
             Array.Copy(Size.Data, newSize.Data, newSize.Length);
-            Array.Copy(grid.Origin.Data, newOrigin.Data, newSize.Length);
-            Array.Copy(grid.CellSize.Data, newCell.Data, newSize.Length);
 
-            FieldGrid sliceGrid = new RectlinearGrid(newSize, newOrigin, newCell);
+            FieldGrid sliceGrid = new RectlinearGrid(newSize);
             for (int i = 0; i < Size.Length-1; ++i)
             {
 
                 slices[i] = new ScalarField(sliceGrid);
                 Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
-                slices[i].TimeSlice = posInLastDimension * grid.CellSize.T + grid.Origin.T;
+                slices[i].TimeSlice = posInLastDimension;
             }
             return new VectorField(slices);
         }
 
-        public delegate Vector3 PositionToColor(VectorField field, bool worldPos, Vector3 position);
+        public delegate Vector3 PositionToColor(VectorField field, Vector3 position);
         public PointSet<Point> ColorCodeArbitrary(LineSet lines, PositionToColor func)
         {
             Point[] points;
@@ -290,12 +282,12 @@ namespace FlowSharp
             {
                 foreach(Vector3 pos in line.Positions)
                 {
-                    points[idx] = new Point() { Position = pos, Color = func(this, lines.WorldPosition, pos), Radius = lines.Thickness };
+                    points[idx] = new Point() { Position = pos, Color = func(this, pos), Radius = lines.Thickness };
                     ++idx;
                 }
             }
 
-            return new PointSet<Point>(points, lines);
+            return new PointSet<Point>(points);
         }
 
         public abstract class Integrator
@@ -309,18 +301,16 @@ namespace FlowSharp
             };
 
             protected VectorField _field;
-            protected bool _worldPosition = false;
             /// <summary>
             /// Based on CellSize equals (StepSize = 1).
             /// </summary>
-            protected float _stepSize = 0.5f;
+            protected float _stepSize = 0.2f;
             protected Sign _direction = Sign.POSITIVE;
-            protected bool _normalizeField = true;
+            protected bool _normalizeField = false;
             protected float _epsCriticalPoint = 0.00000001f;
 
 
             public virtual VectorField Field { get { return _field; } set { _field = value; } }
-            public virtual bool WorldPosition { get { return _worldPosition; } set { _worldPosition = value; } }
             /// <summary>
             /// Based on CellSize equals (StepSize = 1).
             /// </summary>
@@ -340,7 +330,6 @@ namespace FlowSharp
             public virtual StreamLine<Vector3> IntegrateLineForRendering(Vector pos)
             {
                 StreamLine<Vector3> line = new StreamLine<Vector3>((int)(Field.Size.Max() * 1.5f / StepSize)); // Rough guess.
-                line.WorldPosition = WorldPosition;
 
                 Vector point;
                 Vector next = pos;
@@ -375,7 +364,6 @@ namespace FlowSharp
             public LineSet Integrate<P>(PointSet<P> positions, bool forwardAndBackward = false) where P : Point
             {
                 Debug.Assert(Field.NumVectorDimensions <= 3);
-                Debug.Assert(positions.WorldPosition == WorldPosition, "Point set and integrator must both be in world OR grid position.");
 
                 Line[] lines = new Line[positions.Length * (forwardAndBackward ? 2 : 1)];
 
@@ -398,14 +386,14 @@ namespace FlowSharp
                     Direction = !Direction;
                     color = new Vector3(0.5f);
                 }
-                return new LineSet(lines, positions) { Color = color };
+                return new LineSet(lines) { Color = color };
             }
 
             protected Status CheckPosition(Vector pos)
             {
-                if (!Field.Grid.InGrid(pos, WorldPosition))
+                if (!Field.Grid.InGrid(pos))
                     return Status.BORDER;
-                if (Field.Scalars[0].Sample(pos, WorldPosition) == Field.InvalidValue)
+                if (Field.Scalars[0].Sample(pos) == Field.InvalidValue)
                     return Status.INVALID;
                 return Status.OK;
             }
@@ -431,7 +419,6 @@ namespace FlowSharp
         public class StreamLine<T>
         {
             public List<T> Points;
-            public bool WorldPosition = false;
 
             public StreamLine(int startCapacity = 100)
             {
@@ -455,7 +442,7 @@ namespace FlowSharp
             {
                 ++counter;
                 stepped = new Vector(pos);
-                Vector dir = Field.Sample(pos, WorldPosition);
+                Vector dir = Field.Sample(pos);
 
                 if (!ScaleAndCheckVector(dir, out dir))
                     return Status.CP;
@@ -471,20 +458,13 @@ namespace FlowSharp
             public override bool StepBorder(Vector position, out Vector stepped)
             {
                 stepped = new Vector(position);
-                Vector dir = Field.Sample(position, WorldPosition) * (int)Direction;
+                Vector dir = Field.Sample(position) * (int)Direction;
                 if (NormalizeField)
                     dir.Normalize();
 
-                if (!WorldPosition)
-                    dir /= Field.Grid.Scale;
-
-                Vector pos = new Vector(position);
-                if (WorldPosition)
-                    pos = Field.Grid.ToGridPosition(pos);
-
                 // How big is the smallest possible scale to hit a maximum border?
-                float scale = (((Vector)Field.Size - pos) / dir).MinPos();
-                scale = Math.Min(scale, (pos / dir).MinPos());
+                float scale = (((Vector)Field.Size - position) / dir).MinPos();
+                scale = Math.Min(scale, (position / dir).MinPos());
 
                 if (scale >= StepSize)
                     return false;
@@ -501,8 +481,7 @@ namespace FlowSharp
                     return false;
                 if (NormalizeField)
                     scaled = scaled / length;
-                if (!WorldPosition)
-                    scaled = scaled / Field.Grid.Scale;
+
                 scaled *= StepSize * (int)Direction;
                 return true;
             }
@@ -519,7 +498,7 @@ namespace FlowSharp
                 Status status;
 
                 // v0
-                Vector v0 = Field.Sample(pos, WorldPosition);
+                Vector v0 = Field.Sample(pos);
                 if (!ScaleAndCheckVector(v0, out v0))
                     return Status.CP;
                 status = CheckPosition(pos + v0 / 2);
@@ -527,7 +506,7 @@ namespace FlowSharp
                     return status;
 
                 // v1
-                Vector v1 = Field.Sample(pos + v0 / 2, WorldPosition);
+                Vector v1 = Field.Sample(pos + v0 / 2);
                 if (!ScaleAndCheckVector(v1, out v1))
                     return Status.CP;
                 status = CheckPosition(pos + v1 / 2);
@@ -535,7 +514,7 @@ namespace FlowSharp
                     return status;
 
                 // v2
-                Vector v2 = Field.Sample(pos + v1 / 2, WorldPosition);
+                Vector v2 = Field.Sample(pos + v1 / 2);
                 if (!ScaleAndCheckVector(v2, out v2))
                     return Status.CP;
                 status = CheckPosition(pos + v2);
@@ -543,7 +522,7 @@ namespace FlowSharp
                     return status;
 
                 // v3
-                Vector v3 = Field.Sample(pos + v2, WorldPosition);
+                Vector v3 = Field.Sample(pos + v2);
                 if (!ScaleAndCheckVector(v3, out v3))
                     return Status.CP;
                 status = CheckPosition(pos + v2);

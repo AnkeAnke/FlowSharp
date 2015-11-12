@@ -35,6 +35,8 @@ namespace FlowSharp
         /// The WPF host connected to the scene.
         /// </summary>
         private WPFHost.ISceneHost _host;
+        private DPFCanvas _canvas;
+        public void SetCanvas(DPFCanvas canv) { _canvas = canv; }
         /// <summary>
         /// THe Direct3D11 device bound to the WPF render target.
         /// </summary>
@@ -149,7 +151,7 @@ namespace FlowSharp
                 System.Threading.Thread.Sleep(0);
             }
             if (Camera.Active)
-                Camera.Update((float)timeSpan.TotalMilliseconds, Device);
+                Camera.Update((float)timeSpan.TotalMilliseconds, Device, _canvas);
             else
                 Camera.UpdateInactive();
 

@@ -59,7 +59,7 @@ namespace FlowSharp
             Vector3 zAxis = plane.ZAxis;
             for (int index = 0; index < lines.Lines.Length; ++index)
             {
-                Line line = lines.GetWorldLine(index);
+                Line line = lines.Lines[index];
                 if (line.Length < 2)
                     continue;
                 Debug.Assert(line.Length == lines.Lines[index].Length);

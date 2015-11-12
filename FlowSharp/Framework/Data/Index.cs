@@ -399,5 +399,20 @@ namespace FlowSharp
         { }
 
         public Int2(int[] data) : base(data) { }
+
+        public static explicit operator Int2(SlimDX.Vector2 vec)
+        {
+            return new Int2((int)vec.X, (int)vec.Y);
+        }
+
+        public static Int2 operator -(Int2 a, Int2 b)
+        {
+            return new Int2(a.X - b.X, a.Y - b.Y);
+        }
+
+        public static Int2 operator /(Int2 a, int b)
+        {
+            return new Int2(a.X / b, a.Y / b);
+        }
     }
 }

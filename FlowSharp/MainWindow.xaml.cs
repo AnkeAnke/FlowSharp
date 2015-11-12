@@ -57,6 +57,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.Shader] = DropDownShader;
             _windowObjects[(int)DataMapper.Setting.Element.Colormap] = DropDownColormap;
 
+            Renderer.Singleton.SetCanvas(DX11Display);
         }
 
         private void LoadDisplay(object sender, RoutedEventArgs e)

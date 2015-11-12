@@ -13,7 +13,7 @@ namespace FlowSharp
         public int Length { get { return Positions.Length; } }
     }
 
-    class LineSet : GeometryData
+    class LineSet
     {
         protected Line[] _lines;
         
@@ -61,45 +61,6 @@ namespace FlowSharp
         public LineSet(Line[] lines)
         {
             Lines = lines;
-            WorldPosition = true;
-        }
-
-        public LineSet(Line[] lines, GeometryData data)
-        {
-            Lines = lines;
-            WorldPosition = data.WorldPosition;
-            if(!WorldPosition)
-            {
-                _origin = (Vector3)data.Origin;
-                _cellSize = (Vector3)data.CellSize;
-            }
-        }
-
-        public LineSet(Line[] lines, Vector3 cellSize, Vector3 origin)
-        {
-            Lines = lines;
-            WorldPosition = false;
-            _cellSize = cellSize;
-            _origin = origin;
-        }
-
-        public Line GetWorldLine(int index)
-        {
-            if (WorldPosition)
-                return Lines[index];
-
-            Vector3[] gridPos = Lines[index].Positions;
-            Vector3[] positions = new Vector3[gridPos.Length];
-
-            for (int point = 0; point < positions.Length; ++point)
-                positions[point] = MathHelper.Mult(gridPos[point], _cellSize) + _origin;
-
-            Line worldLine = new Line()
-            {
-                Positions = positions
-            };
-
-            return worldLine;
         }
     }
 }

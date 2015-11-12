@@ -13,16 +13,15 @@ namespace FlowSharp
     abstract class FieldGrid
     {
         public Index Size;
-        public abstract Vector Scale { get; }
         public abstract float? TimeOrigin { get; set; }
 
         public abstract int NumAdjacentPoints();
-        public virtual Vector Sample(VectorField field, Vector position, bool worldSpace = true)
+        public virtual Vector Sample(VectorField field, Vector position)
         {
-            // Query relevant edges and their weights. Reault varies with different grid types.
+            // Query relevant edges and their weights. Result varies with different grid types.
             int numCells = NumAdjacentPoints();
             float[] weights;
-            int[] indices = FindAdjacentIndices(position, out weights, worldSpace);
+            int[] indices = FindAdjacentIndices(position, out weights);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -41,12 +40,12 @@ namespace FlowSharp
             return result;
         }
 
-        public virtual float Sample(ScalarField field, Vector position, bool worldSpace = true)
+        public virtual float Sample(ScalarField field, Vector position)
         {
             // Query relevant edges and their weights. Reault varies with different grid types.
             int numCells = NumAdjacentPoints();
             float[] weights;
-            int[] indices = FindAdjacentIndices(position, out weights, worldSpace);
+            int[] indices = FindAdjacentIndices(position, out weights);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -68,19 +67,16 @@ namespace FlowSharp
         }
 
         public abstract FieldGrid Copy();
-        public abstract Vector ToGridPosition(Vector worldPos);
-        public abstract Vector ToWorldPosition(Vector griddPos);
         public abstract FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart, float timeStep);
-        public abstract bool InGrid(Vector pos, bool worldSpace = true);
+        public abstract bool InGrid(Vector pos);
 
         /// <summary>
         /// Returns all cell points necessary to interpolate a value at the position.
         /// </summary>
         /// <param name="position">The position in either world or grid space.</param>
         /// <param name="weights">The weights used for linear interpolation.</param>
-        /// <param name="worldSpace">Is the position given in world space (origin + size * cellSize) or grid space (size)?</param>
         /// <returns>Scalar indices for acessing the grid.</returns>
-        public abstract int[] FindAdjacentIndices(Vector position, out float[] weights, bool worldSpace = true);
+        public abstract int[] FindAdjacentIndices(Vector position, out float[] weights);
     }
 
     /// <summary>
@@ -88,23 +84,19 @@ namespace FlowSharp
     /// </summary>
     class RectlinearGrid : FieldGrid
     {
-        public Vector Origin, CellSize;
-        public override Vector Scale { get { return CellSize; } }
-
-        public Vector Extent { get { return (Size - new Index(1, Size.Length)) * CellSize; } }
-        public Vector Maximum { get { return Origin + Extent; } }
+        private float? _timeOrigin;
         private bool _timeDependent = false;
         public override float? TimeOrigin
         {
             get
             {
-                return _timeDependent ? (float?)Origin.T : null;
+                return _timeOrigin;
             }
 
             set
             {
-                Debug.Assert((_timeDependent) == (value != null), "Please don't mess with time!");
-                Origin.T = value ?? 0;
+                //Debug.Assert((_timeDependent) == (value != null), "Please don't mess with time!");
+                _timeOrigin = value;// ?? 0;
             }
         }
 
@@ -112,44 +104,21 @@ namespace FlowSharp
         /// Create a new rectlinear grid descriptor.
         /// </summary>
         /// <param name="size">Number of cells in each dimension.</param>
-        /// <param name="origin">Minimum value in each direction.</param>
-        /// <param name="cellSize">Size of one cell.</param>
-        public RectlinearGrid(Index size, Vector origin, Vector cellSize, float? timeOrigin = null)
+        /// <param name="cellSize">Size of one cell, only used for rendering.</param>
+        public RectlinearGrid(Index size, float? timeOrigin = null)
         {
             Size = new Index(size);
-            Origin = new Vector(origin);
-            CellSize = new Vector(cellSize);
             _timeDependent = (timeOrigin != null);
             TimeOrigin = timeOrigin;
         }
         public override FieldGrid Copy()
         {
-            return new RectlinearGrid(new Index(Size), new Vector(Origin), new Vector(CellSize), TimeOrigin);
-        }
-
-        public Vector GetWorldPosition(Index index)
-        {
-            return Origin + index * CellSize;
+            return new RectlinearGrid(new Index(Size), TimeOrigin);
         }
 
         public override int NumAdjacentPoints()
         {
             return 1 << Size.Length; // 2 to the power of N 
-        }
-
-        public override Vector ToWorldPosition(Vector gridPos)
-        {
-            Vector ret = new Vector(Origin);
-            ret += CellSize * gridPos;
-            return ret;
-        }
-
-        public override Vector ToGridPosition(Vector worldPos)
-        {
-            Vector ret = new Vector(worldPos);
-            ret -= Origin;
-            ret /= CellSize;
-            return ret;
         }
 
         /// <summary>
@@ -163,17 +132,9 @@ namespace FlowSharp
         {
             Index timeSize = new Index(Size.Length + 1);
             Array.Copy(Size.Data, timeSize.Data, Size.Length);
-            timeSize[Size.Length] = numTimeSlices;
+            timeSize[Size.Length] = numTimeSlices;            
 
-            Vector timeOrigin = new Vector(Size.Length + 1);
-            Array.Copy(Origin.Data, timeOrigin.Data, Size.Length);
-            timeOrigin[Size.Length] = timeStart;
-
-            Vector timeCell = new Vector(Size.Length + 1);
-            Array.Copy(CellSize.Data, timeCell.Data, Size.Length);
-            timeCell[Size.Length] = timeStep;
-
-            RectlinearGrid timeGrid = new RectlinearGrid(timeSize, timeOrigin, timeCell);
+            RectlinearGrid timeGrid = new RectlinearGrid(timeSize);
             _timeDependent = true;
             return timeGrid;
         }
@@ -185,7 +146,7 @@ namespace FlowSharp
         /// <param name="pos"></param>
         /// <param name="indices"></param>
         /// <param name="weights"></param>
-        public override int[] FindAdjacentIndices(Vector pos, out float[] weights, bool worldSpace = true)
+        public override int[] FindAdjacentIndices(Vector pos, out float[] weights)
         {
             int numPoints = NumAdjacentPoints();
             int[] indices = new int[numPoints];
@@ -193,16 +154,9 @@ namespace FlowSharp
 
             Vector position = new Vector(pos);
 
-            if (worldSpace)
-            {
-                // Find minimum grid point.
-                position -= Origin;
-                position /= CellSize;
-            }
+            Debug.Assert(InGrid(position));
 
-            Debug.Assert(InGrid(position, false));
-
-            Index gridPos = Index.Min((Index)position, Size-new Index(1, Size.Length));
+            Index gridPos = Index.Min((Index)position, Size - new Index(1, Size.Length));
             Vector relativePos = position - (Vector)gridPos;
 
             // Convert to int.
@@ -249,16 +203,8 @@ namespace FlowSharp
             return indices;
         }
 
-        public override bool InGrid(Vector pos, bool worldSpace = true)
+        public override bool InGrid(Vector position)
         {
-            Vector position = new Vector(pos);
-
-            if (worldSpace)
-            {
-                // Find minimum grid point.
-                position -= Origin;
-                position /= CellSize;
-            }
             for (int dim = 0; dim < Size.Length; ++dim)
             {
                 if (position[dim] < 0 || position[dim] > Size[dim] - 1)
