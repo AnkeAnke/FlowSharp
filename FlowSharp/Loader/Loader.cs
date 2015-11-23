@@ -197,6 +197,13 @@ namespace FlowSharp
             return field;
         }
 
+        public int GetNumVariables()
+        {
+            int size;
+            NetCDF.nc_inq_nvars(_fileID, out size);
+            return size;
+        }
+
         /// <summary>
         /// Close the file.
         /// </summary>

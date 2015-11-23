@@ -344,13 +344,13 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet<Point> ValidDataPoints(VectorField field)
+        public static PointSet<T> ValidDataPoints<T>(VectorField field) where T :Point, new()
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
             Debug.Assert(field.NumVectorDimensions == 2 || field.NumVectorDimensions == 3);
 
-            List<Point> cpList = new List<Point>(field.Size.Product());
+            List<T> cpList = new List<T>(field.Size.Product());
 
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0]; ++x)
@@ -363,7 +363,7 @@ namespace FlowSharp
                         if (data == field.InvalidValue)
                             continue;
 
-                        Point cp = new Point()
+                        T cp = new T()
                         {
                             Position = new SlimDX.Vector3(x, y, z),
                             Color = new SlimDX.Vector3(0.6f, 0.3f, 0.3f), // Debug color. 
@@ -373,19 +373,19 @@ namespace FlowSharp
                     }
             RectlinearGrid rGrid = field.Grid as RectlinearGrid;
 
-            PointSet<Point> cpSet = new PointSet<Point>(cpList.ToArray());
+            PointSet<T> cpSet = new PointSet<T>(cpList.ToArray());
 
             return cpSet;
         }
 
-        public static PointSet<Point> SomePoints2D(VectorField field, int numPoints, float pointSize = 1)
+        public static PointSet<T> SomePoints2D<T>(VectorField field, int numPoints, float pointSize = 1) where T : Point, new()
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
             Debug.Assert(field.NumVectorDimensions >= 2);
             Random rnd = new Random();
 
-            Point[] cpList = new Point[numPoints];
+            T[] cpList = new T[numPoints];
             bool attachTimeZ = field.NumVectorDimensions == 2 && field.TimeSlice != 0;
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int index = 0; index < numPoints; ++index)
@@ -399,10 +399,10 @@ namespace FlowSharp
                     index--;
                     continue;
                 }
-                Point cp = new Point()
+                T cp = new T()
                 {
                     Position = (Vector3)pos,
-                    Color = new SlimDX.Vector3((float)index / numPoints, 0.0f, 0.3f), // Debug color. 
+                    Color = new Vector3((float)index / numPoints, 0.0f, 0.3f), // Debug color. 
                     Radius = pointSize
                 };
                 if (attachTimeZ)
@@ -410,7 +410,7 @@ namespace FlowSharp
                 cpList[index] = cp;
             }
             RectlinearGrid rGrid = field.Grid as RectlinearGrid;
-            PointSet<Point> cpSet = new PointSet<Point>(cpList);
+            PointSet<T> cpSet = new PointSet<T>(cpList);
 
             return cpSet;
         }
@@ -528,6 +528,40 @@ namespace FlowSharp
         public static Vector VFLength(Vector v, SquareMatrix J)
         {
             return (Vector)v.LengthEuclidean();
+        }
+
+        public static Vector Divergence(Vector v, SquareMatrix J)
+        {
+            float sum = 0;
+            for (int dim = 0; dim < v.Length; ++dim)
+                sum += J[dim][dim];
+            return (Vector)sum;
+        }
+
+        public static Vector DivX(Vector v, SquareMatrix J)
+        {
+            return (Vector)J[0][0];
+        }
+
+        public static Vector DivY(Vector v, SquareMatrix J)
+        {
+            return (Vector)J[1][1];
+        }
+        public static Vector Div2D(Vector v, SquareMatrix J)
+        {
+            return new Vec2(J[0][0], J[1][1]);
+        }
+
+        public static Vector Vorticity(Vector v, SquareMatrix J)
+        {
+            Debug.Assert(v.Length == 2); // If not, write other formula.
+            return (Vector)(J.Vx - J.Uy);
+        }
+
+        public static Vector Shear(Vector v, SquareMatrix J)
+        {
+            Debug.Assert(v.Length == 2); // If not, write other formula.
+            return (Vector)(J.Vx + J.Uy);
         }
     }
 }

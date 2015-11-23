@@ -49,6 +49,7 @@ namespace FlowSharp
             _fov = 1.3f;
             View = Matrix.LookAtLH(new Vector3(0, 0, -20f), Vector3.Zero, Vector3.UnitY);
             Projection = Matrix.PerspectiveFovLH(_fov, aspectRatio, 0.0001f, 100000);
+            //Projection = Matrix.OrthoLH(10 * _aspect, 10, 0.0001f, 100000);
 
             var data = new DataStream(Marshal.SizeOf(typeof(Constants)), true, true);
             data.Write(_globals);
@@ -249,7 +250,6 @@ namespace FlowSharp
 
             Vector4 res = Vector4.Transform(pointVec, dirMat);
             Vector2 xy = new Vector2(Vector4.Dot(dirMat.get_Rows(0), pointVec), Vector4.Dot(dirMat.get_Rows(1), pointVec));
-            Console.WriteLine(res);
             return new Vector2(res.X, res.Y);
         }
 

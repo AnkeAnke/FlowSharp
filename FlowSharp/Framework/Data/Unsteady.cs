@@ -200,6 +200,10 @@ namespace FlowSharp
         public void ScaleToGrid(float dimwiseScale)
         {
             //TODO!!
+            for (int time = 0; time < _slices.Length; ++time)
+                for (int index = 0; index < Size.Product() / Size.T; ++index)
+                    if(_slices[time][index] != InvalidValue)
+                        _slices[time][index] /= dimwiseScale;
             _operationsAllowed = true;
         }
 

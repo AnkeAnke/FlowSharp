@@ -410,9 +410,74 @@ namespace FlowSharp
             return new Int2(a.X - b.X, a.Y - b.Y);
         }
 
+        public static Int2 operator +(Int2 a, Int2 b)
+        {
+            return new Int2(a.X + b.X, a.Y + b.Y);
+        }
+
         public static Int2 operator /(Int2 a, int b)
         {
             return new Int2(a.X / b, a.Y / b);
+        }
+        public static bool operator ==(Int2 a, Int2 b)
+        {
+            return a.X == b.X && a.Y == b.Y;
+        }
+        public static bool operator !=(Int2 a, Int2 b)
+        {
+            return !(a == b);
+        }
+
+        public static explicit operator ManagedCuda.VectorTypes.int2(Int2 v)
+        {
+            return new ManagedCuda.VectorTypes.int2(v.X, v.Y);
+        }
+    }
+
+    class Int3 : Index
+    {
+        public int X { get { return _data[0]; } }
+        public int Y { get { return _data[1]; } }
+        public int Z { get { return _data[1]; } }
+        public override int Length { get { return 3; } }
+
+        public Int3() : base(0, 3)
+        { }
+
+        public Int3(int x, int y, int z) : base(new int[] { x, y, z })
+        { }
+
+        public Int3(Int3 copy) : base(copy)
+        { }
+
+        /// <summary>
+        /// Vector with dim elements set to v.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="dim"></param>
+        public Int3(int xyz) : base(xyz, 3)
+        { }
+
+        public Int3(int[] data) : base(data) { }
+
+        public static explicit operator Int3(SlimDX.Vector3 vec)
+        {
+            return new Int3((int)vec.X, (int)vec.Y, (int)vec.Z);
+        }
+
+        public static Int3 operator -(Int3 a, Int3 b)
+        {
+            return new Int3(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
+        }
+
+        public static Int3 operator +(Int3 a, Int3 b)
+        {
+            return new Int3(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+        }
+
+        public static Int3 operator /(Int3 a, int b)
+        {
+            return new Int3(a.X / b, a.Y / b, a.Z / b);
         }
     }
 }

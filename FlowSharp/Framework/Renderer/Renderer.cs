@@ -98,6 +98,7 @@ namespace FlowSharp
                 SetupCuda();
                 AlgorithmCuda.Initialize(ContextCuda, Device);
                 FlowMapUncertain.Initialize();
+                LocalDiffusion.Initialize();
             }
             catch (Exception e)
             {
@@ -126,6 +127,7 @@ namespace FlowSharp
             }
             ContextCuda = new CudaContext(cudaDevices[0], Device.ComPointer, CUCtxFlags.BlockingSync, CudaContext.DirectXVersion.D3D11);
             var info = ContextCuda.GetDeviceInfo();
+            Console.WriteLine("Max. Nr. Threads: " + info.MaxBlockDim + ", Total: " + info.MaxThreadsPerBlock + "\nMax. Nr. Blocks: " + info.MaxGridDim + "\nMax. Bytes Shared Per Block: " + info.SharedMemoryPerBlock);
         }
 
         public void Detach()

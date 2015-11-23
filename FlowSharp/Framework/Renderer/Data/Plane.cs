@@ -101,9 +101,8 @@ namespace FlowSharp
 #if DEBUG
             // Assert that the fields are 2 dimensional.
             foreach(Field field in fields.Scalars)
-                System.Diagnostics.Debug.Assert(field.Size.Length == 2);
+                System.Diagnostics.Debug.Assert(field.Size.Length >= 2);
 #endif
-            this.Effect = effect;
             this._effect = _planeEffect;
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
@@ -118,7 +117,7 @@ namespace FlowSharp
 
 
             // Generating Textures from the fields.
-            _fieldTextures = new ShaderResourceView[effect == RenderEffect.LIC_LENGTH ? fields.Scalars.Length + 1 : fields.Scalars.Length];
+            _fieldTextures = new ShaderResourceView[fields.Scalars.Length];
             for(int f = 0; f < _field.NumVectorDimensions; ++f)
             {
                 Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);

@@ -34,6 +34,8 @@ namespace FlowSharp
             _color = lines.Color;
             this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
             this._numVertices = lines.NumPoints * 2 - lines.Lines.Length * 2; // Linelist means, all points are there twice, minus the endpoints.
+            if (_numVertices == 0)
+                return;
             this._topology = PrimitiveTopology.LineList;
 
             // Setting up the vertex buffer. 

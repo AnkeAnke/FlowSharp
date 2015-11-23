@@ -9,7 +9,7 @@ using SlimDX.Direct3D11;
 
 namespace FlowSharp
 {
-    class AlgorithmCuda
+    abstract class AlgorithmCuda
     {
         protected CudaKernel _kernel;
         protected static CudaContext _context;
@@ -20,6 +20,8 @@ namespace FlowSharp
             _context = context;
             _device = device;
         }
-        
+
+        public abstract void CompleteRange(Int2 selection);
+        public abstract void Subrange(Int2 min, Int2 max, Int2 selection);
     }
 }

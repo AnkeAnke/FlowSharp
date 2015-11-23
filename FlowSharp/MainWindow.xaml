@@ -13,6 +13,7 @@
         </Grid.ColumnDefinitions>
         <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="1210" Width="1328" Margin="10,10,0,0" VerticalAlignment="Top" Focusable="True" IsEnabled="True" MouseEnter="ActivateCamera" MouseLeave="DeactivateCamera" IsHitTestVisible="True"/>
         <ComboBox x:Name="DropDownDisplay" HorizontalAlignment="Left" Margin="1365,112,0,0" VerticalAlignment="Top" Width="259" Loaded="LoadDisplay" SelectionChanged="OnChangeDisplay"/>
+        <ComboBox x:Name="DropDownMeasure" HorizontalAlignment="Left" Margin="1504,153,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadMeasure" SelectionChanged="OnChangeMeasure"/>
         <ComboBox x:Name="DropDownDisplayLines" HorizontalAlignment="Left" Margin="1365,153,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadDisplayLines" SelectionChanged="OnChangeDisplayLines"/>
         <ComboBox x:Name="DropDownSlice0" HorizontalAlignment="Left" Margin="1365,240,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadSlice0" SelectionChanged="OnChangeSlice0"/>
         <ComboBox x:Name="DropDownSlice1" HorizontalAlignment="Left" Margin="1365,279,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadSlice1" SelectionChanged="OnChangeSlice1"/>
@@ -49,7 +50,9 @@
         <Image Name="ColormapView" HorizontalAlignment="Left" Margin="1365,843,0,0" VerticalAlignment="Top" Width="259" Height="24" Stretch="Fill" Loaded="LoadColormapView">
             <!--<Image.RenderTransform>
                 <TransformGroup>
-                    --><!--<ScaleTransform ScaleX="1.0"/>--><!--
+                    -->
+            <!--<ScaleTransform ScaleX="1.0"/>-->
+            <!--
                     <ScaleTransform>
                         <ScaleTransform.ScaleX>
                             <Binding ElementName="WindowWidth" Path="Value" Mode="OneWay"/>
@@ -60,8 +63,18 @@
         </Image>
         <StackPanel x:Name="WindowWidthBlock" HorizontalAlignment="Right" Height="86" Margin="0,889,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="WindowWidthText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Width" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="WindowWidth" Maximum="10" Minimum ="0" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
+            <Slider x:Name="WindowWidth" Maximum="30" Minimum ="0" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
             <TextBox Text="{Binding Value, ElementName=WindowWidth, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Width="40" />
+        </StackPanel>
+        <ComboBox x:Name="DropDownTracking" HorizontalAlignment="Left" Margin="1504,364,0,0" VerticalAlignment="Top" Width="120" Loaded="LoadTracking" SelectionChanged="OnChangeTracking"/>
+        <StackPanel x:Name="WindowStartBlock" HorizontalAlignment="Right" Height="86" Margin="0,980,18,0" VerticalAlignment="Top" Width="259">
+            <TextBlock x:Name="WindowStartText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Start" VerticalAlignment="Top" Width="163" FontSize="10"/>
+            <Slider x:Name="WindowStart" Maximum="20" Minimum ="-20" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowStart"/>
+            <TextBox Text="{Binding Value, ElementName=WindowStart, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Width="40" />
+        </StackPanel>
+        <StackPanel x:Name="MemberHeightBlock" Height="43" Margin="1436,306,86,0" VerticalAlignment="Top">
+            <TextBlock x:Name="MemberHeightText" HorizontalAlignment="Left"  TextWrapping="Wrap" Text="Slice Height" VerticalAlignment="Top" Width="120"/>
+            <ComboBox x:Name="DropDownHeight" VerticalAlignment="Bottom" Loaded="LoadHeight" Margin="0,5,0,0"  SelectionChanged="OnChangeHeight" HorizontalAlignment="Left" Width="120"/>
         </StackPanel>
 
 

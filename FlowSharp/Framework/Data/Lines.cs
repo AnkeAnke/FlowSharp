@@ -11,6 +11,8 @@ namespace FlowSharp
     {
         public Vector3[] Positions;
         public int Length { get { return Positions.Length; } }
+        public VectorField.Integrator.Status Status;
+        public float LineLength = 0;
     }
 
     class LineSet
@@ -61,6 +63,25 @@ namespace FlowSharp
         public LineSet(Line[] lines)
         {
             Lines = lines;
+        }
+
+        public PointSet<EndPoint> GetEndPoints()
+        {
+            EndPoint[] points = new EndPoint[Lines.Length];
+            for (int idx = 0; idx < points.Length; ++idx)
+                points[idx] = new EndPoint() { Position = Lines[idx].Positions.Last(), LengthLine = Lines[idx].LineLength, Status = Lines[idx].Status };
+            return new PointSet<EndPoint>(points);
+        }
+        public PointSet<EndPoint> GetEndPoints(VectorField.Integrator.Status select)
+        {
+            List<EndPoint> points = new List<EndPoint>(Lines.Length);
+            for (int idx = 0; idx < Lines.Length; ++idx)
+            {
+                Line line = Lines[idx];
+                if(line.Length > 0 && line.Status == select)
+                    points.Add(new EndPoint() { Position = line.Positions.Last(), LengthLine = line.LineLength, Status = line.Status });
+            }
+            return new PointSet<EndPoint>(points.ToArray());
         }
     }
 }

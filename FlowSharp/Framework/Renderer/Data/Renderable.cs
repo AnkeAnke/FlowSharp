@@ -76,6 +76,8 @@ namespace FlowSharp
         /// <param name="device"></param>
         public virtual void Render(Device device)
         {
+            if (_numVertices == 0)
+                return;
             // Rendering immediate.
             DeviceContext context = device.ImmediateContext;
             context.InputAssembler.InputLayout = _vertexLayout;

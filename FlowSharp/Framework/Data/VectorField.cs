@@ -297,6 +297,7 @@ namespace FlowSharp
                 OK,
                 CP,
                 BORDER,
+                TIME_BORDER,
                 INVALID
             };
 
@@ -320,24 +321,31 @@ namespace FlowSharp
             public virtual float EpsCriticalPoint { get { return _epsCriticalPoint; } set { _epsCriticalPoint = value; } }
             public int MaxNumSteps = 2000;
 
-            public abstract Status Step(Vector pos, out Vector stepped);
+            public abstract Status Step(Vector pos, out Vector stepped, out float stepLength);
             /// <summary>
             /// Perform one step, knowing that the border is nearby.
             /// </summary>
             /// <param name="pos"></param>
             /// <param name="stepped"></param>
-            public abstract bool StepBorder(Vector pos, out Vector stepped);
-            public virtual StreamLine<Vector3> IntegrateLineForRendering(Vector pos)
+            public abstract bool StepBorder(Vector pos, out Vector stepped, out float stepLength);
+            public abstract bool StepBorderTime(Vector pos, float timeBorder, out Vector stepped, out float stepLength);
+            public virtual StreamLine<Vector3> IntegrateLineForRendering(Vector pos, float? maxTime = null)
             {
                 StreamLine<Vector3> line = new StreamLine<Vector3>((int)(Field.Size.Max() * 1.5f / StepSize)); // Rough guess.
+                line.Points.Add((Vector3)pos);
+                float timeBorder = maxTime ?? (((Field as VectorFieldUnsteady) == null) ? float.MaxValue : Field.Size.T);
 
                 Vector point;
                 Vector next = pos;
                 if (CheckPosition(next) != Status.OK)
+                {
+                    //line.Points.Add((Vector3)pos);
                     return line;
+                }
                 Status status;
                 int step = -1;
                 bool attachTimeZ = Field.NumVectorDimensions == 2 && Field.TimeSlice != 0;
+                float stepLength;
                 do
                 {
                     step++;
@@ -346,22 +354,46 @@ namespace FlowSharp
                     if (attachTimeZ)
                         posP.Z = (float)Field.TimeSlice;
                     line.Points.Add(posP);
-                    status = Step(point, out next);
-                } while (status == Status.OK && step < MaxNumSteps);
+                    status = Step(point, out next, out stepLength);
+                    if (status == Status.OK)
+                        line.LineLength += stepLength;
+                } while (status == Status.OK && step < MaxNumSteps && next.T <= timeBorder);
 
                 // If a border was hit, take a small step at the end.
                 if (status == Status.BORDER)
                 {
-                    if (StepBorder(point, out next))
+                    if (StepBorder(point, out next, out stepLength))
+                    {
                         line.Points.Add((Vector3)next);
+                        line.LineLength += stepLength;
+                    }
+                }
+
+                // If the time was exceeded, take a small step at the end.
+                if (status == Status.OK && next.T > timeBorder)
+                {
+                    status = Status.TIME_BORDER;
+                    
+                    if (StepBorderTime(point, timeBorder, out next, out stepLength))
+                    {
+                        line.Points.Add((Vector3)next);
+                        line.LineLength += stepLength;
+                    }
+
+                    if (next[1] < 0)
+                        Console.WriteLine("Wut?");
                 }
                 // Single points are confusing for everybody.
                 if (line.Points.Count < 2)
+                {
                     line.Points.Clear();
+                    line.LineLength = 0;
+                }
+                line.Status = status;
                 return line;
             }
 
-            public LineSet Integrate<P>(PointSet<P> positions, bool forwardAndBackward = false) where P : Point
+            public LineSet Integrate<P>(PointSet<P> positions, bool forwardAndBackward = false, float? maxTime = null) where P : Point
             {
                 Debug.Assert(Field.NumVectorDimensions <= 3);
 
@@ -369,9 +401,11 @@ namespace FlowSharp
 
                 for (int index = 0; index < positions.Length; ++index)
                 {
-                    StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)positions.Points[index].Position).ToVec(Field.NumVectorDimensions));
+                    StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)positions.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
                     lines[index] = new Line();
                     lines[index].Positions = streamline.Points.ToArray();
+                    lines[index].Status = streamline.Status;
+                    lines[index].LineLength = streamline.LineLength;
                 }
                 Vector3 color = (Vector3)Direction;
                 if (forwardAndBackward)
@@ -379,7 +413,7 @@ namespace FlowSharp
                     Direction = !Direction;
                     for (int index = 0; index < positions.Length; ++index)
                     {
-                        StreamLine<Vector3> streamline = IntegrateLineForRendering((Vec3)positions.Points[index].Position);
+                        StreamLine<Vector3> streamline = IntegrateLineForRendering((Vec3)positions.Points[index].Position, maxTime);
                         lines[positions.Length + index] = new Line();
                         lines[positions.Length + index].Positions = streamline.Points.ToArray();
                     }
@@ -419,6 +453,8 @@ namespace FlowSharp
         public class StreamLine<T>
         {
             public List<T> Points;
+            public float LineLength = 0;
+            public Integrator.Status Status;
 
             public StreamLine(int startCapacity = 100)
             {
@@ -438,10 +474,11 @@ namespace FlowSharp
                 Field = field;
             }
             int counter = 0;
-            public override Status Step(Vector pos, out Vector stepped)
+            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
             {
                 ++counter;
                 stepped = new Vector(pos);
+                stepLength = 0;
                 Vector dir = Field.Sample(pos);
 
                 if (!ScaleAndCheckVector(dir, out dir))
@@ -451,25 +488,28 @@ namespace FlowSharp
                     Console.WriteLine("NaN NaN NaN NaN WATMAN!");
 
                 stepped += dir;
+                stepLength += dir.LengthEuclidean();
 
                 return CheckPosition(stepped);
             }
 
-            public override bool StepBorder(Vector position, out Vector stepped)
+            public override bool StepBorder(Vector position, out Vector stepped, out float stepLength)
             {
                 stepped = new Vector(position);
+                stepLength = 0;
                 Vector dir = Field.Sample(position) * (int)Direction;
                 if (NormalizeField)
                     dir.Normalize();
 
                 // How big is the smallest possible scale to hit a maximum border?
-                float scale = (((Vector)Field.Size - position) / dir).MinPos();
+                float scale = (((Vector)Field.Size - new Vector(1, Field.Size.Length) - position) / dir).MinPos();
                 scale = Math.Min(scale, (position / dir).MinPos());
 
                 if (scale >= StepSize)
                     return false;
 
                 stepped += dir * scale;
+                stepLength = dir.LengthEuclidean() * scale;
                 return true;
             }
 
@@ -485,6 +525,28 @@ namespace FlowSharp
                 scaled *= StepSize * (int)Direction;
                 return true;
             }
+
+            public override bool StepBorderTime(Vector position, float timeBorder, out Vector stepped, out float stepLength)
+            {
+                stepped = new Vector(position);
+                stepLength = 0;
+                Vector dir = Field.Sample(position) * (int)Direction;
+                if (NormalizeField)
+                    dir.Normalize();
+
+                // How big is the smallest possible scale to hit a maximum border?
+                Vector timeSize = (Vector)Field.Size - new Vector(1, Field.Size.Length);
+                timeSize.T = timeBorder - 1;
+                float scale = ((timeSize - position) / dir).MinPos();
+                scale = Math.Min(scale, (position / dir).MinPos());
+
+                if (scale >= StepSize)
+                    return false;
+
+                stepped += dir * scale;
+                stepLength = dir.LengthEuclidean() * scale;
+                return true;
+            }
         } 
 
         public class IntegratorRK4 : IntegratorEuler
@@ -492,9 +554,10 @@ namespace FlowSharp
             public IntegratorRK4(VectorField field) : base(field)
             { }
 
-            public override Status Step(Vector pos, out Vector stepped)
+            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
             {
                 stepped = new Vector(pos);
+                stepLength = 0;
                 Status status;
 
                 // v0
@@ -529,7 +592,9 @@ namespace FlowSharp
                 if (status != Status.OK)
                     return status;
 
-                stepped += (v0 + (v1 + v2)  * 2 + v3) / 6;
+                Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
+                stepped += dir;
+                stepLength = dir.LengthEuclidean();
 
                 return CheckPosition(stepped);
             }

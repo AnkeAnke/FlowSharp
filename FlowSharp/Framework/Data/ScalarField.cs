@@ -81,6 +81,20 @@ namespace FlowSharp
             set { _data[index] = value; }
         }
 
+        private float? _timeSlice = null;
+        public override float? TimeSlice
+        {
+            get
+            {
+                return _timeSlice;
+            }
+
+            set
+            {
+                _timeSlice = value;
+            }
+        }
+
         /// <summary>
         /// Instanciate a new field. The dimension is derived from the fields size.
         /// </summary>
@@ -216,7 +230,7 @@ namespace FlowSharp
         /// <returns></returns>
         public delegate float SGFunction(float v, Vector J);
 
-        public ScalarField(ScalarField field, SGFunction function)
+        public ScalarField(ScalarField field, SGFunction function, bool needJ = true)
         {
             _data = new float[field.Size.Product()];
             Grid = field.Grid;
@@ -232,9 +246,11 @@ namespace FlowSharp
                 {
                     this[(int)index] = (float)InvalidValue;
                 }
-
-                Vector g = field.SampleDerivative(index);
-                this[(int)index] = function(s, g);
+                else
+                {
+                    Vector g = needJ ? field.SampleDerivative(index) : new Vec2(0, 0);
+                    this[(int)index] = function(s, g);
+                }
             }
         }
 

@@ -19,6 +19,7 @@ namespace FlowSharp
         /// File name. Should contain intial '/'.
         /// </summary>
         public string FileName;
+        public float DomainScale = 2.593f / 15;
         /// <summary>
         /// Relevant variables of Read Sea file.
         /// </summary>
@@ -57,13 +58,35 @@ namespace FlowSharp
             CP_TRACKING,
             PATHLINE_CORES,            
             OKUBO_WEISS,
-            FLOW_MAP_UNCERTAIN
+            FLOW_MAP_UNCERTAIN,
+            PATHLINE_LENGTH,
+            DIFFUSION_MAP
         }
 
         public enum DisplayLines : int
         {
             LINE,
             POINTS_2D_LENGTH
+        }
+
+        public enum DisplayTracking : int
+        {
+            FIELD,
+            POINTS,
+            LINE,
+            LINE_POINTS,
+            LINE_SELECTION
+        }
+        public enum Measure : int
+        {
+            VELOCITY = 0,
+            SURFACE_HEIGHT = Variable.SURFACE_HEIGHT,
+            SALINITY = Variable.SALINITY,
+            TEMPERATURE = Variable.TEMPERATURE,
+            DIVERGENCE = 1,
+            DIVERGENCE_2D = 4,
+            VORTICITY = 2,
+            SHEAR = 3
         }
         public static VectorField.PositionToColor[] DisplayLineFunctions = new VectorField.PositionToColor[]
         {

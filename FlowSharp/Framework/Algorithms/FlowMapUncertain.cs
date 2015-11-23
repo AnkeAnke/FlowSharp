@@ -165,8 +165,9 @@ namespace FlowSharp
 
             _advectParticlesKernel.GridDimensions = grid;
             _advectParticlesKernel.BlockDimensions = threads;
-            // (float* mapT1, const int width, const int height, const int numMembers, /*float timeScale, */ float stepSize, float minDensity, float invalid)
-            _advectParticlesKernel.Run(_pongFlowMap.DevicePointer, _width, _height, _numMembers, stepSize, 0.000001f, _texInvalidValue);
+            float time = 1.0f / 2.592f;
+            // (float* mapT1, const int width, const int height, const int numMembers, float timeScale, float stepSize, float minDensity, float invalid)
+            _advectParticlesKernel.Run(_pongFlowMap.DevicePointer, _width, _height, _numMembers, 1.0f/RedSea.Singleton.DomainScale, stepSize, 0.000001f, _texInvalidValue);
 
             
 
@@ -224,7 +225,7 @@ namespace FlowSharp
             //_advectParticlesKernel = _context.LoadKernelPTX("Framework/Algorithms/Kernels/FlowMapUncertain.ptx", "FlowMapStep", new CUJITOption[] { }, null);
         }
 
-        public void ChangeRange(Int2 min, Int2 max, Int2 point)
+        public override void Subrange(Int2 min, Int2 max, Int2 point)
         {
             _ensembleRanges[0].SetRange(RedSea.Dimension.GRID_X, min.X, max.X);
             _ensembleRanges[0].SetRange(RedSea.Dimension.CENTER_Y, min.Y, max.Y);
@@ -235,7 +236,7 @@ namespace FlowSharp
             SetupPoint(point, CurrentTime);
         }
 
-        public void CompleteRange(Int2 point)
+        public override void CompleteRange(Int2 point)
         {
             _ensembleRanges[0].SetToComplete(RedSea.Dimension.GRID_X);
             _ensembleRanges[0].SetToComplete(RedSea.Dimension.CENTER_Y);

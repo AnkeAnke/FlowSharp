@@ -29,6 +29,8 @@ namespace FlowSharp
         {
             this._vertexSizeBytes = 32;
             this._numVertices = points.Points.Length;
+            if (_numVertices == 0)
+                return;
             this._topology = PrimitiveTopology.PointList;
 
             // Setting up the vertex buffer. 

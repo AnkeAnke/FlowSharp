@@ -48,6 +48,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.SliceTimeReference] = DropDownSlice1;
             _windowObjects[(int)DataMapper.Setting.Element.MemberMain] = Member0Block;
             _windowObjects[(int)DataMapper.Setting.Element.MemberReference] = DropDownMember1;
+            _windowObjects[(int)DataMapper.Setting.Element.SliceHeight] = MemberHeightBlock;
             _windowObjects[(int)DataMapper.Setting.Element.IntegrationType] = DropDownIntegrator;
             _windowObjects[(int)DataMapper.Setting.Element.AlphaStable] = AlphaBlock;
             _windowObjects[(int)DataMapper.Setting.Element.StepSize] = StepSizeBlock;
@@ -56,6 +57,9 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.StepSize] = StepSizeBlock;
             _windowObjects[(int)DataMapper.Setting.Element.Shader] = DropDownShader;
             _windowObjects[(int)DataMapper.Setting.Element.Colormap] = DropDownColormap;
+            _windowObjects[(int)DataMapper.Setting.Element.Tracking] = DropDownTracking;
+            _windowObjects[(int)DataMapper.Setting.Element.WindowStart] = WindowStartBlock;
+            _windowObjects[(int)DataMapper.Setting.Element.Measure] = DropDownMeasure;
 
             Renderer.Singleton.SetCanvas(DX11Display);
         }
@@ -95,15 +99,32 @@ namespace FlowSharp
             //for (int i = 0; i < values.Length - 2; ++i)
             //    values[i + 2] = "Member " + i;
             //(sender as ComboBox).Da = values;
-            (sender as ComboBox).ItemsSource = Enumerable.Range(0, 51);
+            (sender as ComboBox).ItemsSource = Enumerable.Range(0, 52);
+            (sender as ComboBox).SelectedIndex = 0;
+        }
+
+        private void LoadHeight(object sender, RoutedEventArgs e)
+        {
+            (sender as ComboBox).ItemsSource = Enumerable.Range(0, 50);
             (sender as ComboBox).SelectedIndex = 0;
         }
 
         private void LoadIntegrator(object sender, RoutedEventArgs e)
         {
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
-            DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
-            
+            DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER; 
+        }
+
+        private void LoadMeasure(object sender, RoutedEventArgs e)
+        {
+            DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
+            DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;
+        }
+
+        private void LoadTracking(object sender, RoutedEventArgs e)
+        {
+            DropDownTracking.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayTracking)).Cast<RedSea.DisplayTracking>();
+            DropDownTracking.SelectedIndex = (int)RedSea.DisplayTracking.LINE_POINTS;
         }
 
         private void LoadStepSize(object sender, RoutedEventArgs e)
@@ -163,8 +184,21 @@ namespace FlowSharp
         private void OnChangeDisplayLines(object sender, RoutedEventArgs e)
         {
             var comboBox = sender as ComboBox;
-            DataMapper.Setting cpy = new DataMapper.Setting(_mapper.CurrentSetting);
             _mapper.CurrentSetting.LineSetting = (RedSea.DisplayLines)(comboBox.SelectedItem as RedSea.DisplayLines?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeMeasure(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.Measure = (RedSea.Measure)(comboBox.SelectedItem as RedSea.Measure?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeTracking(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.Tracking = (RedSea.DisplayTracking)(comboBox.SelectedItem as RedSea.DisplayTracking?);
             UpdateRenderer();
         }
 
@@ -196,6 +230,13 @@ namespace FlowSharp
             UpdateRenderer();
         }
 
+        private void OnChangeHeight(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.SliceHeight = (int)(comboBox.SelectedItem as int?);
+            UpdateRenderer();
+        }
+
         private void OnChangeIntegrator(object sender, RoutedEventArgs e)
         {
             var comboBox = sender as ComboBox;
@@ -207,7 +248,7 @@ namespace FlowSharp
         private void OnChangeStepSize(object sender, RoutedEventArgs e)
         {
             var slider = sender as Slider;
-            _mapper.CurrentSetting.StepSize = (float)(slider.Value as double?)/10f;
+            _mapper.CurrentSetting.StepSize = (float)(slider.Value as double?);
             UpdateRenderer();
         }
 
@@ -255,6 +296,12 @@ namespace FlowSharp
         {
             var slider = sender as Slider;
             _mapper.CurrentSetting.WindowWidth = (float)slider.Value;
+            UpdateRenderer();
+        }
+        private void OnChangeWindowStart(object sender, RoutedEventArgs e)
+        {
+            var slider = sender as Slider;
+            _mapper.CurrentSetting.WindowStart = (float)slider.Value;
             UpdateRenderer();
         }
         #endregion

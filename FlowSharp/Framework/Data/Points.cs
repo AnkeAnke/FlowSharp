@@ -15,6 +15,13 @@ namespace FlowSharp
         public virtual float Radius { get; set; } = 0.01f;
     }
 
+    class EndPoint : Point
+    {
+        public float LengthLine;
+        public VectorField.Integrator.Status Status;
+        public Int2 Origin;
+    }
+
     class CriticalPoint2D : Point
     {
         public enum TypeCP
