@@ -35,6 +35,7 @@ namespace FlowSharp
         protected CudaGraphicsInteropResourceCollection _cudaDxMapper;
         protected static CudaKernel _advectParticlesKernel;
         protected static CudaKernel _copyMapDataKernel;
+        protected bool _initialized = false;
 
         public FlowMapUncertain(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, int endTime)
         {
@@ -50,6 +51,17 @@ namespace FlowSharp
 
             // Setup a point texture.
             SetupPoint(pos, startTime);
+        }
+
+        private void InitializeResources()
+        {
+            int vHeight = _height * _numMembers;
+            _t0Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
+            _t0X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
+            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
+            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
+
+            _initialized = true;
         }
         /// <summary>
         /// Setup as empty map with only one value at 1.
@@ -85,9 +97,11 @@ namespace FlowSharp
             // Tell CUDA which value is a border.
             _texInvalidValue = t1X.InvalidValue??float.MaxValue;
 
+            if (!_initialized)
+                InitializeResources();
+
             // ~~~~~~~~~~~~ Fill CUDA resources ~~~~~~~~~~~~ \\
             // All members are above each other.
-            int vHeight = _height * _numMembers;
             //// vX, t=0
             //_t0X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
             //_t0X.CopyFromHostToThis<float>(t0X.Data);
@@ -99,12 +113,10 @@ namespace FlowSharp
             //new CudaTextureArray2D(_advectParticlesKernel, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
 
             // vX, t=1
-            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
             _t1X.CopyFromHostToThis<float>(t1X.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
-            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
             _t1Y.CopyFromHostToThis<float>(t1Y.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
 
@@ -184,9 +196,14 @@ namespace FlowSharp
         protected void LoadNextField()
         {
             // Keep t1 timestep as new t0. Update mapping on device side.
+            var tmp = _t0X;
             _t0X = _t1X;
+            _t1X = tmp;
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0X);
+
+            tmp = _t0X;
             _t0Y = _t1Y;
+            _t1Y = tmp;
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
             CurrentTime++;
 
@@ -200,12 +217,12 @@ namespace FlowSharp
             int vHeight = _height * _numMembers;
 
             // vX, t=1
-            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
+            //_t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
             _t1X.CopyFromHostToThis(t1X.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
-            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
+            //_t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
             _t1Y.CopyFromHostToThis(t1Y.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
         }

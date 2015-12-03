@@ -116,7 +116,7 @@ namespace FlowSharp
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_CORES, mapperPathCore);
             RedSea.Singleton.SetMapper(RedSea.Display.MEMBER_COMPARISON, mapperComparison);
             RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);
-            //mapperFlowMap = new FlowMapMapper(new Loader.SliceRange[] { ensembleU, ensembleV }, redSea, velocity);
+            mapperFlowMap = new FlowMapMapper(new Loader.SliceRange[] { ensembleU, ensembleV }, redSea, velocity);
             RedSea.Singleton.SetMapper(RedSea.Display.FLOW_MAP_UNCERTAIN, mapperFlowMap);
             mapperPathLength = new PathlineLengthMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_LENGTH, mapperPathLength);
