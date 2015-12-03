@@ -113,7 +113,7 @@ namespace FlowSharp
             this._field = fields;
             
             // Setting up the vertex buffer. 
-            GenerateGeometry(plane, (RectlinearGrid)fields[0].Grid, fields.TimeSlice??0);
+            GenerateGeometry(plane, fields[0].Size.ToInt2(), fields.TimeSlice??0);
 
 
             // Generating Textures from the fields.
@@ -159,6 +159,9 @@ namespace FlowSharp
                 case RenderEffect.CHECKERBOARD_COLORMAP:
                     this._technique = _planeEffect.GetTechniqueByName("RenderCheckerTex" + _fieldTextures.Length);
                     break;
+                case RenderEffect.OVERLAY:
+                    this._technique = _planeEffect.GetTechniqueByName("Overlay" + _fieldTextures.Length);
+                    break;
                 case RenderEffect.COLORMAP:
                 default:
                     this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fieldTextures.Length);
@@ -169,7 +172,7 @@ namespace FlowSharp
 
         }
 
-        public FieldPlane(Plane plane, RectlinearGrid grid, Texture2D field, Int2 texSize, float timeSlice = 0, float invalidValue = float.MaxValue, RenderEffect effect = RenderEffect.DEFAULT, Colormap map = Colormap.Parula)
+        public FieldPlane(Plane plane, Texture2D field, Int2 texSize, float timeSlice = 0, float invalidValue = float.MaxValue, RenderEffect effect = RenderEffect.DEFAULT, Colormap map = Colormap.Parula)
         {
             this._effect = _planeEffect;
             this._vertexSizeBytes = 32;
@@ -180,7 +183,7 @@ namespace FlowSharp
             this._invalid = invalidValue;
 
             // Setting up the vertex buffer. 
-            GenerateGeometry(plane, grid, timeSlice);
+            GenerateGeometry(plane, texSize, timeSlice);
 
 
             // Generating Textures from the fields.
@@ -238,9 +241,9 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Plane plane, RectlinearGrid grid, float timeOffset)
+        protected void GenerateGeometry(Plane plane, Int2 size, float timeOffset)
         {
-            SetToSubrange(plane, grid, Vector3.Zero, (Vector3)(Vector)grid.Size, timeOffset);
+            SetToSubrange(plane, size, Vector3.Zero, (Vector3)(Vector)size, timeOffset);
             //Vector Extent = grid.Extent;
             //Vector3 maximum = plane.Origin + plane.XAxis * (Extent[0] + grid.Origin[0]) + plane.YAxis * (Extent[1] + grid.Origin[1]);
             //Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + plane.XAxis * grid.Origin[0] + plane.YAxis * grid.Origin[1];
@@ -277,9 +280,9 @@ namespace FlowSharp
             //stream.Dispose();
         }
 
-        public void SetToSubrangeFloat(Plane plane, RectlinearGrid grid, Vector2 minBox, Vector2 extent, float timeOffset = 0)
+        public void SetToSubrangeFloat(Plane plane, Int2 size, Vector2 minBox, Vector2 extent, float timeOffset = 0)
         {
-            SetToSubrange(plane, grid, new Vector3(minBox[0] * grid.Size[0], minBox[1] * grid.Size[1], 0), new Vector3(grid.Size[0] * extent[0], grid.Size[1] * extent[1], 0), timeOffset);
+            SetToSubrange(plane, size, new Vector3(minBox[0] * size[0], minBox[1] * size[1], 0), new Vector3(size[0] * extent[0], size[1] * extent[1], 0), timeOffset);
         }
 
         /// <summary>
@@ -290,9 +293,9 @@ namespace FlowSharp
         /// <param name="minBox">Minimal values of the box. Minimum: (0,0)</param>
         /// <param name="extentBox">Extent of the subplane. Maximum: Size of the Grid.</param>
         /// <param name="timeOffset"></param>
-        public void SetToSubrange(Plane plane, RectlinearGrid grid, Vector3 minBox, Vector3 extentBox, float timeOffset = 0)
+        public void SetToSubrange(Plane plane, Int2 size, Vector3 minBox, Vector3 extentBox, float timeOffset = 0)
         {
-            Vector extent = (Vector)grid.Size;
+            Vector extent = (Vector)size;
             Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + minBox[0] * plane.XAxis + minBox[1] * plane.YAxis;
             Vector3 maximum = origin 
                 + extentBox[0] * plane.XAxis 
@@ -300,8 +303,8 @@ namespace FlowSharp
                 + extentBox[2] * plane.ZAxis;
 
             // Offset, becaue the grid data points shall be OUTSIDE of the grid cells. [x]
-            float uMin = 1.0f / (grid.Size[0] - 1) * 0.5f;
-            float vMin = 1.0f / (grid.Size[1] - 1) * 0.5f;
+            float uMin = 1.0f / (size[0] - 1) * 0.5f;
+            float vMin = 1.0f / (size[1] - 1) * 0.5f;
             uMin += minBox.X / extent[0];
             vMin += minBox.Y / extent[1];
             
@@ -382,6 +385,7 @@ namespace FlowSharp
         {
             DEFAULT = 0,
             COLORMAP,
+            OVERLAY,
             LIC,
             LIC_LENGTH,
             CHECKERBOARD,

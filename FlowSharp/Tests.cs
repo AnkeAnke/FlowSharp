@@ -29,13 +29,16 @@ namespace FlowSharp
 
         public static float RingFieldX(Vector vec)
         {
-            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
-            return -vec[1] / r * (1 - (r - 1) * (r - 1));
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.001f;
+            float tmp = -(vec[1] + 0.0001f) / r * (1 - (r - 1) * (r - 1));
+            if (float.IsNaN(tmp))
+                Console.Write("Nan?");
+            return -(vec[1]+0.0001f) / r * (1 - (r - 1) * (r - 1));
         }
         public static float RingFieldY(Vector vec)
         {
-            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
-            return vec[0] / r * (1 - (r - 1) * (r - 1));
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.001f;
+            return (vec[0]+0.0001f) / r * (1 - (r - 1) * (r - 1));
         }
         public static VectorField GetRingField(int numCells)
         {
@@ -49,20 +52,22 @@ namespace FlowSharp
             return new VectorField(fields);
         }
 
+        private static float RADIUS = 3;
+
         public static float CircleX(Vector vec)
         {
-            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
-            if (r == 0 || Math.Abs(1- r)<0)
-                return 0; 
-            return -vec[1] / r * (1 - (1- r)*(1 - r)) * 20;
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
+            //if (r == 0 || Math.Abs(2- r)<0)
+            //    return 0;
+            return -(vec[1] + 0.00001f) / r * (float)Math.Exp(-Math.Abs(r - RADIUS)) * 20;//-vec[1] / r * (1 - (1- r)*(1 - r)) * 20;
         }
 
         public static float CircleY(Vector vec)
         {
-            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
-            if (r == 0 || Math.Abs(1- r) < 0)
-                return 0;
-            return vec[0] / r * (1 - (1- r)*(1 - r)) * 20;
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
+            //if (r == 0 || Math.Abs(2- r) < 0)
+            //    return 0;
+            return (vec[0] + 0.00001f) / r * (float)Math.Exp(-Math.Abs(r - RADIUS)) * 20; //vec[0] / r * (1 - (1- r)*(1 - r)) * 20;
         }
 
         public static VectorFieldUnsteady CreateCircle(Vec2 center, int numCells, Vec2 dir, int numSlices, float domainR = 2)

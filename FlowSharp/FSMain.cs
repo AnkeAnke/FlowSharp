@@ -45,45 +45,46 @@ namespace FlowSharp
             RedSea.Singleton.DataFolder = "E:/Anke/Dev/Data/First/s";
             RedSea.Singleton.FileName = "/Posterior_Diag.nc";
 
-            //Loader ncFile = new Loader(RedSea.Singleton.DataFolder + 1 + RedSea.Singleton.FileName);
-            //ScalarField[] u = new ScalarField[numTimeSlices];
-            //Loader.SliceRange sliceU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            //sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
-            //sliceU.SetMember(RedSea.Dimension.TIME, 0);
-            //sliceU.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            ////sliceU.SetRange(RedSea.Dimension.GRID_X, 2, 100);
-            ////sliceU.SetRange(RedSea.Dimension.CENTER_Y, 20, 50);
+            Loader ncFile = new Loader(RedSea.Singleton.DataFolder + 1 + RedSea.Singleton.FileName);
+            ScalarField[] u = new ScalarField[numTimeSlices];
+            Loader.SliceRange sliceU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
+            sliceU.SetMember(RedSea.Dimension.TIME, 0);
+            sliceU.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            //sliceU.SetRange(RedSea.Dimension.GRID_X, 300, 100);
+            //sliceU.SetRange(RedSea.Dimension.CENTER_Y, 20, 100);
 
-            //ScalarField[] v = new ScalarField[numTimeSlices];
-            //Loader.SliceRange sliceV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            //sliceV.SetMember(RedSea.Dimension.MEMBER, 0);
-            //sliceV.SetMember(RedSea.Dimension.TIME, 0);
-            //sliceV.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            ////sliceV.SetRange(RedSea.Dimension.CENTER_X, 0, 448);
-            ////sliceV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
+            ScalarField[] v = new ScalarField[numTimeSlices];
+            Loader.SliceRange sliceV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            sliceV.SetMember(RedSea.Dimension.MEMBER, 0);
+            sliceV.SetMember(RedSea.Dimension.TIME, 0);
+            sliceV.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            //sliceV.SetRange(RedSea.Dimension.CENTER_X, 300, 100);
+            //sliceV.SetRange(RedSea.Dimension.GRID_Y, 20, 100);
 
-            //ensembleU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            //ensembleU.SetMember(RedSea.Dimension.TIME, 0);
-            //ensembleU.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            //ensembleU.SetRange(RedSea.Dimension.MEMBER, 2, 50);
-            ////ensembleU.SetRange(RedSea.Dimension.GRID_X, 100, 160);
-            ////ensembleU.SetRange(RedSea.Dimension.CENTER_Y, 10, 70);
-            //ensembleV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            //ensembleV.SetMember(RedSea.Dimension.TIME, 0);
-            //ensembleV.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            //ensembleV.SetRange(RedSea.Dimension.MEMBER, 2, 50);
-            ////ensembleV.SetRange(RedSea.Dimension.CENTER_X, 100, 160);
-            ////ensembleV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
+            ensembleU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            ensembleU.SetMember(RedSea.Dimension.TIME, 0);
+            ensembleU.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            ensembleU.SetRange(RedSea.Dimension.MEMBER, 2, 50);
+            //ensembleU.SetRange(RedSea.Dimension.GRID_X, 100, 160);
+            //ensembleU.SetRange(RedSea.Dimension.CENTER_Y, 10, 70);
+            ensembleV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            ensembleV.SetMember(RedSea.Dimension.TIME, 0);
+            ensembleV.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            ensembleV.SetRange(RedSea.Dimension.MEMBER, 2, 50);
+            //ensembleV.SetRange(RedSea.Dimension.CENTER_X, 100, 160);
+            //ensembleV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
 
-            //ncFile.Close();
+            ncFile.Close();
 
 
-            //velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, 10);
-            //// Scale the field from m/s to (0.1 degree per 3 days).
-            //velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
-            velocity = Tests.CreateCircle(new Vec2(0), 200, new Vec2(0.25f), 10, 8);
-            //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
-            velocity.ScaleToGrid(new Vec2(1.0f));
+            velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, 10);
+            // Scale the field from m/s to (0.1 degree per 3 days).
+            velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
+
+            //velocity = Tests.CreateCircle(new Vec2(0), 200, new Vec2(0.25f), 10, 8);
+            ////velocity = Tests.CreatePathlineSpiral(99, 100, 2);
+            //velocity.ScaleToGrid(new Vec2(1.0f));
 
             Console.WriteLine("Completed loading data.");
 
@@ -97,14 +98,14 @@ namespace FlowSharp
             }
 
             redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX*0.1f, Vector3.UnitY*0.1f, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
-//            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
+            //            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
             //Console.WriteLine("Found CP.");
             //mapperPathCore = new PathlineCoreTracking(velocity, redSea);
             //Console.WriteLine("Found Pathline Cores.");
-//            mapperComparison = new MemberComparison(new Loader.SliceRange[] { sliceU, sliceV }, redSea);
-//            mapperOW = new OkuboWeiss(velocity, redSea);
+            mapperComparison = new MemberComparison(new Loader.SliceRange[] { sliceU, sliceV }, redSea);
+            mapperOW = new OkuboWeiss(velocity, redSea);
             //Console.WriteLine("Computed Okubo-Weiss.");
-            
+
 
             Console.WriteLine("Computed all data necessary.");
         }

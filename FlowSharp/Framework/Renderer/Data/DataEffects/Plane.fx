@@ -80,6 +80,20 @@ PS_IN VS(VS_IN input)
 	return output;
 }
 
+PS_IN VS_zFight(VS_IN input)
+{
+	PS_IN output = (PS_IN)0;
+	float4x4 mat;
+	mat[0] = float4(1, 0, 0, 0); mat[1] = float4(0, 1, 0, 0); mat[2] = float4(0, 0, 1, 0); mat[3] = float4(0, 0, 0, 1);
+	output.pos = mul(projection, mul(view, input.pos));
+	float wOffset = 0.000005;
+	output.pos.w += wOffset;
+	//output.pos /= output.pos.w;
+	output.uv = input.uv;
+
+	return output;
+}
+
 // ~~~~~~~~~~ Colormap ~~~~~~~~~~ \\
 
 float4 PS_nTex_1(PS_IN input) : SV_Target
@@ -121,6 +135,17 @@ float4 PS_nTex_3(PS_IN input) : SV_Target
 	v2 = saturate((v2 - minMap) / (maxMap - minMap));
 
 	return float4(v0, v1, v2, 1.0);
+}
+
+// Overlay map. Useful for varying grid resolution overlays.
+float4 PS_Alpha_1(PS_IN input) : SV_Target
+{
+	float value = field0.SampleLevel(PointSampler, input.uv.xy, 0.0).x;
+	//if (value == invalidNum)
+	//	discard;
+	value = saturate((value - minMap) / (maxMap - minMap));
+
+	return float4(colormap.Sample(LinSampler, float2(value, 0.5)).xyz, value);
 }
 
 // Whatever.
@@ -238,6 +263,17 @@ technique10 RenderTex3
 		SetGeometryShader(0);
 		SetVertexShader(CompileShader(vs_4_0, VS()));
 		SetPixelShader(CompileShader(ps_4_0, PS_nTex_3()));
+		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+}
+
+technique10 Overlay1
+{
+	pass P0
+	{
+		SetGeometryShader(0);
+		SetVertexShader(CompileShader(vs_4_0, VS_zFight()));
+		SetPixelShader(CompileShader(ps_4_0, PS_Alpha_1()));
 		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 }

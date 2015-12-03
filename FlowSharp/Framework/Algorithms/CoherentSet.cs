@@ -14,12 +14,12 @@ using System.Reflection;
 using SliceRange = FlowSharp.Loader.SliceRange;
 namespace FlowSharp
 {
-    class FlowMapUncertain : AlgorithmCuda
+    class CoherentSet : AlgorithmCuda
     {
         public static int BLOCK_SIZE { get; } = 15;
         public static float PARTICLE_DENSITY = 0.1f;
 
-        protected Loader.SliceRange[] _ensembleRanges;
+        protected SliceRange[] _ensembleRanges;
         protected RectlinearGrid _ensembleGrid;
         protected int _width { get { return _ensembleGrid.Size[0]; } }
         protected int _height { get { return _ensembleGrid.Size[1]; } }
@@ -36,12 +36,12 @@ namespace FlowSharp
         protected static CudaKernel _advectParticlesKernel;
         protected static CudaKernel _copyMapDataKernel;
 
-        public FlowMapUncertain(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, int endTime)
+        public CoherentSet(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, int endTime)
         {
 
         }
 
-        public FlowMapUncertain(Int2 pos, Loader.SliceRange[] fieldEnsemble, int startTime, int endTime)
+        public CoherentSet(Int2 pos, Loader.SliceRange[] fieldEnsemble, int startTime, int endTime)
         {
             // ~~~~~~~~~~~~~~ Copy relevant data ~~~~~~~~~~~~~~ \\
             _endTime = endTime;
@@ -83,7 +83,7 @@ namespace FlowSharp
             // Mapper for binding the SlimDX texture to CUDA easily.
             _cudaDxMapper = new CudaGraphicsInteropResourceCollection();
             // Tell CUDA which value is a border.
-            _texInvalidValue = t1X.InvalidValue??float.MaxValue;
+            _texInvalidValue = t1X.InvalidValue ?? float.MaxValue;
 
             // ~~~~~~~~~~~~ Fill CUDA resources ~~~~~~~~~~~~ \\
             // All members are above each other.
@@ -158,18 +158,17 @@ namespace FlowSharp
             CudaArray2D lastFlowMap = _cudaDxMapper[0].GetMappedArray2D(0, 0);
 
             // Advect from each member to each member. In each block, the same configuration is choosen.
-            dim3 grid = new dim3((int)((float)_width/BLOCK_SIZE + 0.5f), (int)((float)_height/BLOCK_SIZE + 0.5f), _numMembers);
+            dim3 grid = new dim3((int)((float)_width / BLOCK_SIZE + 0.5f), (int)((float)_height / BLOCK_SIZE + 0.5f), _numMembers);
 
             // Advect a block in each member-member combination.
             dim3 threads = new dim3(BLOCK_SIZE, BLOCK_SIZE);
 
             _advectParticlesKernel.GridDimensions = grid;
             _advectParticlesKernel.BlockDimensions = threads;
-            float time = 1.0f / 2.592f;
-            // (float* mapT1, const int width, const int height, const int numMembers, float timeScale, float stepSize, float minDensity, float invalid)
-            _advectParticlesKernel.Run(_pongFlowMap.DevicePointer, _width, _height, _numMembers, 1.0f/RedSea.Singleton.DomainScale, stepSize, 0.000001f, _texInvalidValue);
+            // (float* mapT1, const int width, const int height, const int numMembers, /*float timeScale, */ float stepSize, float minDensity, float invalid)
+            _advectParticlesKernel.Run(_pongFlowMap.DevicePointer, _width, _height, _numMembers, stepSize, 0.000001f, _texInvalidValue);
 
-            
+
 
             // Swap the Texture2D handles.
             CudaSurfObject surf = new CudaSurfObject(lastFlowMap);
@@ -218,7 +217,7 @@ namespace FlowSharp
 
         public static void Initialize()
         {
-             CUmodule module = _context.LoadModulePTX("Framework/Algorithms/Kernels/FlowMapUncertain.ptx");
+            CUmodule module = _context.LoadModulePTX("Framework/Algorithms/Kernels/FlowMapUncertain.ptx");
             //__global__ void FlowMapStep(cudaTextureObject_t mapT0, float* mapT1, const int width, const int height, const int numMembers, const float particleDensity, /*float timeScale, */ float stepSize, float minDensity)
             _advectParticlesKernel = new CudaKernel("FlowMapStep", module, _context);
             _copyMapDataKernel = new CudaKernel("FlowMapUpdate", module, _context);

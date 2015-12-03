@@ -60,6 +60,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.Tracking] = DropDownTracking;
             _windowObjects[(int)DataMapper.Setting.Element.WindowStart] = WindowStartBlock;
             _windowObjects[(int)DataMapper.Setting.Element.Measure] = DropDownMeasure;
+            _windowObjects[(int)DataMapper.Setting.Element.IntegrationTime] = IntegrationTimeBlock;
 
             Renderer.Singleton.SetCanvas(DX11Display);
         }
@@ -249,6 +250,12 @@ namespace FlowSharp
         {
             var slider = sender as Slider;
             _mapper.CurrentSetting.StepSize = (float)(slider.Value as double?);
+            UpdateRenderer();
+        }
+        private void OnChangeIntegrationTime(object sender, RoutedEventArgs e)
+        {
+            var slider = sender as Slider;
+            _mapper.CurrentSetting.IntegrationTime = (float)(slider.Value as double?);
             UpdateRenderer();
         }
 

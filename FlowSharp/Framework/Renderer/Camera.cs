@@ -194,10 +194,10 @@ namespace FlowSharp
             }
             else
             {
-                theta += (stateKeyboard.IsPressed(Key.UpArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
-                theta -= (stateKeyboard.IsPressed(Key.DownArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
-                phi -= (stateKeyboard.IsPressed(Key.RightArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
-                phi += (stateKeyboard.IsPressed(Key.LeftArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
+                //theta += (stateKeyboard.IsPressed(Key.UpArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
+                //theta -= (stateKeyboard.IsPressed(Key.DownArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
+                //phi -= (stateKeyboard.IsPressed(Key.RightArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
+                //phi += (stateKeyboard.IsPressed(Key.LeftArrow) ? rotationSpeed * passedTimeSinceLastFrame * 0.3f : 0.0f);
             }
 
             lastMouseX = Cursor.Position.X;

@@ -109,6 +109,20 @@ namespace FlowSharp
             return b * a;
         }
 
+        public static Index operator *(Index a, int b)
+        {
+            Index prod = new Index(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                prod[dim] *= b;
+
+            return prod;
+        }
+
+        public static Index operator *(int a, Index b)
+        {
+            return b * a;
+        }
+
         public static explicit operator Vector(Index vec)  // explicit byte to digit conversion operator
         {
             Vector result = new Vector(vec.Length);
@@ -419,6 +433,10 @@ namespace FlowSharp
         {
             return new Int2(a.X / b, a.Y / b);
         }
+        public static Int2 operator *(Int2 a, int b)
+        {
+            return new Int2(a.X * b, a.Y * b);
+        }
         public static bool operator ==(Int2 a, Int2 b)
         {
             return a.X == b.X && a.Y == b.Y;
@@ -426,6 +444,11 @@ namespace FlowSharp
         public static bool operator !=(Int2 a, Int2 b)
         {
             return !(a == b);
+        }
+
+        public static bool Equals(Int2 a, Int2 b)
+        {
+            return (a == b);
         }
 
         public static explicit operator ManagedCuda.VectorTypes.int2(Int2 v)

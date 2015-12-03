@@ -104,6 +104,8 @@ namespace FlowSharp
             }
             [FieldOffset(56)]
             public int SliceHeight;
+            [FieldOffset(60)]
+            public float IntegrationTime;
 
             // The real data.
             [FieldOffset(0)]
@@ -132,7 +134,8 @@ namespace FlowSharp
                 Tracking,
                 WindowStart,
                 Measure,
-                SliceHeight
+                SliceHeight,
+                IntegrationTime
             }
 
             public Setting(Setting cpy)
@@ -154,6 +157,7 @@ namespace FlowSharp
                 WindowStart = cpy.WindowStart;
                 Measure = cpy.Measure;
                 SliceHeight = cpy.SliceHeight;
+                IntegrationTime = cpy.IntegrationTime;
             }
 
             public Setting() { }
@@ -554,12 +558,12 @@ namespace FlowSharp
             {
                 _fields[0] = LoadPlane(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
-                _fields[0].SetToSubrangeFloat(Plane, _grid as RectlinearGrid, Vector2.Zero, extent);
+                _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
             }
             else if (_currentSetting.LineX != _lastSetting.LineX)
             {
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
-                _fields[0].SetToSubrangeFloat(Plane, _grid as RectlinearGrid, Vector2.Zero, extent);
+                _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
             }
 
             // Changed reference settings.
@@ -572,11 +576,11 @@ namespace FlowSharp
             {
                 _fields[1] = LoadPlane(_currentSetting.MemberReference, _currentSetting.SliceTimeReference);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
-                _fields[1].SetToSubrangeFloat(Plane, _grid, new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
+                _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
             }
             else if (_currentSetting.LineX != _lastSetting.LineX)
             {
-                _fields[1].SetToSubrangeFloat(Plane, _grid, new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
+                _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
             }
 
             // Update window with to shader.
@@ -658,10 +662,10 @@ namespace FlowSharp
                 _fieldSlice = new FieldPlane(Plane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
             }
             if (_lastSetting == null ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                _currentSetting.WindowWidth != _lastSetting.WindowWidth)
             {
-                _fieldSlice.LowerBound = -0.2f * _standardDeviation - _currentSetting.StepSize;
-                _fieldSlice.UpperBound = -0.2f * _standardDeviation + _currentSetting.StepSize;
+                _fieldSlice.LowerBound = -0.2f * _standardDeviation - _currentSetting.WindowWidth;
+                _fieldSlice.UpperBound = -0.2f * _standardDeviation + _currentSetting.WindowWidth;
             }
             if (_lastSetting == null ||
                 _currentSetting.Colormap != _lastSetting.Colormap ||
@@ -673,7 +677,7 @@ namespace FlowSharp
             List<Renderable> list = new List<Renderable>(1);
 
             // Set mapping.
-            _fieldSlice.UpperBound = _currentSetting.WindowWidth;
+//            _fieldSlice.UpperBound = _currentSetting.WindowWidth;
             _fieldSlice.UsedMap = _currentSetting.Colormap;
             _fieldSlice.SetRenderEffect(_currentSetting.Shader);
             list.Add(_fieldSlice);

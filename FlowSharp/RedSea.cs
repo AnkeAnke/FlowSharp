@@ -20,6 +20,7 @@ namespace FlowSharp
         /// </summary>
         public string FileName;
         public float DomainScale = 2.593f / 15;
+        public float TimeScale { get { return 1.0f/DomainScale; } }
         /// <summary>
         /// Relevant variables of Read Sea file.
         /// </summary>

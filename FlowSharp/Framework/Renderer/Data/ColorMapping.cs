@@ -78,6 +78,19 @@ namespace FlowSharp
         /// The maps associated with the Colormap enum.
         /// </summary>
         private static ShaderResourceView[] _maps;
+
+        public static Colormap GetComplementary(Colormap map)
+        {
+            switch (map)
+            {
+                case Colormap.Parula:
+                    return Colormap.Red;
+                case Colormap.Gray:
+                    return Colormap.Parula;
+                default:
+                    return Colormap.Gray;
+            }
+        }
     }
 
     /// <summary>
@@ -86,8 +99,10 @@ namespace FlowSharp
     public enum Colormap
     {
         Parula = 0,
-        Heatstep = 1,
-        Circular,
-        Red
+        Heat,
+        Red,
+        Gray,
+        Heatstep,
+        Circular
     }
 }
