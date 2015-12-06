@@ -61,7 +61,8 @@ namespace FlowSharp
             OKUBO_WEISS,
             FLOW_MAP_UNCERTAIN,
             PATHLINE_LENGTH,
-            DIFFUSION_MAP
+            CUT_DIFFUSION_MAP,
+            LOCAL_DIFFUSION_MAP
         }
 
         public enum DisplayLines : int

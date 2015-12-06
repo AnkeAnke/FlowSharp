@@ -98,6 +98,7 @@ namespace FlowSharp
                 SetupCuda();
                 AlgorithmCuda.Initialize(ContextCuda, Device);
                 FlowMapUncertain.Initialize();
+                CutDiffusion.Initialize();
                 LocalDiffusion.Initialize();
             }
             catch (Exception e)

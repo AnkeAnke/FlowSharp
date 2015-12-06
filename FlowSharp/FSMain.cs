@@ -32,14 +32,15 @@ namespace FlowSharp
         static Plane redSea;
         static DataMapper mapperFlowMap;
         static PathlineLengthMapper mapperPathLength;
-        static DiffusionMapper mapperDiffusion;
+        static DiffusionMapper mapperCutDiffusion;
+        static LocalDiffusionMapper mapperLocalDiffusion;
         //static PointSet[] completeCPSets;
 
         public static void LoadData()
         {
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + ((IntPtr.Size == 8) ? "x64" : "x32"));
-
+            bool loadData = false;
 
             int numTimeSlices = 10;
             RedSea.Singleton.DataFolder = "E:/Anke/Dev/Data/First/s";
@@ -78,13 +79,18 @@ namespace FlowSharp
             ncFile.Close();
 
 
-            //velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
-            //// Scale the field from m/s to (0.1 degree per 3 days).
-            //velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
-
-            velocity = Tests.CreateCircle(new Vec2(0), 100, new Vec2(0.25f), 10, 8);
-            //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
-            velocity.ScaleToGrid(new Vec2(1.0f));
+            if (loadData)
+            {
+                velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, 10);
+                // Scale the field from m/s to (0.1 degree per 3 days).
+                velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
+            }
+            else
+            {
+                velocity = Tests.CreateCircle(new Vec2(0), 200, new Vec2(0.25f), 10, 8);
+                //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
+                velocity.ScaleToGrid(new Vec2(1.0f));
+            }
 
             Console.WriteLine("Completed loading data.");
 
@@ -116,12 +122,18 @@ namespace FlowSharp
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_CORES, mapperPathCore);
             RedSea.Singleton.SetMapper(RedSea.Display.MEMBER_COMPARISON, mapperComparison);
             RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);
+
             mapperFlowMap = new FlowMapMapper(new Loader.SliceRange[] { ensembleU, ensembleV }, redSea, velocity);
             RedSea.Singleton.SetMapper(RedSea.Display.FLOW_MAP_UNCERTAIN, mapperFlowMap);
+
             mapperPathLength = new PathlineLengthMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_LENGTH, mapperPathLength);
-            mapperDiffusion = new DiffusionMapper(velocity, redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.DIFFUSION_MAP, mapperDiffusion);
+
+            mapperCutDiffusion = new DiffusionMapper(velocity, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.CUT_DIFFUSION_MAP, mapperCutDiffusion);
+
+            mapperLocalDiffusion = new LocalDiffusionMapper(velocity, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.LOCAL_DIFFUSION_MAP, mapperLocalDiffusion);
         }
     }
 }

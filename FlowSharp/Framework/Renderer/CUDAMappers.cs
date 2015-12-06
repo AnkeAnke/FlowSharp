@@ -132,13 +132,13 @@ namespace FlowSharp
     {
         private FieldPlane[] _dataMap;
         private Plane _scaledPlane;
-        private LocalDiffusion _diffusionMap;
+        private CutDiffusion _diffusionMap;
         private VectorFieldUnsteady _velocity;
         private int _cellToSeedRatio = 2;
 
         public DiffusionMapper(VectorFieldUnsteady velocity, Plane plane) : base(plane, velocity.Size.ToInt2())
         {
-            _diffusionMap = new LocalDiffusion(velocity, 0, 0.3f);
+            _diffusionMap = new CutDiffusion(velocity, 0, 0.3f);
             _algorithm = _diffusionMap;
             Plane = plane;
             _subrangePlane = Plane;
@@ -297,7 +297,6 @@ namespace FlowSharp
         private Plane _scaledPlane;
         private LocalDiffusion _diffusionMap;
         private VectorFieldUnsteady _velocity;
-        private int _cellToSeedRatio = 2;
 
         public LocalDiffusionMapper(VectorFieldUnsteady velocity, Plane plane) : base(plane, velocity.Size.ToInt2())
         {
@@ -308,7 +307,6 @@ namespace FlowSharp
             Mapping = GetCurrentMap;
             _velocity = velocity;
             _maxPlane = velocity.Size.ToInt2();
-            _scaledPlane = new Plane(_subrangePlane.Origin, _subrangePlane.XAxis, _subrangePlane.YAxis, _subrangePlane.ZAxis, 1.0f / _cellToSeedRatio, _subrangePlane.PointSize);
         }
 
         /// <summary>
@@ -323,7 +321,7 @@ namespace FlowSharp
                 _currentSetting.StepSize != _lastSetting.StepSize ||
                 _currentSetting.IntegrationTime != _lastSetting.IntegrationTime)
             {
-                _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime, _cellToSeedRatio);
+                _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime);
 
                 // Integrate to the desired time step.
                 if (_diffusionMap.CurrentTime < _diffusionMap.EndTime)
@@ -359,33 +357,33 @@ namespace FlowSharp
             _dataMap = new FieldPlane[1];
             switch (_currentSetting.Shader)
             {
-                case FieldPlane.RenderEffect.OVERLAY:
-                    {
-                        _dataMap = new FieldPlane[2];
-                        _dataMap[1] = new FieldPlane(_scaledPlane, _diffusionMap.ReferenceMap, (_velocity.Size * _cellToSeedRatio).ToInt2(), 0, 0, FieldPlane.RenderEffect.OVERLAY, ColorMapping.GetComplementary(_currentSetting.Colormap));
-                        var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
-                        tmp.TimeSlice = null;
-                        _dataMap[0] = new FieldPlane(_subrangePlane, tmp, FieldPlane.RenderEffect.LIC, _currentSetting.Colormap);
-                        _dataMap[0].AddScalar(_diffusionMap.CutMap);
-                        RefreshBoundsPlanes();
-                        break;
-                    }
-                case FieldPlane.RenderEffect.LIC:
-                case FieldPlane.RenderEffect.LIC_LENGTH:
-                    {
-                        _dataMap = new FieldPlane[2];
-                        var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
-                        tmp.TimeSlice = null;
-                        _dataMap[0] = new FieldPlane(_subrangePlane, tmp, _currentSetting.Shader, ColorMapping.GetComplementary(_currentSetting.Colormap));
-                        _dataMap[0].LowerBound = 0;
-                        _dataMap[0].UpperBound = _currentSetting.WindowWidth;
-                        _dataMap[1] = new FieldPlane(_scaledPlane, _diffusionMap.ReferenceMap, (_velocity.Size * _cellToSeedRatio).ToInt2(), 0, 0, FieldPlane.RenderEffect.OVERLAY, _currentSetting.Colormap);
-                        _dataMap[1].LowerBound = 0;
-                        _dataMap[1].UpperBound = 0;
-                        //if (_currentSetting.Shader == FieldPlane.RenderEffect.LIC)
-                        //    _dataMap[0].AddScalar(_diffusionMap.ReferenceMap);
-                        break;
-                    }
+                //case FieldPlane.RenderEffect.OVERLAY:
+                //    {
+                //        _dataMap = new FieldPlane[2];
+                //        _dataMap[1] = new FieldPlane(_scaledPlane, _diffusionMap.ReferenceMap, (_velocity.Size * _cellToSeedRatio).ToInt2(), 0, 0, FieldPlane.RenderEffect.OVERLAY, ColorMapping.GetComplementary(_currentSetting.Colormap));
+                //        var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
+                //        tmp.TimeSlice = null;
+                //        _dataMap[0] = new FieldPlane(_subrangePlane, tmp, FieldPlane.RenderEffect.LIC, _currentSetting.Colormap);
+                //        _dataMap[0].AddScalar(_diffusionMap.CutMap);
+                //        RefreshBoundsPlanes();
+                //        break;
+                //    }
+                //case FieldPlane.RenderEffect.LIC:
+                //case FieldPlane.RenderEffect.LIC_LENGTH:
+                //    {
+                //        _dataMap = new FieldPlane[2];
+                //        var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
+                //        tmp.TimeSlice = null;
+                //        _dataMap[0] = new FieldPlane(_subrangePlane, tmp, _currentSetting.Shader, ColorMapping.GetComplementary(_currentSetting.Colormap));
+                //        _dataMap[0].LowerBound = 0;
+                //        _dataMap[0].UpperBound = _currentSetting.WindowWidth;
+                //        _dataMap[1] = new FieldPlane(_scaledPlane, _diffusionMap.ReferenceMap, (_velocity.Size * _cellToSeedRatio).ToInt2(), 0, 0, FieldPlane.RenderEffect.OVERLAY, _currentSetting.Colormap);
+                //        _dataMap[1].LowerBound = 0;
+                //        _dataMap[1].UpperBound = 0;
+                //        //if (_currentSetting.Shader == FieldPlane.RenderEffect.LIC)
+                //        //    _dataMap[0].AddScalar(_diffusionMap.ReferenceMap);
+                //        break;
+                //    }
                 default:
                     _dataMap[0] = _diffusionMap.GetPlane(_subrangePlane);
                     _dataMap[0].UsedMap = _currentSetting.Colormap;
@@ -437,17 +435,17 @@ namespace FlowSharp
 
         public override void ClickSelection(Vector2 point)
         {
-            base.ClickSelection(point);
-            //_flowMap.SetupPoint(_startPoint, _currentSetting.SliceTimeMain);
+            //base.ClickSelection(point);
+            ////_flowMap.SetupPoint(_startPoint, _currentSetting.SliceTimeMain);
+            ////RefreshPlane();
+            //_diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime, _cellToSeedRatio);
+            //Console.WriteLine("Clicked: " + _startPoint.ToString());
+
+            //// Integrate to the desired time step.
+            //if (_diffusionMap.CurrentTime < _diffusionMap.EndTime)
+            //    _diffusionMap.Advect(_currentSetting.StepSize, _currentSetting.AlphaStable, _startPoint);
+
             //RefreshPlane();
-            _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime, _cellToSeedRatio);
-            Console.WriteLine("Clicked: " + _startPoint.ToString());
-
-            // Integrate to the desired time step.
-            if (_diffusionMap.CurrentTime < _diffusionMap.EndTime)
-                _diffusionMap.Advect(_currentSetting.StepSize, _currentSetting.AlphaStable, _startPoint);
-
-            RefreshPlane();
         }
     }
 }
