@@ -286,7 +286,7 @@ namespace FlowSharp
             // Integrate to the desired time step.
             if (_diffusionMap.CurrentTime < _diffusionMap.EndTime)
                 _diffusionMap.Advect(_currentSetting.StepSize, _currentSetting.AlphaStable, _startPoint);
-
+            Console.WriteLine("Clicked: " + _startPoint.ToString());
             RefreshPlane();
         }
     }
@@ -441,6 +441,7 @@ namespace FlowSharp
             //_flowMap.SetupPoint(_startPoint, _currentSetting.SliceTimeMain);
             //RefreshPlane();
             _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime, _cellToSeedRatio);
+            Console.WriteLine("Clicked: " + _startPoint.ToString());
 
             // Integrate to the desired time step.
             if (_diffusionMap.CurrentTime < _diffusionMap.EndTime)

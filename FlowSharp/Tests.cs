@@ -84,8 +84,11 @@ namespace FlowSharp
                 vX[slice] = ScalarField.FromAnalyticalField(CircleX, size, origin + dir*slice, cell);
                 vY[slice] = ScalarField.FromAnalyticalField(CircleY, size, origin + dir*slice, cell);
             }
+            
+            VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] {new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY)});
+            field.InvalidValue = float.MaxValue;
 
-            return new VectorFieldUnsteady(new ScalarFieldUnsteady[] {new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY)});
+            return field;
         }
 
         public static VectorFieldUnsteady CreatePathlineSpiral(int numCells, int numSlices, float domainR = 2)

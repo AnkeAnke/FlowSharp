@@ -81,7 +81,7 @@ namespace FlowSharp
         private void LoadSlice0(object sender, RoutedEventArgs e)
         {
             DropDownSlice0.ItemsSource = Enumerable.Range(0, 10);          
-            DropDownSlice0.SelectedIndex = 3;
+            DropDownSlice0.SelectedIndex = 0;
             _mapper.CurrentSetting.SliceTimeMain = DropDownSlice0.SelectedIndex;
         }
 
