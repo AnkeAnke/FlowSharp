@@ -78,13 +78,13 @@ namespace FlowSharp
             ncFile.Close();
 
 
-            velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, 10);
-            // Scale the field from m/s to (0.1 degree per 3 days).
-            velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
+            //velocity = Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, new Loader.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
+            //// Scale the field from m/s to (0.1 degree per 3 days).
+            //velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
 
-            //velocity = Tests.CreateCircle(new Vec2(0), 200, new Vec2(0.25f), 10, 8);
-            ////velocity = Tests.CreatePathlineSpiral(99, 100, 2);
-            //velocity.ScaleToGrid(new Vec2(1.0f));
+            velocity = Tests.CreateCircle(new Vec2(0), 100, new Vec2(0.25f), 10, 8);
+            //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
+            velocity.ScaleToGrid(new Vec2(1.0f));
 
             Console.WriteLine("Completed loading data.");
 

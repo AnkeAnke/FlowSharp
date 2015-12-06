@@ -184,8 +184,8 @@ namespace FlowSharp
                 _currentSetting.WindowStart != _lastSetting.WindowStart)
             {
                 RefreshBoundsPlanes();
-                if(_currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH)
-                    _dataMap[1].UpperBound = 0;
+                //if(_currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH)
+                //    _dataMap[1].UpperBound = 0;
             }
             List<Renderable> list = _dataMap.ToList<Renderable>();
             return list;
@@ -214,11 +214,8 @@ namespace FlowSharp
                         var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
                         tmp.TimeSlice = null;
                         _dataMap[0] = new FieldPlane(_subrangePlane, tmp, _currentSetting.Shader, ColorMapping.GetComplementary( _currentSetting.Colormap));
-                        _dataMap[0].LowerBound = 0;
-                        _dataMap[0].UpperBound = _currentSetting.WindowWidth;
                         _dataMap[1] = new FieldPlane(_scaledPlane, _diffusionMap.CutMap, (_velocity.Size * _cellToSeedRatio).ToInt2(), 0, 0, FieldPlane.RenderEffect.OVERLAY, _currentSetting.Colormap);
-                        _dataMap[1].LowerBound = 0;
-                        _dataMap[1].UpperBound = 0;
+                        RefreshBoundsPlanes();
                         //if (_currentSetting.Shader == FieldPlane.RenderEffect.LIC)
                         //    _dataMap[0].AddScalar(_diffusionMap.ReferenceMap);
                         break;
@@ -234,11 +231,16 @@ namespace FlowSharp
 
         private void RefreshBoundsPlanes()
         {
-            foreach (FieldPlane plane in _dataMap)
+            //foreach (FieldPlane plane in _dataMap)
+            //{
+                _dataMap[0].LowerBound = 0;
+                _dataMap[0].UpperBound = _currentSetting.WindowWidth;
+            if (_dataMap.Length > 1)
             {
-                plane.LowerBound = 0;
-                plane.UpperBound = _currentSetting.WindowWidth;
+                _dataMap[1].LowerBound = 0;
+                _dataMap[1].UpperBound = _currentSetting.WindowStart;
             }
+            //}
         }
 
         public override bool IsUsed(Setting.Element element)
@@ -254,6 +256,8 @@ namespace FlowSharp
                 case Setting.Element.IntegrationTime:
                 case Setting.Element.AlphaStable:
                     return true;
+                case Setting.Element.WindowStart:
+                    return _currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH || _currentSetting.Shader == FieldPlane.RenderEffect.OVERLAY;
                 default:
                     return false;
             }
