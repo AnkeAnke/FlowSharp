@@ -270,7 +270,7 @@ namespace FlowSharp
             mean[0].SetMember(RedSea.Dimension.MEMBER, 0);
             mean[1].SetMember(RedSea.Dimension.MEMBER, 0);
 
-            return LoaderNCF.LoadTimeSeries(RedSea.Singleton.GetLoaderNCF, mean, 0, 10);
+            return LoaderNCF.LoadTimeSeries(mean, 0, 10);
         }
     }
 }

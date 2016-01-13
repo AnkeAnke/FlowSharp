@@ -11,20 +11,15 @@ namespace FlowSharp
 {
     class RedSea
     {
-        ///// <summary>
-        ///// Data folder name, in a fashion that only a number has to be added for the respective time slice.
-        ///// </summary>
-        //public string DataFolder;
-        ///// <summary>
-        ///// File name. Should contain intial '/'.
-        ///// </summary>
-        //public string FileName;
-        public delegate Loader FilenameBuilder(int step, int? substep = null, int? member = null, RedSea.Variable var = Variable.VELOCITY_X);
-        public delegate LoaderNCF FilenameBuilderNCF(int index);
+        public delegate Loader LoaderBuilder(int step, int? substep = null, int? member = null, RedSea.Variable var = Variable.VELOCITY_X);
+        public delegate LoaderNCF LoaderBuilderNCF(int index);
+        public delegate string FilenameBuilder(int step, int? substep = null, int? member = null, RedSea.Variable var = Variable.VELOCITY_X);
 
-        private FilenameBuilder _loader;
-        public FilenameBuilder GetLoader { get { return _loader; } set { _loader = value; GetLoaderNCF = ((x) => _loader(x) as LoaderNCF); } }
-        public FilenameBuilderNCF GetLoaderNCF;
+        private LoaderBuilder _loader;
+        public LoaderBuilder GetLoader { get { return _loader; } set { _loader = value; GetLoaderNCF = ((x) => _loader(x) as LoaderNCF); } }
+        public LoaderBuilderNCF GetLoaderNCF;
+        public FilenameBuilder GetFilename;
+
         public int NumSteps = 160;
         public int NumSubsteps = 108;
 
@@ -81,7 +76,8 @@ namespace FlowSharp
             GRID_Y = 10,
             CENTER_Y = 11,
             GRID_Z = 12,
-            CENTER_Z = 13
+            CENTER_Z = 13,
+            SUBTIME = 20
         }
 
         public enum Display : int

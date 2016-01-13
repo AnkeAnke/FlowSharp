@@ -67,29 +67,42 @@ namespace FlowSharp
         /// <returns>Should the NetCDF loader be used?</returns>
         public static Loader RedSeaLoader(int step, int? substep, int? member, RedSea.Variable var)
         {
+            string dir = RedSea.Singleton.GetFilename(step, substep, member, var);
+
+            // Look for raw file.
+            if (substep != null || var == RedSea.Variable.VELOCITY_Z)
+            {
+                return new LoaderRaw();
+            }
+            else
+            {
+                return new LoaderNCF(dir);
+            }
+        }
+
+        public static string RedSeaFilenames(int step, int? substep, int? member, RedSea.Variable var)
+        {
+
             string dir = locDataFolder + (step + 1);
 
             // Look for raw file.
-            if(substep != null || var == RedSea.Variable.VELOCITY_Z)
+            if (substep != null || var == RedSea.Variable.VELOCITY_Z)
             {
                 // Not the W case: go into the inner folder.
-                if(substep != null)
-                    dir += locFolderName + member +'/';
+                if (substep != null)
+                    dir += locFolderName + member + '/';
 
                 string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
                 string[] rawDirs = Directory.GetFiles(dir, RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end", SearchOption.TopDirectoryOnly);
                 Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
 
-                dir = rawDirs[0];
-                return new LoaderRaw(dir);
+                return rawDirs[0];
             }
             else
             {
                 dir += locFileName;
-                return new LoaderNCF(dir);
+                return dir;
             }
-
-//            return (step, substep, var) => locDataFolder + (step + 1) + ((substep == null) ? (var == RedSea.Variable.VELOCITY_Z ? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
         }
 
         public static void LoadData()
@@ -106,7 +119,7 @@ namespace FlowSharp
             //string locWFileName = ".0000000108.data";
 
             RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
-
+            RedSea.Singleton.GetFilename = RedSeaFilenames;
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
@@ -144,7 +157,7 @@ namespace FlowSharp
 
             if (loadData)
             {
-                velocity = LoaderNCF.LoadTimeSeries(RedSea.Singleton.GetLoaderNCF, new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 10);
+                velocity = LoaderNCF.LoadTimeSeries(new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 10);
                 // Scale the field from m/s to (0.1 degree per 3 days).
                 velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
             }
@@ -198,8 +211,8 @@ namespace FlowSharp
             mapperLocalDiffusion = new LocalDiffusionMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.LOCAL_DIFFUSION_MAP, mapperLocalDiffusion);
 
-            SubstepViewer substep = new SubstepViewer(redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
+            //SubstepViewer substep = new SubstepViewer(redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
 
             //FieldAnalysis.AlphaStableFFF = 0;
             //var f = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
