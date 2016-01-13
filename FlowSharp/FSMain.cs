@@ -53,6 +53,7 @@ namespace FlowSharp
 
         //    return field;
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
+        static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locFileName = "/Posterior_Diag.nc";
         static string locFolderName = "/advance_temp";
         //        string locWFileName = ".0000000108.data";
@@ -64,16 +65,20 @@ namespace FlowSharp
         /// <param name="substep"></param>
         /// <param name="var"></param>
         /// <returns>Should the NetCDF loader be used?</returns>
-        public static Loader RedSeaFilename(int step, int? substep, RedSea.Variable var)
+        public static Loader RedSeaLoader(int step, int? substep, int? member, RedSea.Variable var)
         {
-            string dir = locFolderName + (step + 1);
+            string dir = locDataFolder + (step + 1);
 
             // Look for raw file.
             if(substep != null || var == RedSea.Variable.VELOCITY_Z)
             {
-                dir += locFolderName + substep;
+                // Not the W case: go into the inner folder.
+                if(substep != null)
+                    dir += locFolderName + member +'/';
+
+                string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
                 string[] rawDirs = Directory.GetFiles(dir, RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end", SearchOption.TopDirectoryOnly);
-                Debug.Assert(rawDirs.Length == 1, "Only one file expected!");
+                Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
 
                 dir = rawDirs[0];
                 return new LoaderRaw(dir);
@@ -95,16 +100,16 @@ namespace FlowSharp
 
             int numTimeSlices =  42;
             RedSea.Singleton.NumTimeSlices = numTimeSlices;
-            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
-            string locFileName = "/Posterior_Diag.nc";
-            string locFolderName = "/advance_temp";
-            string locWFileName = ".0000000108.data";
+            //string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
+            //string locFileName = "/Posterior_Diag.nc";
+            //string locFolderName = "/advance_temp";
+            //string locWFileName = ".0000000108.data";
 
-            RedSea.Singleton.GetFilename = RedSeaFilename; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
+            RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
 
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
-            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(0));
+            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
             ScalarField[] u = new ScalarField[numTimeSlices];
             LoaderNCF.SliceRange sliceU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
             sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
@@ -139,7 +144,7 @@ namespace FlowSharp
 
             if (loadData)
             {
-                velocity = LoaderNCF.LoadTimeSeries(index => RedSea.Singleton.GetFilename(index), new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 10);
+                velocity = LoaderNCF.LoadTimeSeries(RedSea.Singleton.GetLoaderNCF, new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 10);
                 // Scale the field from m/s to (0.1 degree per 3 days).
                 velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
             }

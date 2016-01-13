@@ -19,22 +19,25 @@ namespace RescaleRawData
 
             string[] uPaths = Directory.GetFiles("E:/Anke/Dev/Data/Shaheen_8", "U.0000*.data", SearchOption.AllDirectories);
             string[] vPaths = Directory.GetFiles("E:/Anke/Dev/Data/Shaheen_8", "V.0000*.data", SearchOption.AllDirectories);
+            string[] wPaths = Directory.GetFiles("E:/Anke/Dev/Data/Shaheen_8", "W.0000*.data", SearchOption.AllDirectories);
 
             string[] sPaths = Directory.GetFiles("E:/Anke/Dev/Data/Shaheen_8", "S.0000*.data", SearchOption.AllDirectories);
             string[] tPaths = Directory.GetFiles("E:/Anke/Dev/Data/Shaheen_8", "T.0000*.data", SearchOption.AllDirectories);
             string[] hPaths = Directory.GetFiles("E:/Anke/Dev/Data/Shaheen_8", "Eta.0000*.data", SearchOption.AllDirectories);
 
-            foreach (string s in uPaths)
-                ScaleFile(s);
-            foreach (string s in vPaths)
+            //foreach (string s in uPaths)
+            //    ScaleFile(s);
+            //foreach (string s in vPaths)
+            //    ScaleFile(s);
+            foreach (string s in wPaths)
                 ScaleFile(s);
 
-            foreach (string s in sPaths)
-                TurnFile(s);
-            foreach (string s in tPaths)
-                TurnFile(s);
-            foreach (string s in hPaths)
-                TurnFile(s);
+            //foreach (string s in sPaths)
+            //    TurnFile(s);
+            //foreach (string s in tPaths)
+            //    TurnFile(s);
+            //foreach (string s in hPaths)
+            //    TurnFile(s);
 
             return;
         }

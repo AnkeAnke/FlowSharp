@@ -19,8 +19,12 @@ namespace FlowSharp
         ///// File name. Should contain intial '/'.
         ///// </summary>
         //public string FileName;
-        public delegate Loader FilenameBuilder(int index, int? subIndex = null, RedSea.Variable var = Variable.VELOCITY_X);
-        public FilenameBuilder GetLoader;
+        public delegate Loader FilenameBuilder(int step, int? substep = null, int? member = null, RedSea.Variable var = Variable.VELOCITY_X);
+        public delegate LoaderNCF FilenameBuilderNCF(int index);
+
+        private FilenameBuilder _loader;
+        public FilenameBuilder GetLoader { get { return _loader; } set { _loader = value; GetLoaderNCF = ((x) => _loader(x) as LoaderNCF); } }
+        public FilenameBuilderNCF GetLoaderNCF;
         public int NumSteps = 160;
         public int NumSubsteps = 108;
 

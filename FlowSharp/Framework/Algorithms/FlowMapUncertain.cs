@@ -84,7 +84,7 @@ namespace FlowSharp
             //ScalarField t0Y = ncFile.LoadFieldSlice(_ensembleRanges[1]);
             //ncFile.Close();
 
-            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(_startTime));
+            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(_startTime);
             ScalarField t1X = ncFile.LoadFieldSlice(_ensembleRanges[0]);
             ScalarField t1Y = ncFile.LoadFieldSlice(_ensembleRanges[1]);
             ncFile.Close();
@@ -208,7 +208,7 @@ namespace FlowSharp
             CurrentTime++;
 
             // Load new t1.
-            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(CurrentTime));
+            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(CurrentTime);
             ScalarField t1X = ncFile.LoadFieldSlice(_ensembleRanges[0]);
             ScalarField t1Y = ncFile.LoadFieldSlice(_ensembleRanges[1]);
             ncFile.Close();
@@ -270,7 +270,7 @@ namespace FlowSharp
             mean[0].SetMember(RedSea.Dimension.MEMBER, 0);
             mean[1].SetMember(RedSea.Dimension.MEMBER, 0);
 
-            return LoaderNCF.LoadTimeSeries(i=>RedSea.Singleton.GetFilename(i), mean, 0, 10);
+            return LoaderNCF.LoadTimeSeries(RedSea.Singleton.GetLoaderNCF, mean, 0, 10);
         }
     }
 }

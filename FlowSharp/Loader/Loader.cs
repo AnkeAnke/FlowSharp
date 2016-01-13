@@ -348,8 +348,8 @@ namespace FlowSharp
             }
         }
 
-        public delegate string FilenameFromIndex(int index);
-        public static VectorFieldUnsteady LoadTimeSeries(FilenameFromIndex func, SliceRange[] vars, int starttime, int timelength)
+//        public delegate string FilenameFromIndex(int index);
+        public static VectorFieldUnsteady LoadTimeSeries(RedSea.FilenameBuilderNCF func, SliceRange[] vars, int starttime, int timelength)
         {
             ScalarField[][] slices = new ScalarField[vars.Length][];
             for (int var = 0; var < vars.Length; ++var)
@@ -359,7 +359,7 @@ namespace FlowSharp
             LoaderNCF ncFile;
             for (int time = starttime; time < starttime + timelength; ++time)
             {
-                ncFile = new LoaderNCF(func(time));// path + (time + 1) + filename);
+                ncFile = func(time);// path + (time + 1) + filename);
                 for(int var = 0; var < vars.Length; ++var)
                 {
                     slices[var][time] = ncFile.LoadFieldSlice(vars[var]);

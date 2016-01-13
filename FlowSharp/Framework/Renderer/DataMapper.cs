@@ -497,7 +497,7 @@ namespace FlowSharp
             Plane = plane;
             Mapping = LoadMembers;
 
-            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(0));
+            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
 
             int sizeVar = ncFile.GetNumVariables();
             _variableRanges = new LoaderNCF.SliceRange[sizeVar];
@@ -526,13 +526,11 @@ namespace FlowSharp
         {
 
             ScalarField[] scalars;// = new ScalarField[2];
-
-            string main = RedSea.Singleton.GetFilename(time);
             // Read in the data.
             //_ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
             //_ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
 
-            LoaderNCF ncFile = new LoaderNCF(main);
+            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(time);
             switch (_currentSetting.Measure)
             {
                 case RedSea.Measure.VELOCITY:
@@ -814,7 +812,20 @@ namespace FlowSharp
 
             ScalarField[] scalars;// = new ScalarField[2];
 
-            LoaderRaw wFile = new LoaderRaw("E:/Anke/Dev/Data/Shaheen_8/s1/advance_temp" + member + "/W.0000000108.data");//RedSea.Singleton.GetFilename(0, null, RedSea.Variable.VELOCITY_Z));
+            RedSea.Variable measureAsVar;
+            switch(_currentSetting.Measure)
+            {
+                case RedSea.Measure.SALINITY:
+                case RedSea.Measure.SURFACE_HEIGHT:
+                case RedSea.Measure.TEMPERATURE:
+                    measureAsVar = (RedSea.Variable)(int)_currentSetting.Measure;
+                    break;
+                default:
+                    measureAsVar = RedSea.Variable.VELOCITY_Z;
+                    break;
+            }
+
+            LoaderRaw file = RedSea.Singleton.GetLoader(time, 107, member, measureAsVar) as LoaderRaw;
 
             switch (_currentSetting.Measure)
             {
@@ -850,7 +861,7 @@ namespace FlowSharp
                     //if (addVelocity)
                     //    goto LoadVelocity;
 
-                    ScalarField w = wFile.LoadField();
+                    ScalarField w = file.LoadField();
                     scalars = new ScalarField[] { w };
                     break;
             }
