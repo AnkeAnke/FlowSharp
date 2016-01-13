@@ -455,7 +455,7 @@ namespace FlowSharp
             return cpSet;
         }
 
-        public static float AlphaStableFFF = 20;
+        public static float AlphaStableFFF = 0;
         public static Vector StableFFF(Vector v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 3 && J.Length == 3);

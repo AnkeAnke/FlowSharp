@@ -11,7 +11,7 @@ using SlimDX.DXGI;
 using ManagedCuda.BasicTypes;
 using System.IO;
 using System.Reflection;
-using SliceRange = FlowSharp.Loader.SliceRange;
+using SliceRange = FlowSharp.LoaderNCF.SliceRange;
 namespace FlowSharp
 {
     class CoherentSet : AlgorithmCuda
@@ -36,12 +36,12 @@ namespace FlowSharp
         protected static CudaKernel _advectParticlesKernel;
         protected static CudaKernel _copyMapDataKernel;
 
-        public CoherentSet(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, int endTime)
+        public CoherentSet(Texture2D input, LoaderNCF.SliceRange fieldEnsemble, int startTime, int endTime)
         {
 
         }
 
-        public CoherentSet(Int2 pos, Loader.SliceRange[] fieldEnsemble, int startTime, int endTime)
+        public CoherentSet(Int2 pos, LoaderNCF.SliceRange[] fieldEnsemble, int startTime, int endTime)
         {
             // ~~~~~~~~~~~~~~ Copy relevant data ~~~~~~~~~~~~~~ \\
             _endTime = endTime;
@@ -72,7 +72,7 @@ namespace FlowSharp
             //ScalarField t0Y = ncFile.LoadFieldSlice(_ensembleRanges[1]);
             //ncFile.Close();
 
-            Loader ncFile = new Loader(RedSea.Singleton.DataFolder + (_startTime + 1) + RedSea.Singleton.FileName);
+            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(_startTime));
             ScalarField t1X = ncFile.LoadFieldSlice(_ensembleRanges[0]);
             ScalarField t1Y = ncFile.LoadFieldSlice(_ensembleRanges[1]);
             ncFile.Close();
@@ -190,7 +190,7 @@ namespace FlowSharp
             CurrentTime++;
 
             // Load new t1.
-            Loader ncFile = new Loader(RedSea.Singleton.DataFolder + (CurrentTime + 1) + RedSea.Singleton.FileName);
+            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(CurrentTime));
             ScalarField t1X = ncFile.LoadFieldSlice(_ensembleRanges[0]);
             ScalarField t1Y = ncFile.LoadFieldSlice(_ensembleRanges[1]);
             ncFile.Close();
@@ -252,7 +252,7 @@ namespace FlowSharp
             mean[0].SetMember(RedSea.Dimension.MEMBER, 0);
             mean[1].SetMember(RedSea.Dimension.MEMBER, 0);
 
-            return Loader.LoadTimeSeries(RedSea.Singleton.DataFolder, RedSea.Singleton.FileName, mean, 0, 10);
+            return LoaderNCF.LoadTimeSeries(i=>RedSea.Singleton.GetFilename(i), mean, 0, 10);
         }
     }
 }

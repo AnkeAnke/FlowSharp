@@ -75,7 +75,7 @@ PS_IN VS(VS_IN input)
 	mat[0] = float4(1, 0, 0, 0); mat[1] = float4(0, 1, 0, 0); mat[2] = float4(0, 0, 1, 0); mat[3] = float4(0, 0, 0, 1);
 	output.pos = mul(projection, mul(view, input.pos));
 	//output.pos /= output.pos.w;
-	output.uv = input.uv;
+	output.uv = input.uv - float4(0.5 / width, 0.5 / height, 0, 0);
 
 	return output;
 }
@@ -89,7 +89,7 @@ PS_IN VS_zFight(VS_IN input)
 	float wOffset = 0.000005;
 	output.pos.w += wOffset;
 	//output.pos /= output.pos.w;
-	output.uv = input.uv;
+	output.uv = input.uv - float4(0.5 / width, 0.5 / height, 0, 0);
 
 	return output;
 }
@@ -105,7 +105,7 @@ float4 PS_nTex_1(PS_IN input) : SV_Target
 	return colormap.Sample(LinSampler, float2(value, 0.5));
 }
 
-// ~~~~~ Value in 2 cannels ~~~~~~ \\
+// ~~~~~ Value in 2 channels ~~~~~~ \\
 
 float4 PS_nTex_2(PS_IN input) : SV_Target
 {
@@ -135,6 +135,41 @@ float4 PS_nTex_3(PS_IN input) : SV_Target
 	v2 = saturate((v2 - minMap) / (maxMap - minMap));
 
 	return float4(v0, v1, v2, 1.0);
+}
+
+float4 PS_diff_1(PS_IN input) : SV_Target
+{
+	float2 stepX = float2(1.0 / width, 0);
+	float2 stepY = float2(0, 1.0 / height);
+	float value = field0.SampleLevel(PointSampler, input.uv.xy, 0.0).x;
+	value -= field0.SampleLevel(PointSampler, input.uv.xy + stepX, 0.0).x / 4;
+	value -= field0.SampleLevel(PointSampler, input.uv.xy - stepX, 0.0).x / 4;
+	value -= field0.SampleLevel(PointSampler, input.uv.xy + stepY, 0.0).x / 4;
+	value -= field0.SampleLevel(PointSampler, input.uv.xy - stepY, 0.0).x / 4;
+
+	if (value == invalidNum)
+		discard;
+	value = saturate((value - minMap) / (maxMap - minMap));
+	return colormap.Sample(LinSampler, float2(value, 0.5));
+}
+
+float4 PS_grad_1(PS_IN input) : SV_Target
+{
+	float2 stepX = float2(1.0 / width, 0);
+	float2 stepY = float2(0, 1.0 / height);
+	float value = 0;
+	float tmp = field0.SampleLevel(PointSampler, input.uv.xy + stepX, 0.0).x / 4;
+	tmp -= field0.SampleLevel(PointSampler, input.uv.xy - stepX, 0.0).x / 4;
+	value += tmp*tmp;
+	tmp = field0.SampleLevel(PointSampler, input.uv.xy + stepY, 0.0).x / 4;
+	tmp -= field0.SampleLevel(PointSampler, input.uv.xy - stepY, 0.0).x / 4;
+	value += tmp*tmp;
+	value = sqrt(value);
+
+	if (value == invalidNum)
+		discard;
+	value = saturate((value - minMap) / (maxMap - minMap));
+	return colormap.Sample(LinSampler, float2(value, 0.5));
 }
 
 // Overlay map. Useful for varying grid resolution overlays.
@@ -263,6 +298,28 @@ technique10 RenderTex3
 		SetGeometryShader(0);
 		SetVertexShader(CompileShader(vs_4_0, VS()));
 		SetPixelShader(CompileShader(ps_4_0, PS_nTex_3()));
+		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+}
+
+technique10 Laplace1
+{
+	pass P0
+	{
+		SetGeometryShader(0);
+		SetVertexShader(CompileShader(vs_4_0, VS()));
+		SetPixelShader(CompileShader(ps_4_0, PS_diff_1()));
+		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+	}
+}
+
+technique10 Gradient1
+{
+	pass P0
+	{
+		SetGeometryShader(0);
+		SetVertexShader(CompileShader(vs_4_0, VS()));
+		SetPixelShader(CompileShader(ps_4_0, PS_grad_1()));
 		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}
 }

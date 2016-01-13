@@ -162,6 +162,12 @@ namespace FlowSharp
                 case RenderEffect.OVERLAY:
                     this._technique = _planeEffect.GetTechniqueByName("Overlay" + _fieldTextures.Length);
                     break;
+                case RenderEffect.LAPLACE:
+                    this._technique = _planeEffect.GetTechniqueByName("Laplace" + _fieldTextures.Length);
+                    break;
+                case RenderEffect.GRADIENT:
+                    this._technique = _planeEffect.GetTechniqueByName("Gradient" + _fieldTextures.Length);
+                    break;
                 case RenderEffect.COLORMAP:
                 default:
                     this._technique = _planeEffect.GetTechniqueByName("RenderTex" + _fieldTextures.Length);
@@ -386,6 +392,8 @@ namespace FlowSharp
             DEFAULT = 0,
             COLORMAP,
             OVERLAY,
+            LAPLACE,
+            GRADIENT,
             LIC,
             LIC_LENGTH,
             CHECKERBOARD,

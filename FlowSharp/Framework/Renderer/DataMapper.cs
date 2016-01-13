@@ -106,6 +106,39 @@ namespace FlowSharp
             public int SliceHeight;
             [FieldOffset(60)]
             public float IntegrationTime;
+            public RedSea.DiffusionMeasure DiffusionMeasure
+            {
+                get { return (RedSea.DiffusionMeasure)this[Element.DiffusionMeasure]; }
+                set { this[Element.DiffusionMeasure] = (int)value; }
+            }
+            public Element VarX
+            {
+                get { return (Element)this[Element.VarX]; }
+                set { this[Element.VarX] = (int)value; }
+            }
+            public Element VarY
+            {
+                get { return (Element)this[Element.VarX]; }
+                set { this[Element.VarX] = (int)value; }
+            }
+
+            [FieldOffset(76)]
+            public float StartX;
+
+            [FieldOffset(80)]
+            public float StartY;
+
+            [FieldOffset(84)]
+            public float EndX;
+
+            [FieldOffset(88)]
+            public float EndY;
+
+            [FieldOffset(92)]
+            public int DimX;
+
+            [FieldOffset(96)]
+            public int DimY;
 
             // The real data.
             [FieldOffset(0)]
@@ -135,12 +168,22 @@ namespace FlowSharp
                 WindowStart,
                 Measure,
                 SliceHeight,
-                IntegrationTime
+                IntegrationTime,
+                DiffusionMeasure,
+                VarX,
+                VarY,
+                StartX,
+                StartY,
+                EndX,
+                EndY,
+                DimX,
+                DimY
             }
 
             public Setting(Setting cpy)
             {
-                //Array.Copy(cpy.Data, _data, cpy.Data.Length);
+                //Array.Copy(cpy.Data, _data, _data.Length);
+                ////Array.Copy(cpy.Data, _data, cpy.Data.Length);
                 LineSetting = cpy.LineSetting;
                 SliceTimeMain = cpy.SliceTimeMain;
                 SliceTimeReference = cpy.SliceTimeReference;
@@ -158,6 +201,15 @@ namespace FlowSharp
                 Measure = cpy.Measure;
                 SliceHeight = cpy.SliceHeight;
                 IntegrationTime = cpy.IntegrationTime;
+                DiffusionMeasure = cpy.DiffusionMeasure;
+                VarX = cpy.VarX;
+                VarY = cpy.VarY;
+                StartX = cpy.StartX;
+                StartY = cpy.StartY;
+                EndX = cpy.EndX;
+                EndY = cpy.EndY;
+                DimX = cpy.DimX;
+                DimY = cpy.DimY;
             }
 
             public Setting() { }
@@ -190,6 +242,7 @@ namespace FlowSharp
             _selectionRect = new LineBall(_intersectionPlane, new LineSet(new Line[] { new Line() { Positions = corners } }) { Thickness = 0.2f, Color = Vector3.UnitX });
             Renderer.Singleton.AddRenderable(_selectionRect);
         }
+
         public virtual void OnRelease()
         {
             if (_intersectionPlane == null)
@@ -204,12 +257,52 @@ namespace FlowSharp
             }
             EndSelection(points);
         }
+
         public virtual void EndSelection(Vector2[] corners)
         {
             Renderer.Singleton.Remove(_selectionRect);
         }
 
         public virtual void ClickSelection(Vector2 pos) { }
+
+        public virtual string GetName(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.MemberMain:
+                    return "Ensemble Member";
+                case Setting.Element.SliceHeight:
+                    return "Slice Height";
+                case Setting.Element.AlphaStable:
+                    return "Alpha for stable FFF";
+                case Setting.Element.StepSize:
+                    return "Integrator Step Size";
+                case Setting.Element.LineX:
+                    return "Comparison Line Position";
+                case Setting.Element.IntegrationTime:
+                    return "Integration Time";
+                case Setting.Element.WindowWidth:
+                    return "Colormap Window Width";
+                case Setting.Element.WindowStart:
+                    return "Colormap Window Start";
+                default:
+                    return "I am a severely ignored Text Field :{";
+            }
+        }
+
+        public virtual int? GetLength (Setting.Element element)
+        {
+            switch(element)
+            {
+                case Setting.Element.MemberMain:
+                case Setting.Element.MemberReference:
+                    return RedSea.Singleton.NumSteps;
+                case Setting.Element.LineX:
+                    return 500;
+                default:
+                    return null;
+            }
+        }
     }
 
     class CriticalPointTracking : DataMapper
@@ -394,9 +487,9 @@ namespace FlowSharp
         //private Loader.SliceRange[] _ranges;
         private FieldPlane[] _fields;
         private RectlinearGrid _grid;
-        private Loader.SliceRange[] _variableRanges;
+        private LoaderNCF.SliceRange[] _variableRanges;
 
-        public MemberComparison(Loader.SliceRange[] ranges, Plane plane)
+        public MemberComparison(LoaderNCF.SliceRange[] ranges, Plane plane)
         {
             Debug.Assert(ranges.Length == 2);
             //_ranges = ranges;
@@ -404,20 +497,20 @@ namespace FlowSharp
             Plane = plane;
             Mapping = LoadMembers;
 
-            Loader ncFile = new Loader(RedSea.Singleton.DataFolder + 1 + RedSea.Singleton.FileName);
+            LoaderNCF ncFile = new LoaderNCF(RedSea.Singleton.GetFilename(0));
 
             int sizeVar = ncFile.GetNumVariables();
-            _variableRanges = new Loader.SliceRange[sizeVar];
+            _variableRanges = new LoaderNCF.SliceRange[sizeVar];
 
-            Loader.SliceRange ensembleU = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            LoaderNCF.SliceRange ensembleU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
             ensembleU.SetMember(RedSea.Dimension.TIME, 0);
-            Loader.SliceRange ensembleV = new Loader.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            LoaderNCF.SliceRange ensembleV = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
             ensembleV.SetMember(RedSea.Dimension.TIME, 0);
-            Loader.SliceRange ensembleSal = new Loader.SliceRange(ncFile, RedSea.Variable.SALINITY);
+            LoaderNCF.SliceRange ensembleSal = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.SALINITY);
             ensembleSal.SetMember(RedSea.Dimension.TIME, 0);
-            Loader.SliceRange ensembleTemp = new Loader.SliceRange(ncFile, RedSea.Variable.TEMPERATURE);
+            LoaderNCF.SliceRange ensembleTemp = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.TEMPERATURE);
             ensembleTemp.SetMember(RedSea.Dimension.TIME, 0);
-            Loader.SliceRange ensembleHeight = new Loader.SliceRange(ncFile, RedSea.Variable.SURFACE_HEIGHT);
+            LoaderNCF.SliceRange ensembleHeight = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.SURFACE_HEIGHT);
             ensembleHeight.SetMember(RedSea.Dimension.TIME, 0);
 
             _variableRanges[(int)RedSea.Variable.VELOCITY_X] = ensembleU;
@@ -434,12 +527,12 @@ namespace FlowSharp
 
             ScalarField[] scalars;// = new ScalarField[2];
 
-            string main = RedSea.Singleton.DataFolder + (time + 1) + RedSea.Singleton.FileName;
+            string main = RedSea.Singleton.GetFilename(time);
             // Read in the data.
             //_ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
             //_ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
 
-            Loader ncFile = new Loader(main);
+            LoaderNCF ncFile = new LoaderNCF(main);
             switch (_currentSetting.Measure)
             {
                 case RedSea.Measure.VELOCITY:
@@ -477,6 +570,290 @@ namespace FlowSharp
                     break;
             }
             ncFile.Close();
+
+            VectorField field;
+            switch (_currentSetting.Measure)
+            {
+                case RedSea.Measure.DIVERGENCE:
+                    {
+                        VectorField vel = new VectorField(scalars);
+
+                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
+                        scalars = new ScalarField[keepField ? 3 : 1];
+                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Divergence, 1, true).Scalars[0] as ScalarField;
+
+                        if (keepField)
+                        {
+                            scalars[0] = vel.Scalars[0] as ScalarField;
+                            scalars[1] = vel.Scalars[1] as ScalarField;
+                        }
+                        break;
+                    }
+                case RedSea.Measure.DIVERGENCE_2D:
+                    {
+                        VectorField vel = new VectorField(scalars);
+                        scalars = new VectorField(vel, FieldAnalysis.Div2D, 2, true).Scalars as ScalarField[];
+                        break;
+                    }
+                case RedSea.Measure.VORTICITY:
+                    {
+                        VectorField vel = new VectorField(scalars);
+
+                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
+                        scalars = new ScalarField[keepField ? 3 : 1];
+                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Vorticity, 1, true).Scalars[0] as ScalarField;
+
+                        if (keepField)
+                        {
+                            scalars[0] = vel.Scalars[0] as ScalarField;
+                            scalars[1] = vel.Scalars[1] as ScalarField;
+                        }
+                        break;
+                    }
+                case RedSea.Measure.SHEAR:
+                    {
+                        VectorField vel = new VectorField(scalars);
+
+                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
+                        scalars = new ScalarField[keepField ? 3 : 1];
+                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Shear, 1, true).Scalars[0] as ScalarField;
+
+                        if (keepField)
+                        {
+                            scalars[0] = vel.Scalars[0] as ScalarField;
+                            scalars[1] = vel.Scalars[1] as ScalarField;
+                        }
+                        break;
+                    }
+                default:
+                    break;
+            }
+            field = new VectorField(scalars);
+            // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
+
+            _grid = field.Grid as RectlinearGrid;
+
+            return new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap);
+        }
+
+        /// <summary>
+        /// If different planes were chosen, load new fields.
+        /// </summary>
+        /// <returns></returns>
+        public List<Renderable> LoadMembers()
+        {
+            // Changed main slice settings.
+            if (_lastSetting == null ||
+                _currentSetting.MemberMain != _lastSetting.MemberMain ||
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
+                _currentSetting.Measure != _lastSetting.Measure ||
+                _currentSetting.SliceHeight != _lastSetting.SliceHeight ||
+                _currentSetting.Shader != _lastSetting.Shader)
+            {
+                _fields[0] = LoadPlane(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
+                Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
+                _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
+            }
+            else if (_currentSetting.LineX != _lastSetting.LineX)
+            {
+                Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
+                _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
+            }
+
+            // Changed reference settings.
+            if (_lastSetting == null ||
+                _currentSetting.MemberReference != _lastSetting.MemberReference ||
+                _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference ||
+                _currentSetting.Measure != _lastSetting.Measure ||
+                _currentSetting.SliceHeight != _lastSetting.SliceHeight ||
+                _currentSetting.Shader != _lastSetting.Shader)
+            {
+                _fields[1] = LoadPlane(_currentSetting.MemberReference, _currentSetting.SliceTimeReference);
+                Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
+                _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
+            }
+            else if (_currentSetting.LineX != _lastSetting.LineX)
+            {
+                _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
+            }
+
+            // Update window with to shader.
+            //float winMin, winMax;
+            //switch (_currentSetting.Shader)
+            //{
+            //    case FieldPlane.RenderEffect.LIC_LENGTH:
+            //        winMin = 0;
+            //        winMax = _currentSetting.WindowWidth;
+            //        break;
+            //    default:
+            //        winMin = -_currentSetting.WindowWidth / 2;
+            //        winMax = _currentSetting.WindowWidth / 2;
+            //        break;
+            //}
+            // Set mapping values.
+            _fields[0].LowerBound = _currentSetting.WindowStart;
+            _fields[0].UpperBound = _currentSetting.WindowWidth + _currentSetting.WindowStart;
+            _fields[0].SetRenderEffect(_currentSetting.Shader);
+            _fields[0].UsedMap = _currentSetting.Colormap;
+
+            _fields[1].LowerBound = _fields[0].LowerBound;
+            _fields[1].UpperBound = _fields[0].UpperBound;
+            _fields[1].SetRenderEffect(_currentSetting.Shader);
+            _fields[1].UsedMap = _currentSetting.Colormap;
+
+            return _fields.ToList<Renderable>();
+        }
+
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.Colormap:
+                case Setting.Element.WindowWidth:
+                case Setting.Element.WindowStart:
+                    return !(_currentSetting.Shader == FieldPlane.RenderEffect.CHECKERBOARD);
+                case Setting.Element.AlphaStable:
+                case Setting.Element.IntegrationType:
+                case Setting.Element.LineSetting:
+                case Setting.Element.StepSize:
+                case Setting.Element.Tracking:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+    }
+
+    class OkuboWeiss : DataMapper
+    {
+        private VectorFieldUnsteady _fieldOW;
+        private FieldPlane _fieldSlice;
+        private float _standardDeviation;
+
+        public OkuboWeiss(VectorFieldUnsteady velocity, Plane plane)
+        {
+            Debug.Assert(velocity.NumVectorDimensions == 2 + 1);
+            _fieldOW = new VectorFieldUnsteady(velocity, FieldAnalysis.OkuboWeiss, 1);
+
+            Plane = plane;
+            Mapping = GetTimeSlice;
+
+            float mean, fill;
+            _fieldOW.ScalarsAsSFU[0].TimeSlices[0].ComputeStatistics(out fill, out mean, out _standardDeviation);
+            Console.WriteLine("Mean: " + mean + ", SD: " + _standardDeviation + ", valid cells: " + fill);
+        }
+
+        /// <summary>
+        /// If different planes were chosen, load new fields.
+        /// </summary>
+        /// <returns></returns>
+        public List<Renderable> GetTimeSlice()
+        {
+            if (_lastSetting == null ||
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+            {
+                VectorField sliceOW = _fieldOW.GetTimeSlice(_currentSetting.SliceTimeMain);
+                _fieldSlice = new FieldPlane(Plane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
+            }
+            if (_lastSetting == null ||
+                _currentSetting.WindowWidth != _lastSetting.WindowWidth)
+            {
+                _fieldSlice.LowerBound = -0.2f * _standardDeviation - _currentSetting.WindowWidth;
+                _fieldSlice.UpperBound = -0.2f * _standardDeviation + _currentSetting.WindowWidth;
+            }
+            if (_lastSetting == null ||
+                _currentSetting.Colormap != _lastSetting.Colormap ||
+                _currentSetting.Shader != _lastSetting.Shader)
+            {
+                _fieldSlice.UsedMap = _currentSetting.Colormap;
+                _fieldSlice.SetRenderEffect(_currentSetting.Shader);
+            }
+            List<Renderable> list = new List<Renderable>(1);
+
+            // Set mapping.
+            //            _fieldSlice.UpperBound = _currentSetting.WindowWidth;
+            _fieldSlice.UsedMap = _currentSetting.Colormap;
+            _fieldSlice.SetRenderEffect(_currentSetting.Shader);
+            list.Add(_fieldSlice);
+            return list;
+        }
+
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.Colormap:
+                case Setting.Element.WindowWidth:
+                    return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
+                case Setting.Element.SliceTimeMain:
+                case Setting.Element.Shader:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
+
+    class SubstepViewer : DataMapper
+    {
+        //private Loader.SliceRange[] _ranges;
+        private FieldPlane[] _fields;
+        private RectlinearGrid _grid;
+
+        public SubstepViewer(Plane plane)
+        {
+            //_ranges = ranges;
+            _fields = new FieldPlane[2];
+            Plane = plane;
+            Mapping = LoadMembers;
+
+        }
+
+        private FieldPlane LoadPlane(int member, int time)
+        {
+
+            ScalarField[] scalars;// = new ScalarField[2];
+
+            LoaderRaw wFile = new LoaderRaw("E:/Anke/Dev/Data/Shaheen_8/s1/advance_temp" + member + "/W.0000000108.data");//RedSea.Singleton.GetFilename(0, null, RedSea.Variable.VELOCITY_Z));
+
+            switch (_currentSetting.Measure)
+            {
+                //case RedSea.Measure.VELOCITY:
+                //case RedSea.Measure.DIVERGENCE:
+                //case RedSea.Measure.VORTICITY:
+                //case RedSea.Measure.SHEAR:
+                //case RedSea.Measure.DIVERGENCE_2D:
+                //    scalars = new ScalarField[2];
+
+                //    LoadVelocity:
+                //    _variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.MEMBER, member);
+                //    _variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.MEMBER, member);
+                //    _variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+                //    _variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+
+                //    scalars[0] = ncFile.LoadFieldSlice(_variableRanges[(int)RedSea.Variable.VELOCITY_X]);
+                //    scalars[1] = ncFile.LoadFieldSlice(_variableRanges[(int)RedSea.Variable.VELOCITY_Y]);
+                //    break;
+
+                default:
+                    RedSea.Measure var = _currentSetting.Measure;
+
+                    //_variableRanges[(int)var].SetMember(RedSea.Dimension.MEMBER, member);
+                    //if (var != RedSea.Measure.SURFACE_HEIGHT)
+                    //    _variableRanges[(int)var].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+
+
+                    // Maybe load vector field too.
+                    //bool addVelocity = (_currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH);
+                    //scalars = new ScalarField[addVelocity ? 3 : 1];
+                    //scalars[scalars.Length - 1] = ncFile.LoadFieldSlice(_variableRanges[(int)var]);
+                    //if (addVelocity)
+                    //    goto LoadVelocity;
+
+                    ScalarField w = wFile.LoadField();
+                    scalars = new ScalarField[] { w };
+                    break;
+            }
 
             VectorField field;
             switch (_currentSetting.Measure)
@@ -628,74 +1005,15 @@ namespace FlowSharp
                     return true;
             }
         }
-    }
 
-    class OkuboWeiss : DataMapper
-    {
-        private VectorFieldUnsteady _fieldOW;
-        private FieldPlane _fieldSlice;
-        private float _standardDeviation;
-
-        public OkuboWeiss(VectorFieldUnsteady velocity, Plane plane)
+        public override string GetName(Setting.Element element)
         {
-            Debug.Assert(velocity.NumVectorDimensions == 2 + 1);
-            _fieldOW = new VectorFieldUnsteady(velocity, FieldAnalysis.OkuboWeiss, 1);
-
-            Plane = plane;
-            Mapping = GetTimeSlice;
-
-            float mean, fill;
-            _fieldOW.ScalarsAsSFU[0].TimeSlices[0].ComputeStatistics(out fill, out mean, out _standardDeviation);
-            Console.WriteLine("Mean: " + mean + ", SD: " + _standardDeviation + ", valid cells: " + fill);
-        }
-
-        /// <summary>
-        /// If different planes were chosen, load new fields.
-        /// </summary>
-        /// <returns></returns>
-        public List<Renderable> GetTimeSlice()
-        {
-            if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+            switch(element)
             {
-                VectorField sliceOW = _fieldOW.GetTimeSlice(_currentSetting.SliceTimeMain);
-                _fieldSlice = new FieldPlane(Plane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
-            }
-            if (_lastSetting == null ||
-                _currentSetting.WindowWidth != _lastSetting.WindowWidth)
-            {
-                _fieldSlice.LowerBound = -0.2f * _standardDeviation - _currentSetting.WindowWidth;
-                _fieldSlice.UpperBound = -0.2f * _standardDeviation + _currentSetting.WindowWidth;
-            }
-            if (_lastSetting == null ||
-                _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader)
-            {
-                _fieldSlice.UsedMap = _currentSetting.Colormap;
-                _fieldSlice.SetRenderEffect(_currentSetting.Shader);
-            }
-            List<Renderable> list = new List<Renderable>(1);
-
-            // Set mapping.
-//            _fieldSlice.UpperBound = _currentSetting.WindowWidth;
-            _fieldSlice.UsedMap = _currentSetting.Colormap;
-            _fieldSlice.SetRenderEffect(_currentSetting.Shader);
-            list.Add(_fieldSlice);
-            return list;
-        }
-
-        public override bool IsUsed(Setting.Element element)
-        {
-            switch (element)
-            {
-                case Setting.Element.Colormap:
-                case Setting.Element.WindowWidth:
-                    return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
-                case Setting.Element.SliceTimeMain:
-                case Setting.Element.Shader:
-                    return true;
+                case Setting.Element.LineX:
+                    return "Global Substep";
                 default:
-                    return false;
+                    return base.GetName(element);
             }
         }
     }
@@ -783,6 +1101,20 @@ namespace FlowSharp
         public override bool IsUsed(Setting.Element element)
         {
             return true;
+        }
+
+        public override string GetName(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.LineX:
+                    return "Comparison X | Neighbor ID | Substep";
+                case Setting.Element.AlphaStable:
+                    return "Alpha for SFFF | Gauss Variance";
+
+                default:
+                    return base.GetName(element);
+            }
         }
     }
 }

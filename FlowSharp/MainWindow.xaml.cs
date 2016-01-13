@@ -9,10 +9,12 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace FlowSharp
 {
@@ -22,22 +24,92 @@ namespace FlowSharp
     public partial class MainWindow : Window
     {
         private DataMapper _mapper;
+        private bool _mapperChanged = true;
         //private RedSea.Display _display;
         //private RedSea.DisplayLines _displayLines;
         //private int _slice0, _slice1;
         //private FieldPlane _slice1Plane;
 
         private static FrameworkElement[] _windowObjects = new FrameworkElement[Enum.GetValues(typeof(DataMapper.Setting.Element)).Length];
-
-
+//        private float startX, startY, endX, endY, dimX, dimY;
         public MainWindow()
         {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => { LoadUI(); }));
             InitializeComponent();
 
             DX11Display.Scene = Renderer.Singleton;
             _mapper = new EmptyMapper();
 
+            RedSea.Singleton.WPFWindow = this;
             FSMain.LoadData();
+        }
+
+        public void UpdateNumTimeSlices()
+        {
+            DropDownSlice0.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumTimeSlices);
+
+            DropDownSlice1.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumTimeSlices);
+        }
+
+        public void LoadUI()
+        {
+
+            DropDownDisplay.ItemsSource = Enum.GetValues(typeof(RedSea.Display)).Cast<RedSea.Display>();
+            DropDownDisplay.SelectedIndex = 0;
+
+            DropDownDisplayLines.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayLines)).Cast<RedSea.DisplayLines>();
+            DropDownDisplayLines.SelectedIndex = 0;
+
+            DropDownSlice0.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumTimeSlices);
+            DropDownSlice0.SelectedIndex = 0;
+
+            DropDownSlice1.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumTimeSlices);
+            DropDownSlice1.SelectedIndex = 0;
+
+            DropDownMember0.ItemsSource = Enumerable.Range(0, 52);
+            DropDownMember0.SelectedIndex = 0;
+
+            DropDownMember1.ItemsSource = Enumerable.Range(0, 52);
+            DropDownMember1.SelectedIndex = 0;
+
+            DropDownHeight.ItemsSource = Enumerable.Range(0, 50);
+            DropDownHeight.SelectedIndex = 0;
+
+            DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
+            DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
+
+            StepSizeSlider.Value = 1;
+            AlphaSlider.Value = 0;
+
+            DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
+            DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;
+
+            DropDownDiffusionMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.DiffusionMeasure)).Cast<RedSea.DiffusionMeasure>();
+            DropDownDiffusionMeasure.SelectedIndex = (int)RedSea.DiffusionMeasure.Density;
+
+            DropDownTracking.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayTracking)).Cast<RedSea.DisplayTracking>();
+            DropDownTracking.SelectedIndex = (int)RedSea.DisplayTracking.LINE_POINTS;
+
+            StepSizeSlider.Value = 1.0;// 0.06;
+
+            DropDownShader.ItemsSource = Enum.GetValues(typeof(FieldPlane.RenderEffect)).Cast<FieldPlane.RenderEffect>();
+            DropDownShader.SelectedIndex = (int)FieldPlane.RenderEffect.COLORMAP;
+
+            DropDownColormap.ItemsSource = Enum.GetValues(typeof(Colormap)).Cast<Colormap>();
+            DropDownColormap.SelectedIndex = (int)Colormap.Parula;
+
+            VarX.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
+            VarX.SelectedIndex = 0;
+            VarY.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
+            VarY.SelectedIndex = 1;
+
+            BitmapImage b = new BitmapImage();
+            b.BeginInit();
+            string dir = Directory.GetCurrentDirectory();
+            b.UriSource = new Uri(dir + "/Framework/Renderer/Resources/Colormap" + "Parula" + ".png");
+            b.EndInit();
+
+            ColormapView.Source = b;
         }
 
         protected override void OnInitialized(EventArgs e)
@@ -60,107 +132,18 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.Tracking] = DropDownTracking;
             _windowObjects[(int)DataMapper.Setting.Element.WindowStart] = WindowStartBlock;
             _windowObjects[(int)DataMapper.Setting.Element.Measure] = DropDownMeasure;
+            _windowObjects[(int)DataMapper.Setting.Element.DiffusionMeasure] = DropDownDiffusionMeasure;
             _windowObjects[(int)DataMapper.Setting.Element.IntegrationTime] = IntegrationTimeBlock;
+            _windowObjects[(int)DataMapper.Setting.Element.VarX] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.VarY] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.StartX] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.StartY] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.EndX] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.EndY] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.DimX] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.DimY] = MatrixBox;
 
             Renderer.Singleton.SetCanvas(DX11Display);
-        }
-
-        private void LoadDisplay(object sender, RoutedEventArgs e)
-        {
-            DropDownDisplay.ItemsSource = Enum.GetValues(typeof(RedSea.Display)).Cast<RedSea.Display>();
-            DropDownDisplay.SelectedIndex = 0;
-        }
-
-        private void LoadDisplayLines(object sender, RoutedEventArgs e)
-        {
-            DropDownDisplayLines.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayLines)).Cast<RedSea.DisplayLines>();
-            DropDownDisplayLines.SelectedIndex = 0;
-            
-        }
-
-        private void LoadSlice0(object sender, RoutedEventArgs e)
-        {
-            DropDownSlice0.ItemsSource = Enumerable.Range(0, 10);          
-            DropDownSlice0.SelectedIndex = 0;
-            _mapper.CurrentSetting.SliceTimeMain = DropDownSlice0.SelectedIndex;
-        }
-
-        private void LoadSlice1(object sender, RoutedEventArgs e)
-        {
-            DropDownSlice1.ItemsSource = Enumerable.Range(0, 10);
-            DropDownSlice1.SelectedIndex = 5;
-            _mapper.CurrentSetting.SliceTimeReference = DropDownSlice1.SelectedIndex;
-        }
-
-        private void LoadMember(object sender, RoutedEventArgs e)
-        {
-            //string[] values = new string[53];
-            //values[0] = "Mean";
-            //values[1] = "Variance";
-            //for (int i = 0; i < values.Length - 2; ++i)
-            //    values[i + 2] = "Member " + i;
-            //(sender as ComboBox).Da = values;
-            (sender as ComboBox).ItemsSource = Enumerable.Range(0, 52);
-            (sender as ComboBox).SelectedIndex = 0;
-        }
-
-        private void LoadHeight(object sender, RoutedEventArgs e)
-        {
-            (sender as ComboBox).ItemsSource = Enumerable.Range(0, 50);
-            (sender as ComboBox).SelectedIndex = 0;
-        }
-
-        private void LoadIntegrator(object sender, RoutedEventArgs e)
-        {
-            DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
-            DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER; 
-        }
-
-        private void LoadMeasure(object sender, RoutedEventArgs e)
-        {
-            DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
-            DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;
-        }
-
-        private void LoadTracking(object sender, RoutedEventArgs e)
-        {
-            DropDownTracking.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayTracking)).Cast<RedSea.DisplayTracking>();
-            DropDownTracking.SelectedIndex = (int)RedSea.DisplayTracking.LINE_POINTS;
-        }
-
-        private void LoadStepSize(object sender, RoutedEventArgs e)
-        {
-            //(sender as Slider).Minimum = 0.01;
-            (sender as Slider).Value = 1.0;// 0.06;
-            _mapper.CurrentSetting.StepSize = (float)(sender as Slider).Value;
-        }
-
-        private void LoadShader(object sender, RoutedEventArgs e)
-        {
-            DropDownShader.ItemsSource = Enum.GetValues(typeof(FieldPlane.RenderEffect)).Cast<FieldPlane.RenderEffect>();
-            DropDownShader.SelectedIndex = (int)FieldPlane.RenderEffect.COLORMAP;
-            
-        }
-
-        private void LoadColormap(object sender, RoutedEventArgs e)
-        {
-            DropDownColormap.ItemsSource = Enum.GetValues(typeof(Colormap)).Cast<Colormap>();
-            DropDownColormap.SelectedIndex = (int)Colormap.Parula;
-            
-        }
-
-        private void LoadColormapView(object sender, RoutedEventArgs e)
-        {
-            BitmapImage b = new BitmapImage();
-            b.BeginInit();
-            string dir = Directory.GetCurrentDirectory();
-            b.UriSource = new Uri(dir + "/Framework/Renderer/Resources/Colormap" + "Parula" + ".png"); 
-            b.EndInit();
-
-            // ... Get Image reference from sender.
-            var image = sender as Image;
-            // ... Assign Source.
-            image.Source = b;
         }
 
         #region OnChangeValue
@@ -172,6 +155,7 @@ namespace FlowSharp
             _mapper = RedSea.Singleton.SetMapper((RedSea.Display)(comboBox.SelectedItem as RedSea.Display?));
             _mapper.CurrentSetting = new DataMapper.Setting(last.CurrentSetting);
 
+            _mapperChanged = true;
             //AlphaStable = (float)alpha.Value;
             //_mapper.CurrentSetting.IntegrationType = (VectorField.Integrator.Type)DropDownIntegrator.SelectedIndex;
             //_mapper.CurrentSetting.LineSetting = (RedSea.DisplayLines)DropDownDisplayLines.SelectedIndex;
@@ -181,6 +165,36 @@ namespace FlowSharp
             //_display = (RedSea.Display)(comboBox.SelectedItem as RedSea.Display?);
             UpdateRenderer();
         }
+
+        //private void OnChangeValue(object sender, RoutedEventArgs e)
+        //{
+        //    _mapper.CurrentSetting.Measure = (RedSea.Measure)(DropDownMeasure.SelectedItem as RedSea.Measure?);
+        //    _mapper.CurrentSetting.LineSetting = (RedSea.DisplayLines)(DropDownDisplayLines.SelectedItem as RedSea.DisplayLines?);
+        //    _mapper.CurrentSetting.SliceTimeMain = (int)(DropDownSlice0.SelectedItem as int?);
+        //    _mapper.CurrentSetting.SliceTimeReference = (int)(DropDownSlice1.SelectedItem as int?);
+        //    _mapper.CurrentSetting.IntegrationType = (VectorField.Integrator.Type)(DropDownIntegrator.SelectedItem as VectorField.Integrator.Type?);
+        //    _mapper.CurrentSetting.StepSize = (float)(StepSizeSlider.Value as double?);
+        //    _mapper.CurrentSetting.AlphaStable = (float)(AlphaSlider.Value as double?);
+        //    _mapper.CurrentSetting.LineX = (int)(LineSlider.Value as int?);
+        //    _mapper.CurrentSetting.MemberMain = (int)(DropDownMember0.SelectedItem as int?);
+        //    _mapper.CurrentSetting.MemberReference = (int)(DropDownMember1.SelectedItem as int?);
+        //    _mapper.CurrentSetting.Shader = (FieldPlane.RenderEffect)(DropDownShader.SelectedItem as FieldPlane.RenderEffect?);
+        //    _mapper.CurrentSetting.Colormap = (Colormap)(DropDownColormap.SelectedItem as Colormap?);
+        //    _mapper.CurrentSetting.WindowWidth = (float)(WindowWidth.Value as double?);
+        //    _mapper.CurrentSetting.WindowStart = (float)(WindowStart.Value as double?);
+        //    _mapper.CurrentSetting.Tracking = (RedSea.DisplayTracking)(DropDownTracking.SelectedItem as RedSea.DisplayTracking?);
+        //    _mapper.CurrentSetting.SliceHeight = (int)(DropDownHeight.SelectedItem as int?);
+        //    _mapper.CurrentSetting.IntegrationTime = (float)(integrationTime.Value as double?);
+        //    _mapper.CurrentSetting.DiffusionMeasure = (RedSea.DiffusionMeasure)(DropDownDiffusionMeasure.SelectedItem as RedSea.DiffusionMeasure?);
+        //    _mapper.CurrentSetting.VarX = (DataMapper.Setting.Element)(VarX.SelectedItem as DataMapper.Setting.Element?);
+        //    _mapper.CurrentSetting.VarY = (DataMapper.Setting.Element)(VarY.SelectedItem as DataMapper.Setting.Element?);
+        //    _mapper.CurrentSetting.StartX = endX; //(float)(EndX.Value as double?);
+        //    _mapper.CurrentSetting.StartY = startY; //(float)(DimX.Value as double?);
+        //    _mapper.CurrentSetting.EndX = endX; //(float)(VarX.Value as double?);
+        //    _mapper.CurrentSetting.EndY = endY; //(float)(StartY.Value as double?);
+        //    _mapper.CurrentSetting.DimX = (int)dimX; //(float)(EndY.Value as double?);
+        //    _mapper.CurrentSetting.DimY = (int)dimY; //(float)(DimY.Value as double?);
+        //}
 
         private void OnChangeDisplayLines(object sender, RoutedEventArgs e)
         {
@@ -193,6 +207,13 @@ namespace FlowSharp
         {
             var comboBox = sender as ComboBox;
             _mapper.CurrentSetting.Measure = (RedSea.Measure)(comboBox.SelectedItem as RedSea.Measure?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeDiffusionMeasure(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.DiffusionMeasure = (RedSea.DiffusionMeasure)(comboBox.SelectedItem as RedSea.DiffusionMeasure?);
             UpdateRenderer();
         }
 
@@ -305,22 +326,51 @@ namespace FlowSharp
             _mapper.CurrentSetting.WindowWidth = (float)slider.Value;
             UpdateRenderer();
         }
+
+        private void StartX_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
+
         private void OnChangeWindowStart(object sender, RoutedEventArgs e)
         {
             var slider = sender as Slider;
             _mapper.CurrentSetting.WindowStart = (float)slider.Value;
             UpdateRenderer();
         }
+
+        private void OnChangeMatrix(object sender, RoutedEventArgs e)
+        {
+            if (_mapper == null) return;
+
+            _mapper.CurrentSetting.StartX = Convert.ToSingle(StartX?.Text ?? "0");
+            _mapper.CurrentSetting.StartY = Convert.ToSingle(StartY?.Text ?? "0");
+            _mapper.CurrentSetting.EndX = Convert.ToSingle(EndX?.Text ?? "1");
+            _mapper.CurrentSetting.EndY = Convert.ToSingle(EndY?.Text ?? "1");
+            _mapper.CurrentSetting.DimX = (int)Convert.ToSingle(DimX?.Text ?? "2");
+            _mapper.CurrentSetting.DimY = (int)Convert.ToSingle(DimY?.Text ?? "2");
+            _mapper.CurrentSetting.VarX = ((VarX?.SelectedValue as DataMapper.Setting.Element?)?? DataMapper.Setting.Element.IntegrationTime);
+            _mapper.CurrentSetting.VarY = ((VarY?.SelectedValue as DataMapper.Setting.Element?) ?? DataMapper.Setting.Element.AlphaStable);
+        }
         #endregion
+
 
         private void UpdateRenderer()
         {
             // Enable/disable GUI elements.
-            foreach (DataMapper.Setting.Element element in Enum.GetValues(typeof(DataMapper.Setting.Element)))  // (int element = 0; element < _windowObjects.Length; ++element)
-            {
-                bool elementActive = _mapper.IsUsed(element);
-                _windowObjects[(int)element].Visibility = elementActive ? Visibility.Visible : Visibility.Hidden;
-            }
+            if(_mapperChanged)
+                foreach (DataMapper.Setting.Element element in Enum.GetValues(typeof(DataMapper.Setting.Element)))  // (int element = 0; element < _windowObjects.Length; ++element)
+                {
+                    bool elementActive = _mapper.IsUsed(element);
+                    _windowObjects[(int)element].Visibility = elementActive ? Visibility.Visible : Visibility.Hidden;
+
+                    TextBlock[] text = (_windowObjects[(int)element] as Panel)?.Children.OfType<TextBlock>().ToArray();
+                    if (text != null && text.Length > 0)
+                        text[0].Text = _mapper.GetName(element);
+
+
+                    _mapperChanged = false;
+                }
 
             if (Renderer.Singleton.Initialized && _mapper != null)
                 RedSea.Singleton.Update();

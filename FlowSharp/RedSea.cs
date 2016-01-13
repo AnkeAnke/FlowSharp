@@ -11,14 +11,19 @@ namespace FlowSharp
 {
     class RedSea
     {
-        /// <summary>
-        /// Data folder name, in a fashion that only a number has to be added for the respective time slice.
-        /// </summary>
-        public string DataFolder;
-        /// <summary>
-        /// File name. Should contain intial '/'.
-        /// </summary>
-        public string FileName;
+        ///// <summary>
+        ///// Data folder name, in a fashion that only a number has to be added for the respective time slice.
+        ///// </summary>
+        //public string DataFolder;
+        ///// <summary>
+        ///// File name. Should contain intial '/'.
+        ///// </summary>
+        //public string FileName;
+        public delegate Loader FilenameBuilder(int index, int? subIndex = null, RedSea.Variable var = Variable.VELOCITY_X);
+        public FilenameBuilder GetLoader;
+        public int NumSteps = 160;
+        public int NumSubsteps = 108;
+
         public float DomainScale = 2.593f / 15;
         public float TimeScale { get { return 1.0f/DomainScale; } }
         /// <summary>
@@ -37,7 +42,30 @@ namespace FlowSharp
             TEMPERATURE = 12,
             VELOCITY_X = 13,
             VELOCITY_Y = 14,
+            VELOCITY_Z = 20,
             SURFACE_HEIGHT = 15
+        }
+
+        private static Dictionary<Variable, string> _variableShort = new Dictionary<Variable, string>()
+        {
+            {Variable.TIME, "T" },
+            {Variable.GRID_X,"GX"},
+            {Variable.CENTER_X,"CX"},
+            {Variable.GRID_Y,"GY"},
+            {Variable.CENTER_Y,"CY"},
+            {Variable.GRID_Z,"GZ"},
+            {Variable.CENTER_Z,"CZ"},
+            {Variable.SALINITY, "S"},
+            {Variable.TEMPERATURE, "T"},
+            {Variable.VELOCITY_X, "U"},
+            {Variable.VELOCITY_Y, "V"},
+            {Variable.VELOCITY_Z, "W"},
+            {Variable.SURFACE_HEIGHT, "Eta"}
+        };
+
+        public static string GetShortName(Variable var)
+        {
+            return _variableShort[var];
         }
 
         public enum Dimension : int
@@ -56,6 +84,7 @@ namespace FlowSharp
         {
             NONE,
             MEMBER_COMPARISON,
+            SUBSTEP_VIEWER,
             CP_TRACKING,
             PATHLINE_CORES,            
             OKUBO_WEISS,
@@ -90,6 +119,18 @@ namespace FlowSharp
             VORTICITY = 2,
             SHEAR = 3
         }
+        public enum DiffusionMeasure : int
+        {
+            Density = 0,
+            Min,
+            Max,
+            Range,
+            Direction,
+            Neighbor
+        }
+
+        public MainWindow WPFWindow { get; set; }
+
         public static VectorField.PositionToColor[] DisplayLineFunctions = new VectorField.PositionToColor[]
         {
             null,
@@ -104,6 +145,13 @@ namespace FlowSharp
                     _instance = new RedSea();
                 return _instance;
             } }
+
+        private int _numTImeSlices = 10;
+        public int NumTimeSlices
+        {
+            get { return _numTImeSlices; }
+            set { _numTImeSlices = value; WPFWindow?.UpdateNumTimeSlices(); }
+        }
 
         private DataMapper[] _mappers;
         private Display _currentMapper = Display.NONE;

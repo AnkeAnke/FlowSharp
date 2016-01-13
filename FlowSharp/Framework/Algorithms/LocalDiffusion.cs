@@ -11,7 +11,7 @@ using SlimDX.DXGI;
 using ManagedCuda.BasicTypes;
 using System.IO;
 using System.Reflection;
-using SliceRange = FlowSharp.Loader.SliceRange;
+using SliceRange = FlowSharp.LoaderNCF.SliceRange;
 using Debug = System.Diagnostics.Debug;
 namespace FlowSharp
 {
@@ -60,7 +60,7 @@ namespace FlowSharp
 
         protected bool _initialized = false;
 
-        public CutDiffusion(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, float time)
+        public CutDiffusion(Texture2D input, LoaderNCF.SliceRange fieldEnsemble, int startTime, float time)
         {
 
         }
@@ -188,7 +188,7 @@ namespace FlowSharp
             float integrationStep = (CurrentTime + 1 > EndTime) ? EndTime - CurrentTime : 1.0f;
             integrationStep *= RedSea.Singleton.TimeScale;
             CurrentTime++;
-            _loadAdvectReference.SetConstantVariable("IntegrationLength", integrationStep * RedSea.Singleton.DomainScale);
+            _loadAdvectReference.SetConstantVariable("IntegrationLength", integrationStep);
 
             bool severalSteps = false;
 
@@ -369,9 +369,9 @@ namespace FlowSharp
 
     class LocalDiffusion : AlgorithmCuda
     {
+        protected static int NUM_ADJACENT_CELLS = 8;
         public static int BLOCK_SIZE { get; } = 15;
-        public static int NUM_PARTICLES = 256;
-        public static int NUM_PARTICLES_REFERENCE = 1024;
+        public static int NUM_PARTICLES = 512;
 
         protected VectorFieldUnsteady _velocity;
         protected int _width { get { return _velocity.Size[0]; } }
@@ -381,31 +381,27 @@ namespace FlowSharp
         public int CurrentTime;
 
         protected CudaArray2D _t0X, _t0Y, _t1X, _t1Y;
-        public Texture2D MapX { get; protected set; }
-        public Texture2D MapY { get; protected set; }
+        public Texture2D Map { get; protected set; }
         protected CudaGraphicsInteropResourceCollection _cudaDxMapper;
 
         //__global__ void LoadAdvectCut(float2* positions, int2 origin)
         protected static CudaKernel _loadAdvectCut;
         //__global__ void AdvectCut(float2* positions, int2 origin)
         protected static CudaKernel _advectCut;
-        //__global__ void CutX/Y(float* cuts, float2* positions)
-        protected static CudaKernel _cutX;
-        protected static CudaKernel _cutY;
+        //__global__ void Cut(float* cuts, float2* positions, int neighbor)
+        protected static CudaKernel _cutNeighbor;
 
-        //__global__ void CutStoreX/Y(cudaSurfaceObject_t grads, float* cuts)
-        protected static CudaKernel _storeXY;
+        //__global__ void ScanCut{Density|Min|Max|Range}(cudaSurfaceObject_t grads, float* cuts)
+        protected static CudaKernel[] _scanStoreMeasure;
         //protected static CudaKernel _storeY;
 
-        protected CudaStream _streamCutX;
-        protected CudaStream _streamCutY;
+        protected CudaStream[] _streamCuts;
         protected CudaDeviceVariable<float2> _particlesCut;
-        protected CudaDeviceVariable<float> _gradientX;
-        protected CudaDeviceVariable<float> _gradientY;
+        protected CudaDeviceVariable<float> _neighbors;
 
         protected bool _initialized = false;
 
-        public LocalDiffusion(Texture2D input, Loader.SliceRange fieldEnsemble, int startTime, float time)
+        public LocalDiffusion(Texture2D input, LoaderNCF.SliceRange fieldEnsemble, int startTime, float time)
         {
 
         }
@@ -432,33 +428,6 @@ namespace FlowSharp
 
             if (!_initialized)
                 InitializeDeviceStorage();
-        }
-
-        protected void InitializeDeviceStorage()
-        {
-            // ~~~~~~~~~~~~~~~ Allocate "Cache" ~~~~~~~~~~~~~~~~ \\
-            // Buffer for advecting reference particles.
-            _particlesCut = new CudaDeviceVariable<float2>(NUM_PARTICLES * _width * _height);
-            _gradientX = new CudaDeviceVariable<float>((_width - 1) * (_height - 1));
-            _gradientY = new CudaDeviceVariable<float>((_width - 1) * (_height - 1));
-
-            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t0X = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t0Y = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            new CudaTextureArray2D(_loadAdvectCut, "vX_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0X);
-            new CudaTextureArray2D(_loadAdvectCut, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
-
-            // Streams to allow for parallel execution.
-            _streamCutX = new CudaStream();
-            _streamCutY = new CudaStream();
-
-            // ~~~~~~~~~~~~~~ Set CUDA constants ~~~~~~~~~~~~~~~ \\
-            // For selection advection.
-            _loadAdvectCut.SetConstantVariable("Width", _width);
-            _loadAdvectCut.SetConstantVariable("Height", _height);
-            _loadAdvectCut.SetConstantVariable("Invalid", _velocity.InvalidValue ?? float.MaxValue);
-            _loadAdvectCut.SetConstantVariable("TimeInGrid", RedSea.Singleton.DomainScale);
 
             // ~~~~~~~~~~~~~~ Fill CUDA resources ~~~~~~~~~~~~~~ \\
             // vX, t=1
@@ -468,6 +437,33 @@ namespace FlowSharp
             // vY, t=1
             _t1Y.CopyFromHostToThis<float>((_velocity.GetTimeSlice(StartTime).Scalars[1] as ScalarField).Data);
             new CudaTextureArray2D(_loadAdvectCut, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
+        }
+
+        protected void InitializeDeviceStorage()
+        {
+            // ~~~~~~~~~~~~~~~ Allocate "Cache" ~~~~~~~~~~~~~~~~ \\
+            // Buffer for advecting reference particles.
+            _particlesCut = new CudaDeviceVariable<float2>(NUM_PARTICLES * _width * _height);
+            _neighbors = new CudaDeviceVariable<float>((_width) * (_height) * NUM_ADJACENT_CELLS/2);
+
+            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
+            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
+            _t0X = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
+            _t0Y = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
+            new CudaTextureArray2D(_loadAdvectCut, "vX_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0X);
+            new CudaTextureArray2D(_loadAdvectCut, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
+
+            // Streams to allow for parallel execution.
+            _streamCuts = new CudaStream[NUM_ADJACENT_CELLS];
+            for(int i = 0; i < NUM_ADJACENT_CELLS; ++i)
+                _streamCuts[i] = new CudaStream();
+
+            // ~~~~~~~~~~~~~~ Set CUDA constants ~~~~~~~~~~~~~~~ \\
+            // For selection advection.
+            _loadAdvectCut.SetConstantVariable("Width", _width);
+            _loadAdvectCut.SetConstantVariable("Height", _height);
+            _loadAdvectCut.SetConstantVariable("Invalid", _velocity.InvalidValue ?? float.MaxValue);
+            _loadAdvectCut.SetConstantVariable("TimeInGrid", RedSea.Singleton.DomainScale);
 
             // ~~~~~~~~~~~~~ Create texture ~~~~~~~~~~~~~~~~~~~~ \\
             // Create texture. Completely zero, except for one point.
@@ -486,13 +482,11 @@ namespace FlowSharp
             };
 
             // Create texture.
-            MapX = new Texture2D(_device, desc);
-            MapY = new Texture2D(_device, desc);
+            Map = new Texture2D(_device, desc);
 
             // ~~~~~~~~~ Make textures mappable to CUDA ~~~~~~~~~~ \\
             _cudaDxMapper = new CudaGraphicsInteropResourceCollection();
-            _cudaDxMapper.Add(new CudaDirectXInteropResource(MapX.ComPointer, CUGraphicsRegisterFlags.None, CudaContext.DirectXVersion.D3D11));
-            _cudaDxMapper.Add(new CudaDirectXInteropResource(MapY.ComPointer, CUGraphicsRegisterFlags.None, CudaContext.DirectXVersion.D3D11));
+            _cudaDxMapper.Add(new CudaDirectXInteropResource(Map.ComPointer, CUGraphicsRegisterFlags.None, CudaContext.DirectXVersion.D3D11));
 
             //            _cudaDxMapper.MapAllResources();
             //            CudaArray2D lastFlowMap = _cudaDxMapper[0].GetMappedArray2D(0, 0);
@@ -503,35 +497,31 @@ namespace FlowSharp
             SetKernelSizes();
             _initialized = true;
         }
-        public void Advect(float stepSize, float variance = 2.0f, Int2 selection = null)
+        public void Advect(float stepSize, float variance = 2.0f, RedSea.DiffusionMeasure measure = RedSea.DiffusionMeasure.Density, uint neighborID = 0)
         {
             LoadNextField();
 
             // ~~~~~~~~~~~~~~~ Upload relevant data ~~~~~~~~~~~~~~~ \\
-            _cudaDxMapper.MapAllResources();
-            CudaArray2D texX = _cudaDxMapper[0].GetMappedArray2D(0, 0);
-            CudaArray2D texY = _cudaDxMapper[1].GetMappedArray2D(0, 0);
-
             _loadAdvectCut.SetConstantVariable("Variance", variance);
-            _loadAdvectCut.SetConstantVariable("StepSize", stepSize);
+            _loadAdvectCut.SetConstantVariable("StepSize", (float)Math.Max(0.0000001f, stepSize));
 
             // Compute and upload integration time.
             float integrationStep = (CurrentTime + 1 > EndTime) ? EndTime - CurrentTime : 1.0f;
             integrationStep *= RedSea.Singleton.TimeScale;
             CurrentTime++;
-            _loadAdvectCut.SetConstantVariable("IntegrationLength", integrationStep * RedSea.Singleton.DomainScale);
+            _loadAdvectCut.SetConstantVariable("IntegrationLength", integrationStep);
 
             bool severalSteps = false;
 
             // ~~~~~~~~~~~ Start Map Integration ~~~~~~~~~~~ \\
             //__global__ void LoadAdvectCut(float2* positions, int2 origin)
-            _loadAdvectCut.RunAsync(_streamCutX.Stream, _particlesCut.DevicePointer, new int2(0));
+            _loadAdvectCut.RunAsync(_streamCuts[0].Stream, _particlesCut.DevicePointer, new int2(0));
 
             // ~~~~~~~~~~~ Advect the Particle Buffers further ~~~~~~~~~~~ \\
             while (CurrentTime < EndTime)
             {
                 severalSteps = true;
-                // If we actually go in here, an integration time of 1 has to be set.
+                // If we actually go in here, an integration time of "1" has to be set.
                 Debug.Assert(integrationStep == RedSea.Singleton.TimeScale);
 
                 // As texture loading happens inbetwen, a synchronization is performed automatically.
@@ -540,7 +530,7 @@ namespace FlowSharp
                 LoadNextField();
 
                 //__global__ void AdvectCut(float2* positions, int2 origin)
-                _advectCut.RunAsync(_streamCutX.Stream, _particlesCut.DevicePointer, new int2(0));
+                _advectCut.RunAsync(_streamCuts[0].Stream, _particlesCut.DevicePointer, new int2(0));
                 CurrentTime++;
             }
 
@@ -553,27 +543,53 @@ namespace FlowSharp
 
             if (severalSteps)
                 //__global__ void AdvectCut(float2* positions, int2 origin)
-                _advectCut.RunAsync(_streamCutX.Stream, _particlesCut.DevicePointer, new int2(0));
+                _advectCut.RunAsync(_streamCuts[0].Stream, _particlesCut.DevicePointer, new int2(0));
 
             // Before stream Y may start, the main stream (=X) has to be completed.
             _context.Synchronize();
 
-            //__global__ void CutX/Y(float* cuts, float2* positions)
-            _cutX.RunAsync(_streamCutX.Stream, _gradientX.DevicePointer, _particlesCut.DevicePointer);
-            // CHANGEE!!!!! (to _cutY)
-            _cutX.RunAsync(_streamCutY.Stream, _gradientY.DevicePointer, _particlesCut.DevicePointer);
+            //__global__ void CutNeighbors(float* neighborMap, float2* positions, unsigned int offset, unsigned int neighborOffset, unsigned int neighbor)
+            for (int i = 0; i < NUM_ADJACENT_CELLS/2; ++i)
+            {
+                // Should the original pixel be offset?
+                int offset = (i == 3) ? 1 : 0;
 
+                // What number needs to be added to finde the reference pixel?
+                int neighborOffset = (i > 0) ? _width : 0;
+                switch(i)
+                {
+                    case 0:
+                    case 2:
+                        neighborOffset++; break;
+                    case 3:
+                        neighborOffset--; break;
+                    default: break;
+                }
+                _cutNeighbor.RunAsync(_streamCuts[i].Stream, _neighbors.DevicePointer, _particlesCut.DevicePointer, (uint) offset, (uint)neighborOffset, i);
+            }
+
+            StoreMeasure(measure, neighborID);
+        }
+
+        public void StoreMeasure(RedSea.DiffusionMeasure measure, uint neighborID = 0, CudaDirectXInteropResource storeTex = null, Int2 origin = null)
+        {
+            if (storeTex != null)
+                _cudaDxMapper.Add(storeTex);
+
+            _cudaDxMapper.MapAllResources();
+            CudaArray2D texture = _cudaDxMapper[storeTex == null? 0 : _cudaDxMapper.Count - 1].GetMappedArray2D(0, 0);
             // Get surface objects of the textures.
-            CudaSurfObject surfX = new CudaSurfObject(texX);
-            CudaSurfObject surfY = new CudaSurfObject(texY);
+            CudaSurfObject surf = new CudaSurfObject(texture);
 
-            //_context.Synchronize();
+            _context.Synchronize();
 
             //__global__ void CutStoreX/Y(cudaSurfaceObject_t grads, float* cuts)
-            _storeXY.RunAsync(_streamCutX.Stream, surfX.SurfObject, surfY.SurfObject, _gradientX.DevicePointer, _gradientY.DevicePointer);
-            //_storeY.RunAsync(_streamCutY.Stream, surfX.SurfObject, _gradientY.DevicePointer);
+            _scanStoreMeasure[(int)measure].RunAsync(_streamCuts[0].Stream, surf.SurfObject, _neighbors.DevicePointer, neighborID % NUM_ADJACENT_CELLS, (int2)(new Int2(0, 0)));// (int2)(origin ?? Int2.ZERO));
 
             _cudaDxMapper.UnmapAllResources();
+
+           // Remove the texture again.
+            _cudaDxMapper.Remove(storeTex);
         }
 
         protected void SetKernelSizes()
@@ -592,21 +608,18 @@ namespace FlowSharp
             _advectCut.GridDimensions = blocksCut;
             _advectCut.BlockDimensions = threadsCut;
 
-            _cutX.GridDimensions = blocksCut;
-            _cutX.BlockDimensions = threadsCut;
-
-            _cutY.GridDimensions = blocksCut;
-            _cutY.BlockDimensions = threadsCut;
+            _cutNeighbor.GridDimensions = blocksCut;
+            _cutNeighbor.BlockDimensions = threadsCut;
 
             // Copy one complete cell-map.
             dim3 blocksSeeds = new dim3((uint)Math.Ceiling((float)_width / BLOCK_SIZE), (uint)Math.Ceiling((float)_height / BLOCK_SIZE));
             dim3 threadsSeeds = new dim3(BLOCK_SIZE, BLOCK_SIZE, 1);
 
-            _storeXY.GridDimensions = blocksSeeds;
-            _storeXY.BlockDimensions = threadsSeeds;
-
-            //_storeY.GridDimensions = blocksSeeds;
-            //_storeY.BlockDimensions = threadsSeeds;
+            foreach(CudaKernel kernel in _scanStoreMeasure)
+            {
+                kernel.GridDimensions = blocksSeeds;
+                kernel.BlockDimensions = threadsSeeds;
+            }
         }
 
         protected void LoadNextField()
@@ -639,7 +652,7 @@ namespace FlowSharp
 
         public FieldPlane GetPlane(Plane plane)
         {
-            FieldPlane gradMap = new FieldPlane(plane, MapX, _velocity.Grid.Size.ToInt2(), 0, _velocity.InvalidValue ?? float.MaxValue, FieldPlane.RenderEffect.DEFAULT);
+            FieldPlane gradMap = new FieldPlane(plane, Map, _velocity.Grid.Size.ToInt2(), 0, _velocity.InvalidValue ?? float.MaxValue, FieldPlane.RenderEffect.DEFAULT);
             //gradMap.AddScalar(MapY);
             return gradMap;
         }
@@ -669,10 +682,16 @@ namespace FlowSharp
             
             _loadAdvectCut = new CudaKernel("LoadAdvectCut", module, _context);
             _advectCut = new CudaKernel("AdvectCut", module, _context);
-            _cutX = new CudaKernel("CutX", module, _context);
-            _cutY = new CudaKernel("CutY", module, _context);
-            _storeXY = new CudaKernel("StoreXY", module, _context);
-            //_storeY = new CudaKernel("StoreY", module, _context);
+            _cutNeighbor = new CudaKernel("CutNeighbors", module, _context);
+            _scanStoreMeasure = new CudaKernel[Enum.GetValues(typeof(RedSea.DiffusionMeasure)).Length];
+            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.DENSITY] = new CudaKernel("ScanStoreDensity", module, _context);
+            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.MIN] = new CudaKernel("ScanStoreMin", module, _context);
+            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.MAX] = new CudaKernel("ScanStoreMax", module, _context);
+            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.RANGE] = new CudaKernel("ScanStoreRange", module, _context);
+            foreach (RedSea.DiffusionMeasure measure in Enum.GetValues(typeof(RedSea.DiffusionMeasure)))
+            {
+                _scanStoreMeasure[(int)measure] = new CudaKernel("ScanStore" + measure.ToString(), module, _context);
+            }
         }
 
         public override void CompleteRange(Int2 selection)

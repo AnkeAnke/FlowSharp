@@ -112,6 +112,7 @@
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
     <Compile Include="Framework\Renderer\Data\Renderable.cs" />
     <Compile Include="Framework\Renderer\PathlineLengthMapper.cs" />
+    <Compile Include="Loader\LoaderRaw.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="WPFHost\Disposer.cs" />
     <Compile Include="WPFHost\DPFCanvas.cs" />

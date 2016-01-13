@@ -8,10 +8,15 @@ using System.Diagnostics;
 
 namespace FlowSharp
 {
+    abstract class Loader
+    {
+
+    }
+
     /// <summary>
     /// Class for loading and accessing data. Currently limited to NetCDF files of the Red Sea, can be exteded later. No error handling so far.
     /// </summary>
-    class Loader
+    class LoaderNCF : Loader
     {
         /// <summary>
         /// NetCDF file ID.
@@ -30,7 +35,7 @@ namespace FlowSharp
         /// Create a Loader object and open a NetCDF file.
         /// </summary>
         /// <param name="file">Path of the file.</param>
-        public Loader(string file)
+        public LoaderNCF(string file)
         {
             Debug.Assert(_numOpenFiles == 0, "Another NetCDF file is still open!");
             NetCDF.ResultCode result = NetCDF.nc_open(file, NetCDF.CreateMode.NC_NOWRITE, out _fileID);
@@ -231,7 +236,7 @@ namespace FlowSharp
             public int[] GetLengths() { return _dimLengths; }
             public RedSea.Variable GetVariable() { return _var; }
 
-            public SliceRange(Loader file, RedSea.Variable var)
+            public SliceRange(LoaderNCF file, RedSea.Variable var)
             {
                 _var = var;
 
@@ -343,17 +348,18 @@ namespace FlowSharp
             }
         }
 
-        public static VectorFieldUnsteady LoadTimeSeries(string path, string filename, SliceRange[] vars, int starttime, int timelength)
+        public delegate string FilenameFromIndex(int index);
+        public static VectorFieldUnsteady LoadTimeSeries(FilenameFromIndex func, SliceRange[] vars, int starttime, int timelength)
         {
             ScalarField[][] slices = new ScalarField[vars.Length][];
             for (int var = 0; var < vars.Length; ++var)
                 slices[var] = new ScalarField[timelength];
 
 
-            Loader ncFile;
+            LoaderNCF ncFile;
             for (int time = starttime; time < starttime + timelength; ++time)
             {
-                ncFile = new Loader(path + (time + 1) + filename);
+                ncFile = new LoaderNCF(func(time));// path + (time + 1) + filename);
                 for(int var = 0; var < vars.Length; ++var)
                 {
                     slices[var][time] = ncFile.LoadFieldSlice(vars[var]);

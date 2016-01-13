@@ -394,6 +394,10 @@ namespace FlowSharp
         public int X { get { return _data[0]; } }
         public int Y { get { return _data[1]; } }
         public override int Length { get { return 2; } }
+        public static Int2 ZERO
+        {
+            get; private set;
+        } = new Int2(0, 0);
 
         public Int2() : base(0, 2)
         { }

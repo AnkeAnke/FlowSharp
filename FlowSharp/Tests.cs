@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace FlowSharp
 {
@@ -107,6 +109,23 @@ namespace FlowSharp
             }
 
             return new VectorFieldUnsteady(new ScalarFieldUnsteady[] { new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY) });
+        }
+
+        public static void CopyBeginningOfFile(string dir, int numChars)
+        {
+            using (FileStream fs = File.Open(dir, FileMode.Open))
+            {
+                using (BinaryReader reader = new BinaryReader(fs))
+                {
+                    // Read in all floats.
+                    Debug.Assert(reader.BaseStream.Length >= numChars);
+                    byte[] data = reader.ReadBytes(numChars);
+                    using(FileStream outStream = new FileStream(dir + "_header", FileMode.OpenOrCreate))
+                    {
+                        outStream.Write(data, 0, numChars);
+                    }
+                }
+            }
         }
 
     }
