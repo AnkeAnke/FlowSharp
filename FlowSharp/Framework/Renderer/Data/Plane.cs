@@ -84,7 +84,10 @@ namespace FlowSharp
         protected VectorField _field;
         protected int _width, _height;
         protected float _invalid;
-        public FieldPlane.RenderEffect Effect;
+        public FieldPlane.RenderEffect Effect
+        {
+            get; protected set;
+        }
 
 
 

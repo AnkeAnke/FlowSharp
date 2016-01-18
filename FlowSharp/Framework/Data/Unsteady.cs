@@ -10,9 +10,10 @@ namespace FlowSharp
 {
     class VectorFieldUnsteady : VectorField
     {
-        private ScalarFieldUnsteady[] _scalars;
-        public override Field[] Scalars { get { return _scalars; } }
-        public ScalarFieldUnsteady[] ScalarsAsSFU { get { return _scalars; } }
+        private ScalarFieldUnsteady[] _scalarsUnsteady;
+        public override Field[] Scalars { get { return _scalarsUnsteady; } }
+        public ScalarFieldUnsteady[] ScalarsAsSFU { get { return _scalarsUnsteady; } }
+
         /// <summary>
         /// Number of dimensions per vector. Including one time dimension.
         /// </summary>
@@ -20,7 +21,7 @@ namespace FlowSharp
 
         public VectorFieldUnsteady(ScalarFieldUnsteady[] fields) : base()
         {
-            _scalars = fields;
+            _scalarsUnsteady = fields;
         }
 
         public virtual void ScaleToGrid(Vector scale)
@@ -28,10 +29,15 @@ namespace FlowSharp
             Debug.Assert(Scalars.Length == scale.Length);
             for (int dim = 0; dim < Scalars.Length; ++dim)
             {
-                ScalarFieldUnsteady field = _scalars[dim];
+                ScalarFieldUnsteady field = _scalarsUnsteady[dim];
                 field.ScaleToGrid(scale[dim]);
             }
             SpreadInvalidValue();
+        }
+
+        public override bool IsValid(Vector pos)
+        {
+            return Scalars[0].IsValid(pos);
         }
 
         /// <summary>
@@ -41,7 +47,7 @@ namespace FlowSharp
         {
             Debug.Assert(index >= 0 && index < Size.Product(), "Index out of bounds: " + index + " not within [0, " + Size.Product() + ").");
             Vector vec = new Vector(NumVectorDimensions);
-            for (int dim = 0; dim < _scalars.Length; ++dim)
+            for (int dim = 0; dim < _scalarsUnsteady.Length; ++dim)
                 vec[dim] = Scalars[dim][index];
 
             // Unsteady!
@@ -84,7 +90,7 @@ namespace FlowSharp
             ScalarField[] slices = new ScalarField[Scalars.Length];
             for (int scalar = 0; scalar < Scalars.Length; ++scalar)
             {
-                slices[scalar] = _scalars[scalar].GetTimeSlice(slice);
+                slices[scalar] = _scalarsUnsteady[scalar].GetTimeSlice(slice);
             }
 
             return new VectorField(slices);
@@ -95,8 +101,8 @@ namespace FlowSharp
         public VectorFieldUnsteady(VectorFieldUnsteady field, VFJFunction function, int outputDim)
         {
             int scalars = outputDim;
-            FieldGrid gridCopy = field._scalars[0].TimeSlices[0].Grid.Copy();
-            _scalars = new ScalarFieldUnsteady[outputDim];
+            FieldGrid gridCopy = field._scalarsUnsteady[0].TimeSlices[0].Grid.Copy();
+            _scalarsUnsteady = new ScalarFieldUnsteady[outputDim];
 
             // Reserve the space.
             for (int comp = 0; comp < outputDim; ++comp)
@@ -106,8 +112,8 @@ namespace FlowSharp
                 for (int t = 0; t < field.Size.T; ++t)
                     fields[t] = new ScalarField(gridCopy);
 
-                _scalars[comp] = new ScalarFieldUnsteady(fields);
-                _scalars[comp].InvalidValue = field.InvalidValue;
+                _scalarsUnsteady[comp] = new ScalarFieldUnsteady(fields);
+                _scalarsUnsteady[comp].InvalidValue = field.InvalidValue;
             }
             this.InvalidValue = field.InvalidValue;
 
@@ -120,7 +126,7 @@ namespace FlowSharp
                 if (v[0] == InvalidValue)
                 {
                     for (int dim = 0; dim < Scalars.Length; ++dim)
-                        _scalars[dim][(int)index] = (float)InvalidValue;
+                        _scalarsUnsteady[dim][(int)index] = (float)InvalidValue;
                     continue;
                 }
 
@@ -156,18 +162,17 @@ namespace FlowSharp
         public ScalarField GetTimeSlice(int slice) { return _slices[slice]; }
         private FieldGrid _sliceGrid;
         protected bool _operationsAllowed = false;
-        //public override float? TimeSlice
-        //{
-        //    get
-        //    {
-        //        return Grid.TimeOrigin;
-        //    }
 
-        //    set
-        //    {
-        //        Grid.TimeOrigin = value;
-        //    }
-        //}
+        public override bool IsValid(Vector pos)
+        {
+            float[] weights;
+            int[] neighbors = _slices[0].Grid.FindAdjacentIndices(pos, out weights);
+            foreach (int neighbor in neighbors)
+                if (this[neighbor] == InvalidValue)
+                    return false;
+            return true;
+        }
+
         public override float this[int index]
         {
             get
@@ -203,7 +208,7 @@ namespace FlowSharp
             for (int time = 0; time < _slices.Length; ++time)
                 for (int index = 0; index < Size.Product() / Size.T; ++index)
                     if(_slices[time][index] != InvalidValue)
-                        _slices[time][index] /= dimwiseScale;
+                        _slices[time][index] *= dimwiseScale;
             _operationsAllowed = true;
         }
 

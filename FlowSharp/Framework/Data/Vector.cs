@@ -39,6 +39,14 @@ namespace FlowSharp
         {
             return !(a == b);
         }
+        public Sign(Sign a)
+        {
+            Value = (int)a;
+        }
+        public static implicit operator bool(Sign a)
+        {
+            return (int)a > 0;
+        }
     }
     class Vector
     {
@@ -361,6 +369,11 @@ namespace FlowSharp
         public static explicit operator Vec3(Vec2 vec)
         {
             return new Vec3(vec, 0);
+        }
+
+        public static explicit operator Vec2(Vector2 vec)  // explicit byte to digit conversion operator
+        {
+            return new Vec2(vec.X, vec.Y);
         }
     }
 

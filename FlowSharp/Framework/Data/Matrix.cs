@@ -155,6 +155,14 @@ namespace FlowSharp
             }
         }
 
+        public Vector EigenvaluesReal()
+        {
+            SquareMatrix vals, vecs;
+            Eigenanalysis(out vals, out vecs);
+
+            return vals[0];
+        }
+
         public SquareMatrix ToMat2x2()
         {
             SquareMatrix mat = new SquareMatrix(2);

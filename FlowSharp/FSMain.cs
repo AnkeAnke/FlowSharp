@@ -157,7 +157,7 @@ namespace FlowSharp
 
             if (loadData)
             {
-                velocity = LoaderNCF.LoadTimeSeries(new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 10);
+                velocity = LoaderNCF.LoadTimeSeries(new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 42);
                 // Scale the field from m/s to (0.1 degree per 3 days).
                 velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
             }
@@ -211,6 +211,8 @@ namespace FlowSharp
             mapperLocalDiffusion = new LocalDiffusionMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.LOCAL_DIFFUSION_MAP, mapperLocalDiffusion);
 
+            DataMapper pathlines = new PathlineRadius(velocity, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_RADIUS, pathlines);
             //SubstepViewer substep = new SubstepViewer(redSea);
             //RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
 

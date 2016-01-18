@@ -112,12 +112,15 @@ namespace FlowSharp
             //_t0Y.CopyFromHostToThis<float>(t0Y.Data);
             //new CudaTextureArray2D(_advectParticlesKernel, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
 
+            float[] paddedArray = new float[_t1X.Width * _t1X.Height];
+            Array.Copy(t1X.Data, paddedArray, t1X.Data.Length);
             // vX, t=1
-            _t1X.CopyFromHostToThis<float>(t1X.Data);
+            _t1X.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
-            _t1Y.CopyFromHostToThis<float>(t1Y.Data);
+            Array.Copy(t1Y.Data, paddedArray, t1Y.Data.Length);
+            _t1Y.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
 
             // ~~~~~~~~~~~~~ Create texture ~~~~~~~~~~~~~~~~~~~~ \\
@@ -216,14 +219,15 @@ namespace FlowSharp
             // All members are above each other.
             int vHeight = _height * _numMembers;
 
+            float[] paddedArray = new float[_t1X.Width * _t1X.Height];
+            Array.Copy(t1X.Data, paddedArray, t1X.Data.Length);
             // vX, t=1
-            //_t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
-            _t1X.CopyFromHostToThis(t1X.Data);
+            _t1X.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
+            Array.Copy(t1Y.Data, paddedArray, t1Y.Data.Length);
             // vY, t=1
-            //_t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
-            _t1Y.CopyFromHostToThis(t1Y.Data);
+            _t1Y.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
         }
 

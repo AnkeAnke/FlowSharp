@@ -412,9 +412,9 @@ namespace FlowSharp
 
 
             LoaderNCF ncFile;
-            for (int time = starttime; time < starttime + timelength; ++time)
+            for (int time = 0; time < timelength; ++time)
             {
-                ncFile = RedSea.Singleton.GetLoaderNCF(time);// path + (time + 1) + filename);
+                ncFile = RedSea.Singleton.GetLoaderNCF(time + starttime);// path + (time + 1) + filename);
                 for(int var = 0; var < vars.Length; ++var)
                 {
                     slices[var][time] = ncFile.LoadFieldSlice(vars[var]);

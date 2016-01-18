@@ -122,7 +122,7 @@ namespace FlowSharp
 
                 lengths[0] = new VectorField(Velocity.GetTimeSlice(0), FieldAnalysis.VFLength, 1, false).Scalars[0] as ScalarField;
                 _minLength[0] = 0;
-                _maxLength[0] = 10;
+                _maxLength[0] = RedSea.Singleton.NumTimeSlices;
                 _pathLengths = new ScalarFieldUnsteady(lengths);
                 mapLines = true;
             }
@@ -205,6 +205,8 @@ namespace FlowSharp
                 case RedSea.DisplayTracking.LINE_SELECTION:
                     VectorField.StreamLine<Vector3> line = intVF.IntegrateLineForRendering(new Vec3(_startPoint.X, _startPoint.Y, 0));
                     LineSet set = new LineSet(new Line[] { new Line() { Positions = line.Points.ToArray() } });
+                    if(_currentSetting.Flat)
+                        set.FlattenLines(_currentSetting.SliceTimeMain);
                     result.Add(new LineBall(Plane, set));
                     break;
                 default:

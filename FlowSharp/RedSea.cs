@@ -23,7 +23,7 @@ namespace FlowSharp
         public int NumSteps = 160;
         public int NumSubsteps = 108;
 
-        public float DomainScale = 2.593f / 15;
+        public float DomainScale = 4.63f; //2.593f / 15;
         public float TimeScale { get { return 1.0f/DomainScale; } }
         /// <summary>
         /// Relevant variables of Read Sea file.
@@ -84,14 +84,15 @@ namespace FlowSharp
         {
             NONE,
             MEMBER_COMPARISON,
-            SUBSTEP_VIEWER,
+            //SUBSTEP_VIEWER,
             CP_TRACKING,
             PATHLINE_CORES,            
             OKUBO_WEISS,
             FLOW_MAP_UNCERTAIN,
             PATHLINE_LENGTH,
             CUT_DIFFUSION_MAP,
-            LOCAL_DIFFUSION_MAP
+            LOCAL_DIFFUSION_MAP,
+            PATHLINE_RADIUS
         }
 
         public enum DisplayLines : int
@@ -126,7 +127,8 @@ namespace FlowSharp
             Max,
             Range,
             Direction,
-            Neighbor
+            Neighbor,
+            FTLE
         }
 
         public MainWindow WPFWindow { get; set; }

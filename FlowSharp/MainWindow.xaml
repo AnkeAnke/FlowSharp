@@ -80,6 +80,7 @@
             <TextBox x:Name="EndY" HorizontalAlignment="Left" Height="22" TextWrapping="Wrap" Text="1" VerticalAlignment="Top" Width="42" TextChanged="OnChangeMatrix"/>
             <TextBox x:Name="DimY" HorizontalAlignment="Left" Height="22" TextWrapping="Wrap" Text="2" VerticalAlignment="Top" Width="42" TextChanged="OnChangeMatrix"/>
         </WrapPanel>
+        <CheckBox x:Name="DisplayFlat" Content="Flatten" HorizontalAlignment="Right" Margin="0,110,85,0" VerticalAlignment="Top" Checked="OnCheckFlat" Unchecked="OnCheckFlat"/>
 
     </Grid>
 </Window>

@@ -83,5 +83,12 @@ namespace FlowSharp
             }
             return new PointSet<EndPoint>(points.ToArray());
         }
+
+        public void FlattenLines(float level = 0)
+        {
+            foreach (Line line in Lines)
+                for (int p = 0; p < line.Positions.Length; ++p)
+                    line.Positions[p].Z = level;
+        }
     }
 }

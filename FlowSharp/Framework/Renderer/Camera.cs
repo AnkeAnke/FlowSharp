@@ -74,6 +74,8 @@ namespace FlowSharp
             mouse.Acquire();
             lastMouseX = Cursor.Position.X;
             lastMouseY = Cursor.Position.Y;
+
+            ResetCamera();
         }
 
         /// <summary>
@@ -218,7 +220,7 @@ namespace FlowSharp
             lastMouseY = 0;
 
             viewDirection = new Vector3(0, 0, 1);
-            position = new Vector3(0, 0, -20);
+            position = new Vector3(0, 7, -18);
         }
 
         public Vector2[] IntersectPlane(Plane plane)

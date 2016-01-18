@@ -61,6 +61,16 @@ namespace FlowSharp
         }
 
         public abstract bool IsUnsteady();
+
+        public virtual bool IsValid(Vector pos)
+        {
+            float[] weights;
+            int[] neighbors = this.Grid.FindAdjacentIndices(pos, out weights);
+            foreach (int neighbor in neighbors)
+                if (this[neighbor] == InvalidValue)
+                    return false;
+            return true;
+        }
     }
     /// <summary>
     /// Class for N dimensional float fields.

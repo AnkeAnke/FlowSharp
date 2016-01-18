@@ -130,6 +130,7 @@ namespace FlowSharp
             RefreshPlane();
         }
     }
+
     class DiffusionMapper : SelectionMapper
     {
         private FieldPlane[] _dataMap;
@@ -312,12 +313,14 @@ namespace FlowSharp
         private FieldPlane[] _dataMap;
         private Plane _scaledPlane;
         private LocalDiffusion _diffusionMap;
+//        private FTLE _ftleMap;
         private VectorFieldUnsteady _velocity;
 
         public LocalDiffusionMapper(VectorFieldUnsteady velocity, Plane plane) : base(plane, velocity.Size.ToInt2())
         {
             _diffusionMap = new LocalDiffusion(velocity, 0, 0.3f);
             _algorithm = _diffusionMap;
+ //           _ftleMap = new FTLE(velocity, 0, 0.3f);
             Plane = plane;
             _subrangePlane = Plane;
             Mapping = GetCurrentMap;
@@ -335,20 +338,28 @@ namespace FlowSharp
                 _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
                 _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
                 _currentSetting.StepSize != _lastSetting.StepSize ||
-                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime)
+                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime ||
+                (_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE || _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE) && _currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure)
             {
-                _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime);
+                //if(_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE)
+                //    _ftleMap.SetupMap(_currentSetting.SliceTimeMain, _currentSetting.IntegrationTime);
+                //else
+                    _diffusionMap.SetupMap(_currentSetting.SliceTimeMain, _currentSetting.IntegrationTime);
 
                 // Integrate to the desired time step.
+                float variance = _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE ? 0 : _currentSetting.AlphaStable;
                 if (_diffusionMap.CurrentTime < _diffusionMap.EndTime)
-                    _diffusionMap.Advect(_currentSetting.StepSize, _currentSetting.AlphaStable, _currentSetting.DiffusionMeasure, (uint)_currentSetting.LineX);
+                    _diffusionMap.Advect(_currentSetting.StepSize, variance, _currentSetting.DiffusionMeasure, (uint)_currentSetting.LineX);
 
                 RefreshPlane();
             }
             else if (_currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure ||
                      _currentSetting.LineX != _lastSetting.LineX)
             {
-                _diffusionMap.StoreMeasure(_currentSetting.DiffusionMeasure, (uint)_currentSetting.LineX);
+                //if (_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE)
+                //    _ftleMap.StoreMeasure();
+                //else
+                    _diffusionMap.StoreMeasure(_currentSetting.DiffusionMeasure, (uint)_currentSetting.LineX);
             }
 
             if (_lastSetting == null ||
@@ -380,6 +391,14 @@ namespace FlowSharp
             switch (_currentSetting.Shader)
             {
                 case FieldPlane.RenderEffect.LIC:
+                    {
+                        var tmp = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
+                        tmp.TimeSlice = null;
+                        _dataMap[0] = new FieldPlane(_subrangePlane, tmp, _currentSetting.Shader, _currentSetting.Colormap);
+                        _dataMap[0].AddScalar(_diffusionMap.Map);
+                        RefreshBoundsPlanes();
+                        break;
+                    }
                 case FieldPlane.RenderEffect.LIC_LENGTH:
                     {
                         _dataMap = new FieldPlane[2];
@@ -409,8 +428,8 @@ namespace FlowSharp
         {
             foreach (FieldPlane plane in _dataMap)
             {
-                plane.LowerBound = 0;
-                plane.UpperBound = _currentSetting.WindowWidth;
+                plane.LowerBound = _currentSetting.WindowStart;
+                plane.UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
             }
         }
 
@@ -420,6 +439,7 @@ namespace FlowSharp
             {
                 case Setting.Element.Colormap:
                 case Setting.Element.WindowWidth:
+                case Setting.Element.WindowStart:
                 //return _currentSetting.Shader == FieldPlane.RenderEffect.COLORMAP || _currentSetting.Shader == FieldPlane.RenderEffect.DEFAULT;
                 case Setting.Element.SliceTimeMain:
                 case Setting.Element.Shader:

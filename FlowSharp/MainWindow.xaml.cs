@@ -79,6 +79,7 @@ namespace FlowSharp
             DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
 
             StepSizeSlider.Value = 1;
+            StepSizeSlider.Minimum = 0.000001;
             AlphaSlider.Value = 0;
 
             DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
@@ -142,6 +143,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.EndY] = MatrixBox;
             _windowObjects[(int)DataMapper.Setting.Element.DimX] = MatrixBox;
             _windowObjects[(int)DataMapper.Setting.Element.DimY] = MatrixBox;
+            _windowObjects[(int)DataMapper.Setting.Element.Flat] = DisplayFlat;
 
             Renderer.Singleton.SetCanvas(DX11Display);
         }
@@ -270,7 +272,7 @@ namespace FlowSharp
         private void OnChangeStepSize(object sender, RoutedEventArgs e)
         {
             var slider = sender as Slider;
-            _mapper.CurrentSetting.StepSize = (float)(slider.Value as double?);
+            _mapper.CurrentSetting.StepSize = (float)Math.Max(0.000000001f, (float)(slider.Value as double?));
             UpdateRenderer();
         }
         private void OnChangeIntegrationTime(object sender, RoutedEventArgs e)
@@ -327,6 +329,14 @@ namespace FlowSharp
             UpdateRenderer();
         }
 
+        private void OnCheckFlat(object sender, RoutedEventArgs e)
+        {
+            CheckBox box = (sender as CheckBox);
+            _mapper.CurrentSetting.Flat = box.IsChecked ?? true ? Sign.POSITIVE : Sign.NEGATIVE;
+            UpdateRenderer();
+        }
+
+
         private void StartX_TextChanged(object sender, TextChangedEventArgs e)
         {
 
@@ -364,10 +374,11 @@ namespace FlowSharp
                     bool elementActive = _mapper.IsUsed(element);
                     _windowObjects[(int)element].Visibility = elementActive ? Visibility.Visible : Visibility.Hidden;
 
-                    TextBlock[] text = (_windowObjects[(int)element] as Panel)?.Children.OfType<TextBlock>().ToArray();
+                    TextBlock[] text = (_windowObjects[(int)element] as Panel)?.Children.OfType<TextBlock>().ToArray() ;
                     if (text != null && text.Length > 0)
                         text[0].Text = _mapper.GetName(element);
-
+                    else if(_windowObjects[(int)element] as CheckBox != null)
+                        (_windowObjects[(int)element] as CheckBox).Content = _mapper.GetName(element);
 
                     _mapperChanged = false;
                 }

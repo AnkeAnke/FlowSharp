@@ -67,7 +67,7 @@ namespace FlowSharp
             [FieldOffset(12)]
             public float AlphaStable;
             [FieldOffset(16)]
-            public float StepSize;
+            public float StepSize = 1;
             public VectorField.Integrator.Type IntegrationType
             {
                 get { return (VectorField.Integrator.Type)this[Element.IntegrationType]; }
@@ -140,6 +140,8 @@ namespace FlowSharp
             [FieldOffset(96)]
             public int DimY;
 
+            [FieldOffset(100)]
+            public Sign Flat;
             // The real data.
             [FieldOffset(0)]
             private int[] _data = new int[Enum.GetValues(typeof(Element)).Length];
@@ -177,7 +179,8 @@ namespace FlowSharp
                 EndX,
                 EndY,
                 DimX,
-                DimY
+                DimY,
+                Flat
             }
 
             public Setting(Setting cpy)
@@ -210,6 +213,7 @@ namespace FlowSharp
                 EndY = cpy.EndY;
                 DimX = cpy.DimX;
                 DimY = cpy.DimY;
+                Flat = cpy.Flat;
             }
 
             public Setting() { }
@@ -285,6 +289,8 @@ namespace FlowSharp
                     return "Colormap Window Width";
                 case Setting.Element.WindowStart:
                     return "Colormap Window Start";
+                case Setting.Element.Flat:
+                    return "Flatten";
                 default:
                     return "I am a severely ignored Text Field :{";
             }
@@ -1029,6 +1035,126 @@ namespace FlowSharp
     //    }
     //}
 
+    /// <summary>
+    /// Integrate a number of pathlines from selected point on.
+    /// </summary>
+    class PathlineRadius : DataMapper
+    {
+        private VectorFieldUnsteady _velocity;
+        //private Plane _plane;
+        private Vector2 _selection;
+
+        private LineBall _pathlines;
+        private FieldPlane _timeSlice;
+
+        private bool _selectionChanged = false;
+        public PathlineRadius(VectorFieldUnsteady velocity, Plane plane)// : base(plane, velocity.Size.ToInt2())
+        {
+            _velocity = velocity;
+            Plane = plane;
+            _intersectionPlane = new Plane(Plane, (velocity.TimeSlice??0) * Plane.ZAxis);
+
+            Mapping = AdvectLines;
+        }
+
+        public override void ClickSelection(Vector2 pos)
+        {
+            _selection = pos;
+            _selectionChanged = true;
+        }
+
+        public List<Renderable> AdvectLines()
+        {
+            List<Renderable> renderables = new List<Renderable>(3);
+            int numLines = _currentSetting.LineX;
+
+            // Update / create underlying plane.
+            if (_lastSetting == null ||
+                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+            {
+                _timeSlice = new FieldPlane(Plane, _velocity.GetTimeSlice(_currentSetting.SliceTimeMain), _currentSetting.Shader, _currentSetting.Colormap);
+                _intersectionPlane = new Plane(_intersectionPlane, new Vector3(0, 0, _currentSetting.SliceTimeMain - (_lastSetting?.SliceTimeMain)??0));
+            }
+            else if(_currentSetting.Colormap != _lastSetting.Colormap ||
+                _currentSetting.Shader != _lastSetting.Shader)
+            {
+                _timeSlice.SetRenderEffect(_currentSetting.Shader);
+                _timeSlice.UsedMap = _currentSetting.Colormap;
+            }
+            // First item in list: plane.
+            renderables.Add(_timeSlice);
+
+
+            // Add Point to indicate clicked position.
+            renderables.Add(new PointCloud(Plane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, 0) + Plane.ZAxis * (_currentSetting.SliceTimeMain + _velocity.Grid.TimeOrigin??0), Color = new Vector3(1, 0, 1), Radius = 0.5f } })));
+
+            // Recompute lines if necessary.
+            if (_lastSetting == null ||
+                _currentSetting.LineX != _lastSetting.LineX ||
+                _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
+                _currentSetting.StepSize != _lastSetting.StepSize ||
+                _selectionChanged)
+            {
+                if (_velocity.IsValid((Vec2)_selection))
+                {
+                    // Compute starting positions.
+                    Point[] circle = new Point[numLines];
+                    float offset = _currentSetting.AlphaStable;
+                    float angleDiff = 2 * (float)(Math.PI / numLines);
+                    for (int dir = 0; dir < numLines; ++dir)
+                    {
+                        float x = (float)(Math.Sin(angleDiff * dir));
+                        float y = (float)(Math.Cos(angleDiff * dir));
+                        circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offset, _selection.Y + y * offset, _currentSetting.SliceTimeMain) };
+                    }
+
+                    VectorField.Integrator integrator = VectorField.Integrator.CreateIntegrator(_velocity, _currentSetting.IntegrationType);
+                    integrator.StepSize = _currentSetting.StepSize;
+                    bool pos = _velocity.SampleDerivative(new Vec3((Vec2)_selection, _currentSetting.SliceTimeMain)).EigenvaluesReal()[0] > 0;
+                    integrator.Direction = pos ? Sign.POSITIVE : Sign.NEGATIVE;
+
+                    LineSet lines = integrator.Integrate<Point>(new PointSet<Point>(circle), false);
+                    lines.FlattenLines(_currentSetting.SliceTimeMain);
+                    _pathlines = new LineBall(Plane, lines);
+                }
+                _selectionChanged = false;  
+            }
+            // Add the lineball.
+            if(_pathlines!= null)
+                renderables.Add(_pathlines);
+            return renderables;
+        }
+
+        public override bool IsUsed(Setting.Element element)
+        {
+            switch(element)
+            {
+                case Setting.Element.DiffusionMeasure:
+                case Setting.Element.IntegrationTime:
+                case Setting.Element.Measure:
+                case Setting.Element.MemberReference:
+                case Setting.Element.SliceHeight:
+                case Setting.Element.SliceTimeReference:
+                case Setting.Element.Tracking:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        public override string GetName(Setting.Element element)
+        {
+            switch(element)
+            {
+                case Setting.Element.AlphaStable:
+                    return "Offset Start Point";
+                case Setting.Element.LineX:
+                    return "Number of Lines";
+                default:
+                    return base.GetName(element);
+            }
+        }
+    }
     abstract class SelectionMapper : DataMapper
     {
         protected AlgorithmCuda _algorithm;
@@ -1096,7 +1222,7 @@ namespace FlowSharp
 
         public override void ClickSelection(Vector2 point)
         {
-            Int2 selection = (Int2)point - _minPlane; ;
+            Int2 selection = (Int2)point - _minPlane;
             if (selection.IsPositive() && selection < _maxPlane)
                 _startPoint = selection;
         }

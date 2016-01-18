@@ -27,12 +27,20 @@ namespace FlowSharp
         /// </summary>
         public virtual int NumVectorDimensions { get { return Scalars.Length; } }
 
-        public float? InvalidValue
+        public virtual float? InvalidValue
         {
             get { return Scalars[0].InvalidValue; }
             set { Scalars[0].InvalidValue = value; }
         }
-        public float? TimeSlice { get { return _scalars[0].TimeSlice; } set { _scalars[0].TimeSlice = value; } }
+        public virtual float? TimeSlice {
+            get { return Scalars[0].TimeSlice; }
+            set { Scalars[0].TimeSlice = value; }
+        }
+        public virtual bool IsValid(Vector pos)
+        {
+            return _scalars[0].IsValid(pos);
+        }
+
         /// <summary>
         /// Pun. TODO: Better.
         /// </summary>
