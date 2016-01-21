@@ -34,7 +34,7 @@
         </StackPanel>
         <StackPanel x:Name="LineXBlock" HorizontalAlignment="Right" Height="86" Margin="0,550,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="LineXText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Comparison Line Position X / Neighbor ID" VerticalAlignment="Top" Width="200" FontSize="10"/>
-            <Slider x:Name="LineSlider" Maximum="450" Minimum ="0" TickPlacement="BottomRight" TickFrequency="10" Height="45" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine"/>
+            <Slider x:Name="LineSlider" Maximum="10000" Minimum ="0" TickPlacement="BottomRight" TickFrequency="15" Height="45" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine"/>
             <TextBox Text="{Binding Value, ElementName=LineSlider, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
         <StackPanel x:Name="Member0Block" Height="43" Margin="0,143,10,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="128">
@@ -81,6 +81,7 @@
             <TextBox x:Name="DimY" HorizontalAlignment="Left" Height="22" TextWrapping="Wrap" Text="2" VerticalAlignment="Top" Width="42" TextChanged="OnChangeMatrix"/>
         </WrapPanel>
         <CheckBox x:Name="DisplayFlat" Content="Flatten" HorizontalAlignment="Right" Margin="0,110,85,0" VerticalAlignment="Top" Checked="OnCheckFlat" Unchecked="OnCheckFlat"/>
+        <CheckBox x:Name="ShowGraph" Content="Statistics" HorizontalAlignment="Right" Margin="0,110,18,0" VerticalAlignment="Top" Checked="OnCheckGraph" Unchecked="OnCheckGraph"/>
 
     </Grid>
 </Window>

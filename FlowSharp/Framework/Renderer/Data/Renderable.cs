@@ -116,9 +116,9 @@ namespace FlowSharp
         {
             if (UsedMap == null)
                 return;
-            _effect.GetVariableByName("colormap").AsResource().SetResource(ColorMapping.GetColormapTexture((Colormap)UsedMap));
-            _effect.GetVariableByName("minMap").AsScalar().Set(LowerBound);
-            _effect.GetVariableByName("maxMap").AsScalar().Set(UpperBound);
+            _effect.GetVariableByName("colormap")?.AsResource().SetResource(ColorMapping.GetColormapTexture((Colormap)UsedMap));
+            _effect.GetVariableByName("minMap")?.AsScalar().Set(LowerBound);
+            _effect.GetVariableByName("maxMap")?.AsScalar().Set(UpperBound);
         }
 
         public override void Render(Device device)

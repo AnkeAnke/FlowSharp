@@ -371,7 +371,7 @@ namespace FlowSharp
     {
         protected static int NUM_ADJACENT_CELLS = 8;
         public static int BLOCK_SIZE { get; } = 15;
-        public static int NUM_PARTICLES = 1;
+        public static int NUM_PARTICLES = 512;
 
         protected VectorFieldUnsteady _velocity;
         protected int _width { get { return _velocity.Size[0]; } }

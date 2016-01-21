@@ -144,6 +144,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.DimX] = MatrixBox;
             _windowObjects[(int)DataMapper.Setting.Element.DimY] = MatrixBox;
             _windowObjects[(int)DataMapper.Setting.Element.Flat] = DisplayFlat;
+            _windowObjects[(int)DataMapper.Setting.Element.Graph] = ShowGraph;
 
             Renderer.Singleton.SetCanvas(DX11Display);
         }
@@ -333,6 +334,13 @@ namespace FlowSharp
         {
             CheckBox box = (sender as CheckBox);
             _mapper.CurrentSetting.Flat = box.IsChecked ?? true ? Sign.POSITIVE : Sign.NEGATIVE;
+            UpdateRenderer();
+        }
+
+        private void OnCheckGraph(object sender, RoutedEventArgs e)
+        {
+            CheckBox box = (sender as CheckBox);
+            _mapper.CurrentSetting.Graph = box.IsChecked ?? true ? Sign.POSITIVE : Sign.NEGATIVE;
             UpdateRenderer();
         }
 

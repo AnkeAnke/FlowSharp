@@ -88,7 +88,7 @@ namespace FlowSharp
                     _maxLength[time] = float.MinValue;
 
                     // Integrate last points until next time slice.
-                    _pathlineSegments[time-1] = intVF.Integrate(_intersectTimeSlices[time - 1], false, time);
+                    _pathlineSegments[time-1] = intVF.Integrate(_intersectTimeSlices[time - 1], false, time)[0];
                     _pathlineSegments[time - 1].Color = Vector3.UnitZ * (float)time / timeLength;
 
                     //                    if(time == timeLength - 1)

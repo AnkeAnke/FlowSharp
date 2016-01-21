@@ -103,6 +103,7 @@ namespace FlowSharp
         Red,
         Gray,
         Heatstep,
-        Circular
+        Circular,
+        ParulaIso
     }
 }

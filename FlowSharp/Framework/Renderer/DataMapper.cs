@@ -141,11 +141,14 @@ namespace FlowSharp
             public int DimY;
 
             [FieldOffset(100)]
-            public Sign Flat;
+            public Sign Flat = Sign.NEGATIVE;
+            [FieldOffset(104)]
+            public Sign Graph = Sign.NEGATIVE;
             // The real data.
             [FieldOffset(0)]
             private int[] _data = new int[Enum.GetValues(typeof(Element)).Length];
             public int[] Data { get { return _data; } }
+
             public int this[Element idx]
             {
                 get { return _data[(int)idx]; }
@@ -180,7 +183,8 @@ namespace FlowSharp
                 EndY,
                 DimX,
                 DimY,
-                Flat
+                Flat,
+                Graph
             }
 
             public Setting(Setting cpy)
@@ -214,6 +218,7 @@ namespace FlowSharp
                 DimX = cpy.DimX;
                 DimY = cpy.DimY;
                 Flat = cpy.Flat;
+                Graph = cpy.Graph;
             }
 
             public Setting() { }
@@ -291,14 +296,16 @@ namespace FlowSharp
                     return "Colormap Window Start";
                 case Setting.Element.Flat:
                     return "Flatten";
+                case Setting.Element.Graph:
+                    return "Statistics";
                 default:
                     return "I am a severely ignored Text Field :{";
             }
         }
 
-        public virtual int? GetLength (Setting.Element element)
+        public virtual int? GetLength(Setting.Element element)
         {
-            switch(element)
+            switch (element)
             {
                 case Setting.Element.MemberMain:
                 case Setting.Element.MemberReference:
@@ -398,7 +405,7 @@ namespace FlowSharp
                 intVF.NormalizeField = true;
 
                 // Integrate the forward field.
-                LineSet cpLinesPos = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false);
+                LineSet cpLinesPos = intVF.Integrate(CP[_currentSetting.SliceTimeMain], false)[0];
 
                 // Negative FFF integration. Reversed stabilising field.
                 //intVF.Direction = Sign.NEGATIVE;
@@ -1044,7 +1051,8 @@ namespace FlowSharp
         //private Plane _plane;
         private Vector2 _selection;
 
-        private LineBall _pathlines;
+        private LineBall[] _pathlines;
+        private Renderable[] _graph;
         private FieldPlane _timeSlice;
 
         private bool _selectionChanged = false;
@@ -1052,7 +1060,7 @@ namespace FlowSharp
         {
             _velocity = velocity;
             Plane = plane;
-            _intersectionPlane = new Plane(Plane, (velocity.TimeSlice??0) * Plane.ZAxis);
+            _intersectionPlane = new Plane(Plane, (velocity.TimeSlice ?? 0) * Plane.ZAxis);
 
             Mapping = AdvectLines;
         }
@@ -1065,7 +1073,7 @@ namespace FlowSharp
 
         public List<Renderable> AdvectLines()
         {
-            List<Renderable> renderables = new List<Renderable>(3);
+            List<Renderable> renderables = new List<Renderable>(3 + _currentSetting.LineX);
             int numLines = _currentSetting.LineX;
 
             // Update / create underlying plane.
@@ -1073,9 +1081,9 @@ namespace FlowSharp
                 _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
             {
                 _timeSlice = new FieldPlane(Plane, _velocity.GetTimeSlice(_currentSetting.SliceTimeMain), _currentSetting.Shader, _currentSetting.Colormap);
-                _intersectionPlane = new Plane(_intersectionPlane, new Vector3(0, 0, _currentSetting.SliceTimeMain - (_lastSetting?.SliceTimeMain)??0));
+                _intersectionPlane = new Plane(_intersectionPlane, new Vector3(0, 0, _currentSetting.SliceTimeMain - (_lastSetting?.SliceTimeMain) ?? 0));
             }
-            else if(_currentSetting.Colormap != _lastSetting.Colormap ||
+            else if (_currentSetting.Colormap != _lastSetting.Colormap ||
                 _currentSetting.Shader != _lastSetting.Shader)
             {
                 _timeSlice.SetRenderEffect(_currentSetting.Shader);
@@ -1086,13 +1094,16 @@ namespace FlowSharp
 
 
             // Add Point to indicate clicked position.
-            renderables.Add(new PointCloud(Plane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, 0) + Plane.ZAxis * (_currentSetting.SliceTimeMain + _velocity.Grid.TimeOrigin??0), Color = new Vector3(1, 0, 1), Radius = 0.5f } })));
+            renderables.Add(new PointCloud(Plane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, _currentSetting.SliceTimeMain + _velocity.Grid.TimeOrigin ?? 0), Color = new Vector3(1, 0, 1), Radius = 0.5f } })));
+            bool rebuilt = false;
 
             // Recompute lines if necessary.
             if (_lastSetting == null ||
                 _currentSetting.LineX != _lastSetting.LineX ||
                 _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
                 _currentSetting.StepSize != _lastSetting.StepSize ||
+                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime ||
+                _currentSetting.Flat != _lastSetting.Flat ||
                 _selectionChanged)
             {
                 if (_velocity.IsValid((Vec2)_selection))
@@ -1103,34 +1114,96 @@ namespace FlowSharp
                     float angleDiff = 2 * (float)(Math.PI / numLines);
                     for (int dir = 0; dir < numLines; ++dir)
                     {
-                        float x = (float)(Math.Sin(angleDiff * dir));
-                        float y = (float)(Math.Cos(angleDiff * dir));
-                        circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offset, _selection.Y + y * offset, _currentSetting.SliceTimeMain) };
+                        float x = (float)(Math.Sin(angleDiff * dir + Math.PI / 2));
+                        float y = (float)(Math.Cos(angleDiff * dir + Math.PI / 2));
+                        circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offset, _selection.Y + y * offset, _currentSetting.SliceTimeMain + (_velocity.Grid.TimeOrigin ?? 0)) };
                     }
 
                     VectorField.Integrator integrator = VectorField.Integrator.CreateIntegrator(_velocity, _currentSetting.IntegrationType);
                     integrator.StepSize = _currentSetting.StepSize;
-                    bool pos = _velocity.SampleDerivative(new Vec3((Vec2)_selection, _currentSetting.SliceTimeMain)).EigenvaluesReal()[0] > 0;
-                    integrator.Direction = pos ? Sign.POSITIVE : Sign.NEGATIVE;
+                    //bool pos = _velocity.SampleDerivative(new Vec3((Vec2)_selection, _currentSetting.SliceTimeMain)).EigenvaluesReal()[0] > 0;
+                    //integrator.Direction = pos ? Sign.POSITIVE : Sign.NEGATIVE;
 
-                    LineSet lines = integrator.Integrate<Point>(new PointSet<Point>(circle), false);
-                    lines.FlattenLines(_currentSetting.SliceTimeMain);
-                    _pathlines = new LineBall(Plane, lines);
+                    LineSet[] lineSets = integrator.Integrate<Point>(new PointSet<Point>(circle), true); /*, _currentSetting.AlphaStable * 10);
+                    PointSet<EndPoint> ends = lineSets[0].GetEndPoints();
+                    lineSets[0] = integrator.Integrate(ends, false)[0];
+                    ends = lineSets[1].GetEndPoints();
+                    lineSets[1] = integrator.Integrate(ends, false)[0];*/
+
+                    // COmpute and show statistics.
+                    if (_currentSetting.Flat)
+                    {
+                        lineSets[0].FlattenLines(_currentSetting.SliceTimeMain);
+                        lineSets[1].FlattenLines(_currentSetting.SliceTimeMain);
+                        _graph = new Renderable[0];
+                        // Compute values (distance to start point).
+                        foreach (LineSet lines in lineSets)
+                        {
+                            Line[] starLines = new Line[lines.Lines.Length];
+
+                            int count = 0;
+                            float[] values = new float[lines.NumExistentPoints];
+
+                            for (int l = 0; l < lines.Lines.Length; ++l)
+                            {
+                                Line line = lines.Lines[l];
+                                // Outgoing direction.
+                                Vector3 start = line.Positions[0];
+                                Vector3 dir = line.Positions[0] - new Vector3(_selection, line.Positions[0].Z); ; dir.Normalize();
+
+                                // Scale such that step size does not scale.
+                                dir *= _currentSetting.StepSize / _velocity.Size.T * 40;
+
+                                // Write star coordinates here.
+                                Vector3[] starPos = new Vector3[line.Length];
+
+                                for (int p = 0; p < line.Length; ++p)
+                                {
+                                    values[count++] = new Vector2(line.Positions[p].X - _selection.X, line.Positions[p].Y - _selection.Y).Length();
+                                    starPos[p] = start + p * dir;
+                                }
+                                starLines[l] = new Line() { Positions = starPos };
+                            }
+                            var graph = FieldAnalysis.BuildGraph(Plane, new LineSet(starLines), values, _currentSetting.IntegrationTime, _currentSetting.LineSetting, _currentSetting.Colormap);
+                            _graph = graph.Concat(_graph).ToArray();
+                        }
+                    }
+                    else
+                        _graph = null;
+                    _pathlines = new LineBall[] { new LineBall(Plane, lineSets[0]), new LineBall(Plane, lineSets[1]) };
                 }
-                _selectionChanged = false;  
+                _selectionChanged = false;
+                rebuilt = true;
             }
+
+            if (_graph != null &&
+                _currentSetting.LineSetting == RedSea.DisplayLines.LINE &&(
+                _lastSetting == null || rebuilt ||
+                _currentSetting.WindowWidth != _lastSetting.WindowWidth ||
+                _currentSetting.WindowStart != _lastSetting.WindowStart ||
+                _currentSetting.Colormap != _lastSetting.Colormap))
+            {
+                foreach (Renderable ball in _graph)
+                {
+                    (ball as LineBall).LowerBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain;
+                    (ball as LineBall).UpperBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain + _currentSetting.WindowWidth;
+                    (ball as LineBall).UsedMap = _currentSetting.Colormap;
+                }
+            }
+
             // Add the lineball.
-            if(_pathlines!= null)
-                renderables.Add(_pathlines);
+            if (_pathlines != null)
+                renderables.AddRange(_pathlines);
+            if (_graph != null && _currentSetting.Graph)
+                renderables = renderables.Concat(_graph.ToList()).ToList();
             return renderables;
         }
 
         public override bool IsUsed(Setting.Element element)
         {
-            switch(element)
+            switch (element)
             {
                 case Setting.Element.DiffusionMeasure:
-                case Setting.Element.IntegrationTime:
                 case Setting.Element.Measure:
                 case Setting.Element.MemberReference:
                 case Setting.Element.SliceHeight:
@@ -1144,12 +1217,14 @@ namespace FlowSharp
 
         public override string GetName(Setting.Element element)
         {
-            switch(element)
+            switch (element)
             {
                 case Setting.Element.AlphaStable:
                     return "Offset Start Point";
                 case Setting.Element.LineX:
                     return "Number of Lines";
+                case Setting.Element.IntegrationTime:
+                    return "Height Scale Statistics";
                 default:
                     return base.GetName(element);
             }

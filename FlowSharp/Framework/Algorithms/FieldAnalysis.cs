@@ -563,5 +563,101 @@ namespace FlowSharp
             Debug.Assert(v.Length == 2); // If not, write other formula.
             return (Vector)(J.Vx + J.Uy);
         }
+
+        public static Renderable BuildGraph<P>(Plane basePlane, PointSet<P> positions, float[] values, float scaleUp, RedSea.DisplayLines lineSetting, Colormap colormap = Colormap.Parula) where P : Point
+        {
+            Debug.Assert(positions.Length == values.Length);
+            Renderable result;
+            switch (lineSetting)
+            {
+                case RedSea.DisplayLines.LINE:
+                    Vector3[] pos = new Vector3[values.Length];
+                    for (int p = 0; p < pos.Length; ++p)
+                    {
+                        pos[p] = positions.Points[p].Position + Vector3.UnitZ * values[p] * scaleUp;
+                    }
+                    LineSet lines = new LineSet(new Line[] { new Line() { Positions = pos } });
+                    result = new LineBall(basePlane, lines, LineBall.RenderEffect.HEIGHT, colormap);
+                    break;
+                default:
+                    Point[] point = new Point[positions.Length];
+                    for (int p = 0; p < positions.Length; ++p)
+                    {
+                        point[p] = new Point() { Position = positions.Points[p].Position + Vector3.UnitZ * values[p] * scaleUp, Color = new Vector3(values[p], values[p], values[p]) };
+                    }
+                    PointSet<Point> pointSet = new PointSet<Point>(point);
+                    result = new PointCloud(basePlane, pointSet);
+                    break;
+            }
+
+            return result;
+        }
+
+        public static Renderable BuildGraph(Plane basePlane, Vector3[] positions, float[] values, float scaleUp, RedSea.DisplayLines lineSetting, Colormap colormap = Colormap.Parula)
+        {
+            Debug.Assert(positions.Length == values.Length);
+            Renderable result;
+            switch (lineSetting)
+            {
+                case RedSea.DisplayLines.LINE:
+                    Vector3[] pos = new Vector3[values.Length];
+                    for (int p = 0; p < pos.Length; ++p)
+                    {
+                        pos[p] = positions[p] + Vector3.UnitZ * values[p] * scaleUp;
+                    }
+                    LineSet lines = new LineSet(new Line[] { new Line() { Positions = pos } });
+                    result = new LineBall(basePlane, lines, LineBall.RenderEffect.HEIGHT, colormap);
+                    break;
+                default:
+                    Point[] point = new Point[positions.Length];
+                    for (int p = 0; p < positions.Length; ++p)
+                    {
+                        point[p] = new Point() { Position = positions[p] + Vector3.UnitZ * values[p] * scaleUp, Color = new Vector3(values[p], values[p], values[p]) };
+                    }
+                    PointSet<Point> pointSet = new PointSet<Point>(point);
+                    result = new PointCloud(basePlane, pointSet);
+                    break;
+            }
+
+            return result;
+        }
+
+        public static List<Renderable> BuildGraph(Plane basePlane, LineSet positions, float[] values, float scaleUp, RedSea.DisplayLines lineSetting, Colormap colormap = Colormap.Parula)
+        {
+            Debug.Assert(positions.NumExistentPoints == values.Length);
+            List<Renderable> result = new List<Renderable>(positions.Lines.Length);
+
+
+            int count = 0;
+
+            switch (lineSetting)
+            {
+                case RedSea.DisplayLines.LINE:
+                    foreach(Line l in positions.Lines)
+                    {
+                        Vector3[] pos = new Vector3[l.Length];
+                        for (int p = 0; p < l.Length; ++p)
+                            pos[p] = l.Positions[p] + Vector3.UnitZ * values[count++] * scaleUp;
+
+                        LineSet lines = new LineSet(new Line[] { new Line() { Positions = pos } }) {Color = positions.Color};
+                        result.Add(new LineBall(basePlane, lines, LineBall.RenderEffect.HEIGHT, colormap));
+                    }
+                    
+                    break;
+                default:
+                    Point[] point = new Point[positions.NumExistentPoints];
+                    foreach (Line l in positions.Lines)
+                    {
+                        for (int p = 0; p < l.Length; ++p)
+                            point[count++] = new Point() { Position = l.Positions[p] + Vector3.UnitZ * values[p] * scaleUp, Color = new Vector3(values[p], values[p], values[p]) };
+                    }
+
+                    PointSet<Point> pointSet = new PointSet<Point>(point);
+                    result.Add(new PointCloud(basePlane, pointSet));
+                    break;
+            }
+
+            return result;
+        }
     }
 }

@@ -401,11 +401,14 @@ namespace FlowSharp
                 return line;
             }
 
-            public LineSet Integrate<P>(PointSet<P> positions, bool forwardAndBackward = false, float? maxTime = null) where P : Point
+            public LineSet[] Integrate<P>(PointSet<P> positions, bool forwardAndBackward = false, float? maxTime = null) where P : Point
             {
                 Debug.Assert(Field.NumVectorDimensions <= 3);
 
-                Line[] lines = new Line[positions.Length * (forwardAndBackward ? 2 : 1)];
+                Line[] lines = new Line[positions.Length];
+                Line[] linesReverse = new Line[forwardAndBackward? positions.Length : 0];
+
+                LineSet[] result = new LineSet[forwardAndBackward ? 2 : 1];
 
                 for (int index = 0; index < positions.Length; ++index)
                 {
@@ -415,20 +418,21 @@ namespace FlowSharp
                     lines[index].Status = streamline.Status;
                     lines[index].LineLength = streamline.LineLength;
                 }
-                Vector3 color = (Vector3)Direction;
+                result[0] = new LineSet(lines) { Color = (Vector3)Direction };
+
                 if (forwardAndBackward)
                 {
                     Direction = !Direction;
                     for (int index = 0; index < positions.Length; ++index)
                     {
                         StreamLine<Vector3> streamline = IntegrateLineForRendering((Vec3)positions.Points[index].Position, maxTime);
-                        lines[positions.Length + index] = new Line();
-                        lines[positions.Length + index].Positions = streamline.Points.ToArray();
+                        linesReverse[index] = new Line();
+                        linesReverse[index].Positions = streamline.Points.ToArray();
                     }
-                    Direction = !Direction;
-                    color = new Vector3(0.5f);
+                    result[1] = new LineSet(linesReverse) { Color = (Vector3)Direction };
+                    Direction = !Direction;                   
                 }
-                return new LineSet(lines) { Color = color };
+                return result;
             }
 
             protected Status CheckPosition(Vector pos)

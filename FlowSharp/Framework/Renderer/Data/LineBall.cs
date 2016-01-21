@@ -16,10 +16,15 @@ using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
-    class LineBall : Renderable
+    class LineBall : ColormapRenderable
     {
         protected Vector3 _color;
         protected float _thickness;
+        protected Vector3 _planeNormal;
+        public LineBall.RenderEffect Effect
+        {
+            get; protected set;
+        }
         /// <summary>
         /// Set of lines in 3D space.
         /// </summary>
@@ -28,7 +33,7 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public LineBall(Plane plane, LineSet lines)
+        public LineBall(Plane plane, LineSet lines, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
         {
             _thickness = lines.Thickness * plane.PointSize;
             _color = lines.Color;
@@ -41,9 +46,16 @@ namespace FlowSharp
             // Setting up the vertex buffer. 
             GenerateGeometry(plane, lines);
 
-            this._technique = _lineEffect.GetTechniqueByName("Render");
+            //this._technique = _lineEffect.GetTechniqueByName("Render");
+            UsedMap = colormap;
+            _planeNormal = plane.ZAxis;
+            _planeNormal.Normalize();
+            _effect = _lineEffect;
+            SetRenderEffect(effect);
+
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
-                new InputElement("POSITION", 0, Format.R32G32B32A32_Float, 0, 0)
+                new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
+                new InputElement("SCALAR", 0, Format.R32_Float, 12, 0)
             });
         }
 
@@ -65,15 +77,15 @@ namespace FlowSharp
                 if (line.Length < 2)
                     continue;
                 Debug.Assert(line.Length == lines.Lines[index].Length);
-                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] + zAxis * line.Positions[0][2]), 1.0f));
+                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] + zAxis * line.Positions[0][2]), line.Positions[0][2]));
                 for (int point = 1; point < line.Positions.Length - 1; ++point)
                 {
-                    Vector4 pos = new Vector4(plane.Origin + (plane.XAxis * line.Positions[point][0] + plane.YAxis * line.Positions[point][1] + zAxis * line.Positions[point][2]), 1.0f);
+                    Vector4 pos = new Vector4(plane.Origin + (plane.XAxis * line.Positions[point][0] + plane.YAxis * line.Positions[point][1] + zAxis * line.Positions[point][2]), line.Positions[point][2]);
                     stream.Write(pos);
                     stream.Write(pos);
                 }
                 int end = line.Positions.Length - 1;
-                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[end][0] + plane.YAxis * line.Positions[end][1] + zAxis * line.Positions[end][2]), 1.0f));
+                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[end][0] + plane.YAxis * line.Positions[end][1] + zAxis * line.Positions[end][2]), line.Positions[end][2]));
             }
             stream.Position = 0;
 
@@ -89,9 +101,27 @@ namespace FlowSharp
             stream.Dispose();
         }
 
+        public void SetRenderEffect(RenderEffect effect)
+        {
+            switch (effect)
+            {
+                case RenderEffect.THIN:
+                    this._technique = _lineEffect.GetTechniqueByName("Simple");
+                    break;
+                case RenderEffect.HEIGHT:
+                    this._technique = _lineEffect.GetTechniqueByName("Height");
+                    break;
+                default:
+                    this._technique = _lineEffect.GetTechniqueByName("Render");
+                    break;
+
+            }
+        }
+
         public override void Render(Device device)
         {
             _lineEffect.GetVariableByName("color").AsVector().Set(_color);
+            _lineEffect.GetVariableByName("worldNormal").AsVector().Set(_planeNormal);
             _lineEffect.GetVariableByName("thickness").AsScalar().Set(_thickness);
             base.Render(device);
         }
@@ -119,6 +149,12 @@ namespace FlowSharp
 
         }
 
+        public enum RenderEffect
+        {
+            DEFAULT,
+            THIN,
+            HEIGHT
+        }
         /// <summary>
         /// The effects that will be used by the lines.
         /// </summary>

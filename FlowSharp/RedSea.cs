@@ -92,7 +92,8 @@ namespace FlowSharp
             PATHLINE_LENGTH,
             CUT_DIFFUSION_MAP,
             LOCAL_DIFFUSION_MAP,
-            PATHLINE_RADIUS
+            PATHLINE_RADIUS,
+            LINE_STATISTICS
         }
 
         public enum DisplayLines : int
