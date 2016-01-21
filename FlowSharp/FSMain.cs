@@ -35,23 +35,7 @@ namespace FlowSharp
         static PathlineLengthMapper mapperPathLength;
         static DiffusionMapper mapperCutDiffusion;
         static LocalDiffusionMapper mapperLocalDiffusion;
-        //static PointSet[] completeCPSets;
 
-
-        //public static ScalarField LoadField(LoaderNCF.SliceRange range, int timestep, int? subtimestep)
-        //{
-        //    //ScalarField field;
-        //    //// Do we need to look at raw data?
-        //    //if (range.GetVariable() == RedSea.Variable.VELOCITY_Z || subtimestep != null || subtimestep != 108)
-        //    //{
-        //    //}
-        //    //// We can read the CDF file.
-        //    //else
-        //    //{
-        //    //    field = 
-        //    //}
-
-        //    return field;
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locFileName = "/Posterior_Diag.nc";
@@ -109,9 +93,9 @@ namespace FlowSharp
         {
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + ((IntPtr.Size == 8) ? "x64" : "x32"));
-            bool loadData = true;
+            bool loadData = false;
 
-            int numTimeSlices =  42;
+            int numTimeSlices =  10;
             RedSea.Singleton.NumTimeSlices = numTimeSlices;
             //string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
             //string locFileName = "/Posterior_Diag.nc";
@@ -157,15 +141,15 @@ namespace FlowSharp
 
             if (loadData)
             {
-                velocity = LoaderNCF.LoadTimeSeries(new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, 42);
+                velocity = LoaderNCF.LoadTimeSeries(new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
                 // Scale the field from m/s to (0.1 degree per 3 days).
                 velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
             }
             else
             {
-                velocity = Tests.CreateCircle(new Vec2(0), 50, new Vec2(0f), 10, 8);
+                velocity = Tests.CreateCircle(new Vec2(0), 100, new Vec2(0/*.2f*/), numTimeSlices, 8);
                 //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
-                velocity.ScaleToGrid(new Vec2(1.0f));
+                velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
             }
 
             Console.WriteLine("Completed loading data.");
@@ -186,8 +170,8 @@ namespace FlowSharp
             //Console.WriteLine("Found Pathline Cores.");
             mapperComparison = new MemberComparison(new LoaderNCF.SliceRange[] { sliceU, sliceV }, redSea);
             //mapperOW = new OkuboWeiss(velocity, redSea);
-            //Console.WriteLine("Computed Okubo-Weiss.");
-           
+            Console.WriteLine("Computed Okubo-Weiss.");
+
 
             Console.WriteLine("Computed all data necessary.");
         }
@@ -215,6 +199,12 @@ namespace FlowSharp
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_RADIUS, pathlines);
             //SubstepViewer substep = new SubstepViewer(redSea);
             //RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
+
+            DataMapper lineStatistics = new LineStatisticsMapper(velocity, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.LINE_STATISTICS, lineStatistics);
+
+            if (mapperOW != null)
+                RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);
 
             //FieldAnalysis.AlphaStableFFF = 0;
             //var f = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);

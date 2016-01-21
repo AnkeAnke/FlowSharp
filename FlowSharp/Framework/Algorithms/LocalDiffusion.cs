@@ -405,7 +405,7 @@ namespace FlowSharp
 
         public LocalDiffusion(Texture2D input, LoaderNCF.SliceRange fieldEnsemble, int startTime, float time)
         {
-
+            throw new NotImplementedException();
         }
 
         public LocalDiffusion(VectorFieldUnsteady velocity, int startTime, float integrationTime)
@@ -553,9 +553,10 @@ namespace FlowSharp
             for (int i = 0; i < NUM_ADJACENT_CELLS/2; ++i)
             {
                 // Should the original pixel be offset?
+                // Case 3 (right low): offset computation ALONG X ????????
                 int offset = (i == 3) ? 1 : 0;
 
-                // What number needs to be added to finde the reference pixel?
+                // What number needs to be added to find the reference pixel?
                 int neighborOffset = (i > 0) ? _width : 0;
                 switch(i)
                 {

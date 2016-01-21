@@ -241,12 +241,12 @@ float4 PS_LIC_3(PS_IN input) : SV_Target
 // A simple checkerboard to see the grid resolution.
 float4 PS_Checker(PS_IN input) : SV_Target
 {
-	return ((int)(input.uv.x * width + 0.5) + (int)(input.uv.y * height + 0.5)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
+	return ((int)(input.uv.x * width) + (int)(input.uv.y * height)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
 }
 
 float4 PS_Checker_Tex_1(PS_IN input) : SV_Target
 {
-	float4 board = ((int)(input.uv.x * width + 0.5) + (int)(input.uv.y * height + 0.5)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
+	float4 board = ((int)(input.uv.x * width) + (int)(input.uv.y * height)) % 2 == 0 ? float4(0.8, 0.8, 0.8, 1.0) : float4(1.0, 1.0, 1.0, 1.0);
 
 	float value = field0.Sample(PointSampler, input.uv.xy).x;
 	// Discarding should have been done by the LIC shader.
