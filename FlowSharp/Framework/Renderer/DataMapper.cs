@@ -37,6 +37,7 @@ namespace FlowSharp
         private LineBall _selectionRect;
         #endregion
 
+        #region Settings
         public Setting CurrentSetting { get { return _currentSetting; } set { _currentSetting = value; } }
         protected Setting _currentSetting;
         protected Setting _lastSetting;
@@ -223,6 +224,7 @@ namespace FlowSharp
 
             public Setting() { }
         }
+        #endregion Settings
 
         public ViewFunction Mapping;
 
@@ -316,6 +318,37 @@ namespace FlowSharp
                     return null;
             }
         }
+
+        #region SettingChanged
+        public bool LineSettingChanged { get { return _currentSetting.LineSetting != _lastSetting.LineSetting; } }
+        public bool SliceTimeMainChanged { get { return _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain; } }
+        public bool SliceTimeReferenceChanged { get { return _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference; } }
+        public bool AlphaStableChanged { get { return _currentSetting.AlphaStable != _lastSetting.AlphaStable; } }
+        public bool StepSizeChanged { get { return _currentSetting.StepSize != _lastSetting.StepSize; } }
+        public bool IntegrationTypeChanged { get { return _currentSetting.IntegrationType != _lastSetting.IntegrationType; } }
+        public bool LineXChanged { get { return _currentSetting.LineX != _lastSetting.LineX; } }
+        public bool MemberMainChanged { get { return _currentSetting.MemberMain != _lastSetting.MemberMain; } }
+        public bool MemberReferenceChanged { get { return _currentSetting.MemberReference != _lastSetting.MemberReference; } }
+        public bool ColormapChanged { get { return _currentSetting.Colormap != _lastSetting.Colormap; } }
+        public bool ShaderChanged { get { return _currentSetting.Shader != _lastSetting.Shader; } }
+        public bool WindowWidthChanged { get { return _currentSetting.WindowWidth != _lastSetting.WindowWidth; } }
+        public bool TrackingChanged { get { return _currentSetting.Tracking != _lastSetting.Tracking; } }
+        public bool WindowStartChanged { get { return _currentSetting.WindowStart != _lastSetting.WindowStart; } }
+        public bool MeasureChanged { get { return _currentSetting.Measure != _lastSetting.Measure; } }
+        public bool SliceHeightChanged { get { return _currentSetting.SliceHeight != _lastSetting.SliceHeight; } }
+        public bool IntegrationTimeChanged { get { return _currentSetting.IntegrationTime != _lastSetting.IntegrationTime; } }
+        public bool DiffusionMeasureChanged { get { return _currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure; } }
+        public bool VarXChanged { get { return _currentSetting.VarX != _lastSetting.VarX; } }
+        public bool VarYChanged { get { return _currentSetting.VarY != _lastSetting.VarY; } }
+        public bool StartXChanged { get { return _currentSetting.StartX != _lastSetting.StartX; } }
+        public bool StartYChanged { get { return _currentSetting.StartY != _lastSetting.StartY; } }
+        public bool EndXChanged { get { return _currentSetting.EndX != _lastSetting.EndX; } }
+        public bool EndYChanged { get { return _currentSetting.EndY != _lastSetting.EndY; } }
+        public bool DimXChanged { get { return _currentSetting.DimX != _lastSetting.DimX; } }
+        public bool DimYChanged { get { return _currentSetting.DimY != _lastSetting.DimY; } }
+        public bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
+        public bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
+        #endregion SettingChanged
     }
 
     class CriticalPointTracking : DataMapper
@@ -358,7 +391,7 @@ namespace FlowSharp
 
             // The reference slice was changed. Update the field and its critical points.
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference)
+                SliceTimeReferenceChanged)
             {
                 _slice1 = new List<Renderable>(2);
                 _planes[0] = new FieldPlane(Plane, SlicesToRender[_currentSetting.SliceTimeReference], FieldPlane.RenderEffect.LIC);
@@ -370,12 +403,12 @@ namespace FlowSharp
             // Something mayor changed. Re-integrate.
             bool mapLines = false;
             if (_lastSetting == null ||
-                _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
-                _currentSetting.IntegrationType != _lastSetting.IntegrationType ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                AlphaStableChanged ||
+                SliceTimeMainChanged ||
+                IntegrationTypeChanged ||
+                StepSizeChanged)
             {
-                if (_lastSetting == null || _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                if (_lastSetting == null || SliceTimeMainChanged)
                 {
                     // Clear the slice mapping.
                     _slice0 = new List<Renderable>(2);
@@ -389,7 +422,7 @@ namespace FlowSharp
                 }
 
                 // Re-compute the feature flow field. Costly operation.
-                if (_lastSetting == null || _currentSetting.AlphaStable != _lastSetting.AlphaStable)
+                if (_lastSetting == null || AlphaStableChanged)
                 {
                     FieldAnalysis.AlphaStableFFF = _currentSetting.AlphaStable;
                     ForwardFFF = new VectorField(Velocity, FieldAnalysis.StableFFF, 3);
@@ -420,7 +453,7 @@ namespace FlowSharp
             }
 
             // The line settings have changed. Create new renderables from the lines.
-            if (mapLines || _currentSetting.LineSetting != _lastSetting.LineSetting)
+            if (mapLines || LineSettingChanged)
             {
                 _lines = new List<Renderable>(_rawLines.Count);
 
@@ -655,17 +688,17 @@ namespace FlowSharp
         {
             // Changed main slice settings.
             if (_lastSetting == null ||
-                _currentSetting.MemberMain != _lastSetting.MemberMain ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
-                _currentSetting.Measure != _lastSetting.Measure ||
-                _currentSetting.SliceHeight != _lastSetting.SliceHeight ||
-                _currentSetting.Shader != _lastSetting.Shader)
+                MemberMainChanged ||
+                SliceTimeMainChanged ||
+                MeasureChanged ||
+                SliceHeightChanged ||
+                ShaderChanged)
             {
                 _fields[0] = LoadPlane(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
                 _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
             }
-            else if (_currentSetting.LineX != _lastSetting.LineX)
+            else if (LineXChanged)
             {
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
                 _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
@@ -673,17 +706,17 @@ namespace FlowSharp
 
             // Changed reference settings.
             if (_lastSetting == null ||
-                _currentSetting.MemberReference != _lastSetting.MemberReference ||
-                _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference ||
-                _currentSetting.Measure != _lastSetting.Measure ||
-                _currentSetting.SliceHeight != _lastSetting.SliceHeight ||
-                _currentSetting.Shader != _lastSetting.Shader)
+                MemberReferenceChanged ||
+                SliceTimeReferenceChanged ||
+                MeasureChanged ||
+                SliceHeightChanged ||
+                ShaderChanged)
             {
                 _fields[1] = LoadPlane(_currentSetting.MemberReference, _currentSetting.SliceTimeReference);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
                 _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
             }
-            else if (_currentSetting.LineX != _lastSetting.LineX)
+            else if (LineXChanged)
             {
                 _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
             }
@@ -761,20 +794,20 @@ namespace FlowSharp
         public List<Renderable> GetTimeSlice()
         {
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                SliceTimeMainChanged)
             {
                 VectorField sliceOW = _fieldOW.GetTimeSlice(_currentSetting.SliceTimeMain);
                 _fieldSlice = new FieldPlane(Plane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
             }
             if (_lastSetting == null ||
-                _currentSetting.WindowWidth != _lastSetting.WindowWidth)
+                WindowWidthChanged)
             {
                 _fieldSlice.LowerBound = -0.2f * _standardDeviation - _currentSetting.WindowWidth;
                 _fieldSlice.UpperBound = -0.2f * _standardDeviation + _currentSetting.WindowWidth;
             }
             if (_lastSetting == null ||
-                _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader)
+                ColormapChanged ||
+                ShaderChanged)
             {
                 _fieldSlice.UsedMap = _currentSetting.Colormap;
                 _fieldSlice.SetRenderEffect(_currentSetting.Shader);
@@ -951,17 +984,17 @@ namespace FlowSharp
     //    {
     //        // Changed main slice settings.
     //        if (_lastSetting == null ||
-    //            _currentSetting.MemberMain != _lastSetting.MemberMain ||
-    //            _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
-    //            _currentSetting.Measure != _lastSetting.Measure ||
-    //            _currentSetting.SliceHeight != _lastSetting.SliceHeight ||
-    //            _currentSetting.Shader != _lastSetting.Shader)
+    //            MemberMainChanged ||
+    //            SliceTimeMainChanged ||
+    //            MeasureChanged ||
+    //            SliceHeightChanged ||
+    //            ShaderChanged)
     //        {
     //            _fields[0] = LoadPlane(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
     //            Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
     //            _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
     //        }
-    //        else if (_currentSetting.LineX != _lastSetting.LineX)
+    //        else if (LineXChanged)
     //        {
     //            Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
     //            _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
@@ -969,17 +1002,17 @@ namespace FlowSharp
 
     //        // Changed reference settings.
     //        if (_lastSetting == null ||
-    //            _currentSetting.MemberReference != _lastSetting.MemberReference ||
-    //            _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference ||
-    //            _currentSetting.Measure != _lastSetting.Measure ||
-    //            _currentSetting.SliceHeight != _lastSetting.SliceHeight ||
-    //            _currentSetting.Shader != _lastSetting.Shader)
+    //            MemberReferenceChanged ||
+    //            SliceTimeReferenceChanged ||
+    //            MeasureChanged ||
+    //            SliceHeightChanged ||
+    //            ShaderChanged)
     //        {
     //            _fields[1] = LoadPlane(_currentSetting.MemberReference, _currentSetting.SliceTimeReference);
     //            Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
     //            _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
     //        }
-    //        else if (_currentSetting.LineX != _lastSetting.LineX)
+    //        else if (LineXChanged)
     //        {
     //            _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
     //        }
@@ -1078,13 +1111,13 @@ namespace FlowSharp
 
             // Update / create underlying plane.
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                SliceTimeMainChanged)
             {
                 _timeSlice = new FieldPlane(Plane, _velocity.GetTimeSlice(_currentSetting.SliceTimeMain), _currentSetting.Shader, _currentSetting.Colormap);
                 _intersectionPlane = new Plane(_intersectionPlane, new Vector3(0, 0, _currentSetting.SliceTimeMain - (_lastSetting?.SliceTimeMain) ?? 0));
             }
-            else if (_currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader)
+            else if (ColormapChanged ||
+                ShaderChanged)
             {
                 _timeSlice.SetRenderEffect(_currentSetting.Shader);
                 _timeSlice.UsedMap = _currentSetting.Colormap;
@@ -1099,11 +1132,11 @@ namespace FlowSharp
 
             // Recompute lines if necessary.
             if (_lastSetting == null ||
-                _currentSetting.LineX != _lastSetting.LineX ||
-                _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
-                _currentSetting.StepSize != _lastSetting.StepSize ||
-                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime ||
-                _currentSetting.Flat != _lastSetting.Flat ||
+                LineXChanged ||
+                AlphaStableChanged ||
+                StepSizeChanged ||
+                IntegrationTimeChanged ||
+                FlatChanged ||
                 _selectionChanged)
             {
                 if (_velocity.IsValid((Vec2)_selection))
@@ -1179,9 +1212,9 @@ namespace FlowSharp
             if (_graph != null &&
                 _currentSetting.LineSetting == RedSea.DisplayLines.LINE &&(
                 _lastSetting == null || rebuilt ||
-                _currentSetting.WindowWidth != _lastSetting.WindowWidth ||
-                _currentSetting.WindowStart != _lastSetting.WindowStart ||
-                _currentSetting.Colormap != _lastSetting.Colormap))
+                WindowWidthChanged ||
+                WindowStartChanged ||
+                ColormapChanged))
             {
                 foreach (Renderable ball in _graph)
                 {

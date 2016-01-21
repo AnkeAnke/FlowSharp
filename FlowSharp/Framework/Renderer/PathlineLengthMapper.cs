@@ -65,8 +65,8 @@ namespace FlowSharp
             intVF.StepSize = _currentSetting.StepSize;
 
             if (_lastSetting == null ||
-                _currentSetting.IntegrationType != _lastSetting.IntegrationType ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                IntegrationTypeChanged ||
+                StepSizeChanged)
             {
                 // ~~~~~~~~~~~ Line Integration ~~~~~~~~~~~ \\
                 // Clear the raw lines.
@@ -128,8 +128,8 @@ namespace FlowSharp
             }
 
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain||
-                _currentSetting.Shader != _lastSetting.Shader)
+                SliceTimeMainChanged||
+                ShaderChanged)
             {
                 ScalarField f = _pathLengths.GetTimeSlice(_currentSetting.SliceTimeMain);
                 f.TimeSlice = 0;
@@ -155,7 +155,7 @@ namespace FlowSharp
             }
 
             // The line settings have changed. Create new renderables from the lines.
-            if (mapLines || _currentSetting.LineSetting != _lastSetting.LineSetting)
+            if (mapLines || LineSettingChanged)
             {
                 _lines = new Renderable[_pathlineSegments.Length];
 

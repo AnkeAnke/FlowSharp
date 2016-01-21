@@ -35,7 +35,7 @@ namespace FlowSharp
         public List<Renderable> GetCurrentMap()
         {
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                SliceTimeMainChanged)
             {
                 if (_lastSetting == null || _currentSetting.SliceTimeMain < _flowMap.CurrentTime)
                 {
@@ -51,20 +51,20 @@ namespace FlowSharp
 
             }
             if (_lastSetting == null ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                StepSizeChanged)
             {
             }
             if (_lastSetting == null ||
-                _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                ColormapChanged ||
+                ShaderChanged ||
+                SliceTimeMainChanged)
             {
                 RefreshPlane();
                 _currentState.LowerBound = 0;
                 _currentState.UpperBound = _currentSetting.WindowWidth;
             }
             if (_lastSetting == null ||
-                _lastSetting.WindowWidth != _currentSetting.WindowWidth)
+                WindowWidthChanged)
             {
                 _currentState.LowerBound = 0;
                 _currentState.UpperBound = _currentSetting.WindowWidth;
@@ -158,10 +158,10 @@ namespace FlowSharp
         public List<Renderable> GetCurrentMap()
         {
              if(_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
-                _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
-                _currentSetting.StepSize != _lastSetting.StepSize ||
-                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime)
+                SliceTimeMainChanged ||
+                AlphaStableChanged ||
+                StepSizeChanged ||
+                IntegrationTimeChanged)
             {
                 _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime, _cellToSeedRatio);
 
@@ -172,19 +172,19 @@ namespace FlowSharp
                 RefreshPlane();
             }
             if (_lastSetting == null ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                StepSizeChanged)
             {
             }
             if (_lastSetting == null ||
-                _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                ColormapChanged ||
+                ShaderChanged ||
+                SliceTimeMainChanged)
             {
                 RefreshPlane();
             }
             if (_lastSetting == null ||
-                _lastSetting.WindowWidth != _currentSetting.WindowWidth ||
-                _currentSetting.WindowStart != _lastSetting.WindowStart)
+                WindowWidthChanged ||
+                WindowStartChanged)
             {
                 RefreshBoundsPlanes();
                 //if(_currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH)
@@ -335,11 +335,11 @@ namespace FlowSharp
         public List<Renderable> GetCurrentMap()
         {
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
-                _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
-                _currentSetting.StepSize != _lastSetting.StepSize ||
-                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime ||
-                (_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE || _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE) && _currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure)
+                SliceTimeMainChanged ||
+                AlphaStableChanged ||
+                StepSizeChanged ||
+                IntegrationTimeChanged ||
+                (_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE || _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE) && DiffusionMeasureChanged)
             {
                 //if(_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE)
                 //    _ftleMap.SetupMap(_currentSetting.SliceTimeMain, _currentSetting.IntegrationTime);
@@ -353,8 +353,8 @@ namespace FlowSharp
 
                 RefreshPlane();
             }
-            else if (_currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure ||
-                     _currentSetting.LineX != _lastSetting.LineX)
+            else if (DiffusionMeasureChanged ||
+                     LineXChanged)
             {
                 //if (_currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.FTLE)
                 //    _ftleMap.StoreMeasure();
@@ -363,19 +363,19 @@ namespace FlowSharp
             }
 
             if (_lastSetting == null ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                StepSizeChanged)
             {
             }
             if (_lastSetting == null ||
-                _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                ColormapChanged ||
+                ShaderChanged ||
+                SliceTimeMainChanged)
             {
                 RefreshPlane();
             }
             if (_lastSetting == null ||
-                _lastSetting.WindowWidth != _currentSetting.WindowWidth ||
-                _currentSetting.WindowStart != _lastSetting.WindowStart)
+                WindowWidthChanged ||
+                WindowStartChanged)
             {
                 RefreshBoundsPlanes();
                 if (_currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH)
@@ -449,7 +449,7 @@ namespace FlowSharp
                 case Setting.Element.DiffusionMeasure:
                     return true;
                 case Setting.Element.LineX:
-                    return _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.Neighbor || _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.Direction;
+                    return true;// _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.Neighbor || _currentSetting.DiffusionMeasure == RedSea.DiffusionMeasure.Direction;
                 default:
                     return false;
             }
@@ -525,10 +525,10 @@ namespace FlowSharp
         public List<Renderable> GetCurrentMap()
         {
             if (_lastSetting == null ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain ||
-                _currentSetting.AlphaStable != _lastSetting.AlphaStable ||
-                _currentSetting.StepSize != _lastSetting.StepSize ||
-                _currentSetting.IntegrationTime != _lastSetting.IntegrationTime)
+                SliceTimeMainChanged ||
+                AlphaStableChanged ||
+                StepSizeChanged ||
+                IntegrationTimeChanged)
             {
                 _diffusionMap.SetupMap(_startPoint, _currentSetting.SliceTimeMain, _currentSetting.IntegrationTime);
 
@@ -538,26 +538,26 @@ namespace FlowSharp
 
                 RefreshPlane();
             }
-            else if (_currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure ||
-                     _currentSetting.LineX != _lastSetting.LineX)
+            else if (DiffusionMeasureChanged ||
+                     LineXChanged)
             {
                 _diffusionMap.StoreMeasure(_currentSetting.DiffusionMeasure, (uint)_currentSetting.LineX);
             }
 
             if (_lastSetting == null ||
-                _currentSetting.StepSize != _lastSetting.StepSize)
+                StepSizeChanged)
             {
             }
             if (_lastSetting == null ||
-                _currentSetting.Colormap != _lastSetting.Colormap ||
-                _currentSetting.Shader != _lastSetting.Shader ||
-                _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain)
+                ColormapChanged ||
+                ShaderChanged ||
+                SliceTimeMainChanged)
             {
                 RefreshPlane();
             }
             if (_lastSetting == null ||
-                _lastSetting.WindowWidth != _currentSetting.WindowWidth ||
-                _currentSetting.WindowStart != _lastSetting.WindowStart)
+                WindowWidthChanged ||
+                WindowStartChanged)
             {
                 RefreshBoundsPlanes();
                 if (_currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH)
