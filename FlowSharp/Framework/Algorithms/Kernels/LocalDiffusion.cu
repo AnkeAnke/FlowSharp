@@ -36,6 +36,7 @@ extern "C"  {
 	__constant__ float StepSize = 0.3f;
 	__constant__ float Invalid = 3600000000;
 	__constant__ int CellToSeedRatio = 10;
+	__constant__ unsigned int HalfNumNeighbors = 4;
 	__device__ const float TWO_PI = 2.0f*3.14159265358979323846f;
 
 	// ~~~~~~~~~~~~~~~~~~~~ Random Functions ~~~~~~~~~~~~~~~~~~~~ //
@@ -81,7 +82,7 @@ extern "C"  {
 		int particleIdx = threadIdx.x;
 
 		float3 pos = make_float3(seed.x, seed.y, 0);
-		int numSteps = 100000;
+		int numSteps = 1000;
 
 		float3 v = make_float3(0, 0, 0);
 		float valid;
@@ -112,7 +113,7 @@ extern "C"  {
 				v.x += gauss.x;
 				v.y += gauss.y;
 
-				//// Critical point?
+				// Critical point?
 				float vLen = v.x*v.x + v.y*v.y + 1;
 				vLen = sqrt(vLen);
 
@@ -148,6 +149,18 @@ extern "C"  {
 
 		return AdvectParticle(position);
 	}
+
+	//// ~~~~~~~~~~~ FTLE Start Settings ~~~~~~~~~~~ //
+	//__device__ float2 LoadAdvectFTLE(int2 origin)
+	//{
+	//	// Offset position by origin. Assume all blocks are in the seed range.
+	//	int px = origin.x + blockIdx.x;
+	//	int py = origin.y + blockIdx.y;
+	//	float2 position = make_float2(px, py);
+
+
+	//	return AdvectParticle(position);
+	//}
 
 	// ~~~~~~~~~~~~ Start Reference Particle Integration ~~~~~~~~~~~~ //
 	__global__ void LoadAdvectReference(float2* positions, int2 seed)
@@ -226,67 +239,379 @@ extern "C"  {
 		}
 	}
 
-	// Gradient Kernels
-	// ~~~~~~~~ Cut with right Particle Cloud ~~~~~~~~ //
-	__global__ void CutX(float* cuts, float2* positions)
+	__global__ void CutNeighbors(float* neighborMap, float2* positions, unsigned int offset, unsigned int neighborOffset, unsigned int neighbor)
 	{
-		// Enough memory for this?
-		float2 reference[1024];
-		int idx = blockIdx.x + blockIdx.y * Width;
-		idx *= blockDim.x;
-		int idxR = idx + blockDim.x;
-		idx += threadIdx.x;
+			// Enough memory for this?
+			__shared__ float2 reference[1024];
 
-		reference[threadIdx.x] = positions[threadIdx.x];
-		__syncthreads();
-		
-		
-		// Here comes the hammer methode!
-		float2 pos = positions[idx];
-		unsigned int sum = 0;
-		for (int ref = 0; ref < blockIdx.x; ++ref)
-		{
-			// Is the reference particle within the same "cell"?
-			if (abs((pos.x - reference[idxR].x) * (pos.y - reference[idxR].y)) < 0.25f)
-				sum++;
-			//positions[idx].x = referenceMap[(int)(positions[idx].x * CellToSeedRatio + 0.5) + (int)(positions[idx].y * CellToSeedRatio + 0.5) * WidthCells]; //referenceMap[blockIdx.x*CellToSeedRatio + blockIdx.y * CellToSeedRatio*WidthCells];//
-		}
-		__syncthreads();
-		// Use the same buffer we had before. Reference particles are not needed anymore.
+			// Adding an offset in case the reference is "left" or "below" the current point.
+			int idx = blockIdx.x + blockIdx.y * Width + offset;
+			int idxRef = idx + neighborOffset;
+			idx *= blockDim.x;
+			idxRef *= blockDim.x;
 
-		reference[threadIdx.x].x = (float)sum;
-		__syncthreads();
-		// Reduce.
-		for (int nextSize = blockDim.x / 2; nextSize > 0; nextSize /= 2)
-		{
-			if (threadIdx.x < nextSize)
-				reference[idx].x += reference[idx + nextSize].x;
+			reference[threadIdx.x] = positions[idxRef + threadIdx.x];
+			__syncthreads();	
+			
+			// Here comes the hammer methode!
+			float2 pos = positions[idx + threadIdx.x];
+			float sum = 0;
+
+			// Compare to each particle at the reference position.
+			for (int ref = 0; ref < blockDim.x; ++ref)
+			{
+				float diffX = (reference[ref].x - pos.x);
+				float diffY = (reference[ref].y - pos.y);
+				// Is the reference particle within the same "cell"?
+//				if (diffX*diffX < 0.5f && diffY*diffY < 0.5f)
+//					sum++;
+				sum += 1.0 / max(0.5, sqrt(diffX*diffX + diffY*diffY));
+			}
+
 			__syncthreads();
-		}
 
-		// Write data to texture.
-		if (threadIdx.x == 0)
-		{
-			//surf2Dwrite(0.1f, cuts, positions[idx].x * sizeof(float), positions[idx].y, cudaBoundaryModeTrap);
-			//surf2Dwrite(reference[0].x / blockDim.x, cuts, blockIdx.x*sizeof(float), blockIdx.y, cudaBoundaryModeTrap);
-			cuts[blockIdx.x + blockIdx.y * (Width - 1)] = reference[0].x;
-		}
+			// Use the same buffer we had before. Reference particles are not needed anymore.
+			reference[threadIdx.x].y = (float)sum/blockDim.x;
+			__syncthreads();
+
+			// Reduce.
+			for (int nextSize = blockDim.x / 2; nextSize > 0; nextSize /= 2)
+			{
+				if (threadIdx.x < nextSize)
+					reference[threadIdx.x].y += reference[threadIdx.x + nextSize].y;
+				__syncthreads();
+			}
+
+			// Write data to texture.
+			if (threadIdx.x == 0)
+			{
+				//surf2Dwrite(0.1f, cuts, positions[idx].x * sizeof(float), positions[idx].y, cudaBoundaryModeTrap);
+				//surf2Dwrite(reference[0].x / blockDim.x, cuts, blockIdx.x*sizeof(float), blockIdx.y, cudaBoundaryModeTrap);
+				neighborMap[(blockIdx.x + blockIdx.y * Width + offset) * HalfNumNeighbors + neighbor] = reference[0].y / blockDim.x;
+			}
 	}
-	// ~~~~~~~~ Cut with upper Particle Cloud ~~~~~~~~ //
-	__global__ void CutY(float* cuts, float2* positions)
+
+	__global__ void DeformationTensorFTLE (float* neighborMap, float2* positions, unsigned int offset, unsigned int neighborOffset, unsigned int neighbor)
 	{
+		if (threadIdx.x > 0)
+			return;
+		if (blockIdx.x == 0 || blockIdx.x == Width - 1 || blockIdx.y == 0 || blockIdx.y == Height - 1)
+			return;
 
+		int idx = blockIdx.x + blockIdx.y * Width;
+		int idxP; int idxN;
+
+//		reference[threadIdx.x] = positions[idxRef + threadIdx.x];
+		switch (neighbor)
+		{
+			// Right - Left.
+		case 0:
+		case 2:
+			idxP = idx + 1;
+			idxN = idx - 1;
+			break;
+			// Up - Down.
+		case 1:
+		case 3:
+			idxP = idx + Width;
+			idxN = idx - Width;
+			break;
+		}
+		// Write data to texture.
+		float diff = neighbor < 2 ?
+			// U derivative.
+			positions[idxP].x - positions[idxN].x :
+			// V derivative.
+			positions[idxP].y - positions[idxN].y;
+		//surf2Dwrite(0.1f, cuts, positions[idx].x * sizeof(float), positions[idx].y, cudaBoundaryModeTrap);
+		//surf2Dwrite(reference[0].x / blockDim.x, cuts, blockIdx.x*sizeof(float), blockIdx.y, cudaBoundaryModeTrap);
+		neighborMap[idx * HalfNumNeighbors + neighbor] = diff;	
 	}
 
-	__global__ void StoreXY(cudaSurfaceObject_t gradsX, cudaSurfaceObject_t gradsY, float* cutsX, float* cutsY)
+	__global__ void ScanStoreDensity(cudaSurfaceObject_t dens, float* neighborMap, unsigned int pad, int2 origin)
+	{
+			int px = blockIdx.x * blockDim.x + threadIdx.x + origin.x;
+			int py = blockIdx.y * blockDim.y + threadIdx.y + origin.y;
+			int linIdx = py * Width + px;
+			linIdx *= HalfNumNeighbors;
+			// Exclude outermost pixels.
+			if (px > 0 && py > 0 && px < Width-1 && py < Height-1)
+			{
+				float density = 0;
+				// Right.
+				density += neighborMap[linIdx + 0];
+				// Left.
+				density += neighborMap[linIdx - HalfNumNeighbors + 0];
+
+				// Up.
+				density += neighborMap[linIdx + 1];
+				// Down.
+				density += neighborMap[linIdx - HalfNumNeighbors*Width + 1];
+
+				// Upper Right.
+				density += neighborMap[linIdx + 2];
+				density += neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2];
+
+				// Upper Left.
+				density += neighborMap[linIdx + 3];
+				density += neighborMap[linIdx + HalfNumNeighbors*(1-Width) + 3];
+
+				surf2Dwrite(density/8, dens, px * sizeof(float), py, cudaBoundaryModeTrap);
+			}
+	}
+
+	__global__ void ScanStoreMin(cudaSurfaceObject_t mins, float* neighborMap, unsigned int pad, int2 origin)
+	{
+		int px = blockIdx.x * blockDim.x + threadIdx.x + origin.x;
+		int py = blockIdx.y * blockDim.y + threadIdx.y + origin.y;
+		int linIdx = py * Width + px;
+		linIdx *= HalfNumNeighbors;
+		// Exclude outermost pixels.
+		if (px > 0 && py > 0 && px < Width - 1 && py < Height - 1)
+		{
+			float density = 1;
+			// Right.
+			density = min(neighborMap[linIdx + 0], density);
+			// Left.
+			density = min(neighborMap[linIdx - HalfNumNeighbors + 0], density);
+
+			// Up.
+			density = min(neighborMap[linIdx + 1], density);
+			// Down.
+			density = min(neighborMap[linIdx - HalfNumNeighbors*Width + 1], density);
+
+			// Upper Right.
+			density = min(neighborMap[linIdx + 2], density);
+			density = min(neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2], density);
+
+			// Upper Left.
+			density = min(neighborMap[linIdx + 3], density);
+			density = min(neighborMap[linIdx + HalfNumNeighbors*(1 - Width) + 3], density);
+
+			surf2Dwrite(density, mins, px * sizeof(float), py, cudaBoundaryModeTrap);
+		}
+	}
+
+	__global__ void ScanStoreMax(cudaSurfaceObject_t maxs, float* neighborMap, unsigned int pad, int2 origin)
+	{
+		int px = blockIdx.x * blockDim.x + threadIdx.x + origin.x;
+		int py = blockIdx.y * blockDim.y + threadIdx.y + origin.x;
+		int linIdx = py * Width + px;
+		linIdx *= HalfNumNeighbors;
+		// Exclude outermost pixels.
+		if (px > 0 && py > 0 && px < Width - 1 && py < Height - 1)
+		{
+			float density = 0;
+			// Right.
+			density = max(neighborMap[linIdx + 0], density);
+			// Left.
+			density = max(neighborMap[linIdx - HalfNumNeighbors + 0], density);
+
+			// Up.
+			density = max(neighborMap[linIdx + 1], density);
+			// Down.
+			density = max(neighborMap[linIdx - HalfNumNeighbors*Width + 1], density);
+
+			// Upper Right.
+			density = max(neighborMap[linIdx + 2], density);
+			density = max(neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2], density);
+
+			// Upper Left.
+			density = max(neighborMap[linIdx + 3], density);
+			density = max(neighborMap[linIdx + HalfNumNeighbors*(1 - Width) + 3], density);
+
+			surf2Dwrite(density, maxs, px * sizeof(float), py, cudaBoundaryModeTrap);
+		}
+	}
+
+	__global__ void ScanStoreRange(cudaSurfaceObject_t diffs, float* neighborMap, unsigned int pad, int2 origin)
+	{
+		int px = blockIdx.x * blockDim.x + threadIdx.x + origin.x;
+		int py = blockIdx.y * blockDim.y + threadIdx.y + origin.x;
+		int linIdx = py * Width + px;
+		linIdx *= HalfNumNeighbors;
+
+		if (px > 0 && py > 0 && px < Width - 1 && py < Height - 1)
+		{
+			float minDens = 1;
+			// Right.
+			minDens = min(neighborMap[linIdx + 0], minDens);
+			// Left.
+			minDens = min(neighborMap[linIdx - HalfNumNeighbors + 0], minDens);
+
+			// Up.
+			minDens = min(neighborMap[linIdx + 1], minDens);
+			// Down.
+			minDens = min(neighborMap[linIdx - HalfNumNeighbors*Width + 1], minDens);
+
+			// Upper Right.
+			minDens = min(neighborMap[linIdx + 2], minDens);
+			minDens = min(neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2], minDens);
+
+			// Upper Left.
+			minDens = min(neighborMap[linIdx + 3], minDens);
+			minDens = min(neighborMap[linIdx + HalfNumNeighbors*(1 - Width) + 3], minDens);
+
+			float maxDens = 0;
+			// Right.
+			maxDens = max(neighborMap[linIdx + 0], maxDens);
+			// Left.
+			maxDens = max(neighborMap[linIdx - HalfNumNeighbors + 0], maxDens);
+
+			// Up.
+			maxDens = max(neighborMap[linIdx + 1], maxDens);
+			// Down.
+			maxDens = max(neighborMap[linIdx - HalfNumNeighbors*Width + 1], maxDens);
+
+			// Upper Right.
+			maxDens = max(neighborMap[linIdx + 2], maxDens);
+			maxDens = max(neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2], maxDens);
+
+			// Upper Left.
+			maxDens = max(neighborMap[linIdx + 3], maxDens);
+			maxDens = max(neighborMap[linIdx + HalfNumNeighbors*(1 - Width) + 3], maxDens);
+
+			surf2Dwrite(maxDens - minDens, diffs, px * sizeof(float), py, cudaBoundaryModeTrap);
+		}
+	}
+
+	__global__ void ScanStoreDirection(cudaSurfaceObject_t map, float* neighborMap, unsigned int neighbor, int2 origin)
+	{
+		int px = blockIdx.x * blockDim.x + threadIdx.x + origin.x;
+		int py = blockIdx.y * blockDim.y + threadIdx.y + origin.x;
+		int linIdx = py * Width + px;
+		linIdx *= HalfNumNeighbors;
+		// Exclude outermost pixels.
+		if (px > 0 && py > 0 && px < Width - 1 && py < Height - 1)
+		{
+			float density = 0;
+			switch (neighbor)
+			{
+			case 0:
+			case 4:
+				// Right.
+				density += neighborMap[linIdx + 0];
+				// Left.
+				density += neighborMap[linIdx - HalfNumNeighbors + 0];
+				break;
+			case 1:
+			case 5:
+				// Up.
+				density += neighborMap[linIdx + 1];
+				// Down.
+				density += neighborMap[linIdx - HalfNumNeighbors*Width + 1];
+				break;
+			case 2:
+			case 6:
+				// Upper Right.
+				density += neighborMap[linIdx + 2];
+				density += neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2];
+				break;
+			case 3:
+			default:
+				// Upper Left.
+				density += neighborMap[linIdx + 3];
+				density += neighborMap[linIdx + HalfNumNeighbors*(1 - Width) + 3];
+				break;
+			}
+			surf2Dwrite(density, map, px * sizeof(float), py, cudaBoundaryModeTrap);
+		}
+	}
+
+	__global__ void ScanStoreNeighbor(cudaSurfaceObject_t map, float* neighborMap, unsigned int neighbor, int2 origin)
+	{
+		int px = blockIdx.x * blockDim.x + threadIdx.x + origin.x;
+		int py = blockIdx.y * blockDim.y + threadIdx.y + origin.x;
+		int linIdx = py * Width + px;
+		linIdx *= HalfNumNeighbors;
+		// Exclude outermost pixels.
+		if (px > 0 && py > 0 && px < Width - 1 && py < Height - 1)
+		{
+			float density = 0;
+			switch (neighbor)
+			{
+			case 0:
+				// Right.
+				density = neighborMap[linIdx + 0];
+				break;
+			case 4:
+				// Left.
+				density = neighborMap[linIdx - HalfNumNeighbors + 0];
+				break;
+			case 1:
+				// Up.
+				density = neighborMap[linIdx + 1];
+				break;
+			case 5:
+				// Down.
+				density = neighborMap[linIdx - HalfNumNeighbors*Width + 1];
+				break;
+			case 2:
+				// Upper Right.
+				density = neighborMap[linIdx + 2];
+				break;
+			case 6:
+				// Lower left.
+				density = neighborMap[linIdx - HalfNumNeighbors*(Width + 1) + 2];
+				break;
+			case 3:
+				// Upper Left.
+				density = neighborMap[linIdx + 3];
+				break;
+			default:
+				// Lower Right.
+				density = neighborMap[linIdx + HalfNumNeighbors*(1 - Width) + 3];
+				break;
+			}
+			surf2Dwrite(density, map, px * sizeof(float), py, cudaBoundaryModeTrap);
+		}
+	}
+
+	__global__ void ScanStoreFTLE(cudaSurfaceObject_t map, float* neighborMap, unsigned int neighbor, int2 origin)
 	{
 		int px = blockIdx.x * blockDim.x + threadIdx.x;
 		int py = blockIdx.y * blockDim.y + threadIdx.y;
 		int linIdx = py * Width + px;
-		if (px < Width-1 && py < Height-1)
+		linIdx *= HalfNumNeighbors;
+		// Exclude outermost pixels.
+		if (px > 0 && py > 0 && px < Width - 1 && py < Height - 1)
 		{
-			surf2Dwrite(cutsX[linIdx], gradsX, px*sizeof(float), py, cudaBoundaryModeTrap);
-			surf2Dwrite(cutsY[linIdx], gradsY, px*sizeof(float), py, cudaBoundaryModeTrap);
+			// Compute Eigenvalues.
+			// Load 4 values.
+			float Ux = neighborMap[linIdx + 0];
+			float Uy = neighborMap[linIdx + 1];
+			float Vx = neighborMap[linIdx + 2];
+			float Vy = neighborMap[linIdx + 3];
+			float a = Ux*Ux + Vx*Vx;
+			float b = Ux*Uy + Vx*Vy;
+			float d = Uy*Uy + Vy*Vy;
+
+			// Helpers.
+			float Th = (a - d) * 0.5f;
+			float D = a * d - b * b;
+			float root = Th * Th - D;
+
+			root = max(0.0f, root);
+
+			root = sqrt(root);
+			float l0 = Th + root;
+			float l1 = Th - root;
+
+			float lambdaMax = max(0.000001, max(l0, l1));
+
+			//float a = neighborMap[linIdx + 0];
+			//float b = neighborMap[linIdx + 1];
+			//float c = neighborMap[linIdx + 2];
+			//float d = neighborMap[linIdx + 3];
+
+			//a *= a;
+			//float bc = b*b * c*c;
+			//d *= d;
+
+			//float root = a*a - 2 * a*d + 4 * bc + d*d;
+			//root = sqrt(max(0.0, root));
+			//float lambdaMax = (a + d) * 0.5;
+			surf2Dwrite(logf(sqrt(lambdaMax)) / IntegrationLength, map, px * sizeof(float), py, cudaBoundaryModeTrap);
 		}
 	}
 }
