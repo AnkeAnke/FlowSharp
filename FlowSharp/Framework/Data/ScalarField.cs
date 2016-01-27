@@ -71,6 +71,34 @@ namespace FlowSharp
                     return false;
             return true;
         }
+
+        public abstract void ChangeEndian();
+
+        public static void FlipEndian(float[] data)
+        {
+            int length = data.Length;
+            // Rewrite the data in memory.
+            unsafe
+            {
+                fixed (float* floatPtr = data)
+                {
+                    byte* byteData = (byte*)floatPtr;
+
+                    // Swap beginning and ending float after multiplication.
+                    for (int i = 0; i < length; ++i)
+                    {
+                        byte tmp = byteData[i * 4];
+                        byteData[i * 4] = byteData[i * 4 + 3];
+                        byteData[i * 4 + 3] = tmp;
+
+                        tmp = byteData[i * 4 + 1];
+                        byteData[i * 4 + 1] = byteData[i * 4 + 2];
+                        byteData[i * 4 + 2] = tmp;
+
+                    }
+                }
+            }
+        }
     }
     /// <summary>
     /// Class for N dimensional float fields.
@@ -336,6 +364,11 @@ namespace FlowSharp
             }
             sd /= numValidCells;
             sd = (float)Math.Sqrt(sd);
+        }
+
+        public override void ChangeEndian()
+        {
+            FlipEndian(Data);
         }
 
         //class SliceRange

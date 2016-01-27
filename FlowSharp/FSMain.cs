@@ -38,6 +38,7 @@ namespace FlowSharp
 
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
+        static string locDataFolderSubstep = "E:/Anke/Dev/Data/ShaheenSubsteps/s";
         static string locFileName = "/Posterior_Diag.nc";
         static string locFolderName = "/advance_temp";
         //        string locWFileName = ".0000000108.data";
@@ -56,7 +57,11 @@ namespace FlowSharp
             // Look for raw file.
             if (substep != null || var == RedSea.Variable.VELOCITY_Z)
             {
-                return new LoaderRaw();
+                var loader = new LoaderRaw(var);
+                loader.Range.SetMember(RedSea.Dimension.TIME, step);
+                loader.Range.SetMember(RedSea.Dimension.SUBTIME, substep??0);
+                loader.Range.SetMember(RedSea.Dimension.MEMBER, member??0);
+                return loader;
             }
             else
             {
@@ -66,18 +71,21 @@ namespace FlowSharp
 
         public static string RedSeaFilenames(int step, int? substep, int? member, RedSea.Variable var)
         {
-
             string dir = locDataFolder + (step + 1);
 
             // Look for raw file.
             if (substep != null || var == RedSea.Variable.VELOCITY_Z)
             {
+                dir = locDataFolderSubstep + (step + 1);
+
                 // Not the W case: go into the inner folder.
                 if (substep != null)
                     dir += locFolderName + member + '/';
 
-                string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
-                string[] rawDirs = Directory.GetFiles(dir, RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end", SearchOption.TopDirectoryOnly);
+                //string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
+                int numZeros = 10 - (substep == 0? 1 : (int)(Math.Log10((int)substep*9) + 1));
+                string filename = RedSea.GetShortName(var) + "." + new string('0', numZeros) + (substep*9) + ".data";
+                string[] rawDirs = Directory.GetFiles(dir, filename, SearchOption.TopDirectoryOnly);
                 Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
 
                 return rawDirs[0];
@@ -92,10 +100,10 @@ namespace FlowSharp
         public static void LoadData()
         {
             Console.WriteLine("Output works.");
-            Console.WriteLine("Using " + ((IntPtr.Size == 8) ? "x64" : "x32"));
-            bool loadData = false;
+            Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
+            bool loadData = true;
 
-            int numTimeSlices =  10;
+            int numTimeSlices =  60;
             RedSea.Singleton.NumTimeSlices = numTimeSlices;
             //string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
             //string locFileName = "/Posterior_Diag.nc";
@@ -136,14 +144,24 @@ namespace FlowSharp
             //ensembleV.SetRange(RedSea.Dimension.CENTER_X, 100, 160);
             //ensembleV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
 
+            Loader.SliceRange rawU = new LoaderRaw.SliceRangeRaw(RedSea.Variable.VELOCITY_X);
+            rawU.SetMember(RedSea.Dimension.GRID_Z, 0);
+            rawU.SetMember(RedSea.Dimension.MEMBER, 0);
+            rawU.SetMember(RedSea.Dimension.SUBTIME, 0);
+            Loader.SliceRange rawV = new LoaderRaw.SliceRangeRaw(RedSea.Variable.VELOCITY_Y);
+            rawV.SetMember(RedSea.Dimension.GRID_Z, 0);
+            rawV.SetMember(RedSea.Dimension.MEMBER, 0);
+            rawV.SetMember(RedSea.Dimension.SUBTIME, 0);
+
             ncFile.Close();
 
 
             if (loadData)
             {
-                velocity = LoaderNCF.LoadTimeSeries(new LoaderNCF.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
+                //velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
+                velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { rawU, rawV });
                 // Scale the field from m/s to (0.1 degree per 3 days).
-                velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
+                velocity.ScaleToGrid(new Vec2(RedSea.Singleton.TimeScale));
             }
             else
             {
@@ -163,14 +181,14 @@ namespace FlowSharp
                 Console.WriteLine("Completed processing step " + time + '.');
             }
 
-            redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX*0.1f, Vector3.UnitY*0.1f, -Vector3.UnitZ * 3, 0.4f/*10f/size*/, 0.1f);
+            redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX*0.1f, Vector3.UnitY*0.1f, -Vector3.UnitZ, 0.4f/*10f/size*/, 0.1f);
             //            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
             //Console.WriteLine("Found CP.");
             //mapperPathCore = new PathlineCoreTracking(velocity, redSea);
             //Console.WriteLine("Found Pathline Cores.");
-            mapperComparison = new MemberComparison(new LoaderNCF.SliceRange[] { sliceU, sliceV }, redSea);
+            mapperComparison = new MemberComparison(/*new LoaderNCF.SliceRange[] { sliceU, sliceV },*/ redSea);
             //mapperOW = new OkuboWeiss(velocity, redSea);
-            Console.WriteLine("Computed Okubo-Weiss.");
+           // Console.WriteLine("Computed Okubo-Weiss.");
 
 
             Console.WriteLine("Computed all data necessary.");
@@ -197,11 +215,14 @@ namespace FlowSharp
 
             DataMapper pathlines = new PathlineRadius(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_RADIUS, pathlines);
-            //SubstepViewer substep = new SubstepViewer(redSea);
-            //RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
+            SubstepViewer substep = new SubstepViewer(redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
 
             DataMapper lineStatistics = new LineStatisticsMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.LINE_STATISTICS, lineStatistics);
+
+            DataMapper coreDistance = new CoreDistanceMapper(1, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.CORE_DISTANCE, coreDistance);
 
             if (mapperOW != null)
                 RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);

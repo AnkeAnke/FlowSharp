@@ -23,10 +23,12 @@ namespace FlowSharp
             protected int[] _dimLengths;
             protected RedSea.Variable _var;
 
+            public bool CorrectEndian { get; set; } = true;
             public int GetDimensionID(int index) { return (int)_presentDims[index]; }
             public int[] GetOffsets() { return _dimOffsets; }
             public int[] GetLengths() { return _dimLengths; }
             public RedSea.Variable GetVariable() { return _var; }
+            public void SetVariable(RedSea.Variable value) { _var = value; }
 
 
             protected void Initialize(int[] dims, RedSea.Variable var)
@@ -59,6 +61,11 @@ namespace FlowSharp
             {
                 Initialize(dims, var);
             }
+
+            //public SliceRange(LoaderRaw loader)
+            //{
+            //    Initialize(loader.GetIDs, var);
+            //}
 
             public SliceRange(SliceRange range)
             {
@@ -216,51 +223,6 @@ namespace FlowSharp
                 name = new StringBuilder(null);
             }
         }
-//        /// <summary>
-//        /// Load one value into memory completely.
-//        /// </summary>
-//        /// <param name="var"></param>
-//        /// <returns></returns>
-//        public ScalarField LoadField(RedSea.Variable var)
-//        {
-//            ScalarField field;
-//            // Query number of dimensions, since it may differ for each variable.
-//            int numDims;
-//            NetCDF.nc_inq_varndims(_fileID, (int)var, out numDims);
-
-//            // Query sizes of all relevant dimensions to know the scalar fields size.
-//            Index size = new Index(numDims);
-//            int[] dimIDs = new int[numDims];
-//            NetCDF.nc_inq_vardimid(_fileID, (int)var, dimIDs);
-
-//            // Fill index directly.
-//            for(int dim = 0; dim < numDims; ++dim)
-//            {
-//                int sizeDim;
-//                NetCDF.nc_inq_dimlen(_fileID, dimIDs[dim], out sizeDim);
-//                size[dim] = sizeDim;
-//            }
-
-//#if DEBUG
-//            Console.WriteLine("Field dimensions of " + var.ToString() + ": " + size.ToString());
-
-//            // Assert the type is float.
-//            NetCDF.NcType type;
-//            NetCDF.nc_inq_vartype(_fileID, (int)var, out type);
-//            Debug.Assert(type == NetCDF.NcType.NC_FLOAT);
-//#endif
-
-//            // Create a grid descriptor for the field. 
-//            // TODO: Actually load this data.
-//            RectlinearGrid grid = new RectlinearGrid(size, new )
-
-//            // Create scalar field instance and fill it with data.
-//            field = new ScalarField(size);
-//            int[] zero = new int[numDims];
-//            NetCDF.nc_get_var_float(_fileID, (int)var, field.Data);
-
-//            return field;
-//        }
 
         /// <summary>
         /// Load a slice from the file.
@@ -330,7 +292,7 @@ namespace FlowSharp
             field = new ScalarField(grid);
             int sliceSize = grid.Size.Product();// / slice.GetNumTimeSlices();
 
-            // Get data. x64 dll fails here...
+            // Get data. x64 dll fails in debug here...
             ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
             Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
 
@@ -339,18 +301,6 @@ namespace FlowSharp
             ncState = NetCDF.nc_get_att_float(_fileID, (int)slice.GetVariable(), "_FillValue", invalidval);
 
             field.InvalidValue = invalidval[0];
-
-            //// Scale the data such that a vector (1,1) travels 1 grid cell exactly! Without this, no operations are allowed.
-            //switch (slice.GetVariable())
-            //{
-            //    case RedSea.Variable.VELOCITY_X:
-            //    case RedSea.Variable.VELOCITY_Y:
-            //        //field.ScaleToGrid(new Vector(0.1f, fieldSize.Length));
-            //        break;
-            //    default:
-            //        field.UseRawData();
-            //        break;
-            //}
 
             return field;
         }
@@ -374,8 +324,10 @@ namespace FlowSharp
         public override ScalarFieldUnsteady LoadTimeSlices(SliceRange var, int starttime, int timelength)
         {
             Close();
-            return LoadTimeSeries(var, starttime, timelength);
+            var ret = LoadTimeSeries(var, starttime, timelength);
             Open();
+
+            return ret;
         }
         public override VectorFieldUnsteady LoadTimeVectorField(SliceRange[] vars, int starttime, int timelength)
         {

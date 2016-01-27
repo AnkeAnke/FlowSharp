@@ -34,10 +34,18 @@ namespace FlowSharp
 //        private float startX, startY, endX, endY, dimX, dimY;
         public MainWindow()
         {
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => { LoadUI(); }));
-            InitializeComponent();
+            try
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => { LoadUI(); }));
+                InitializeComponent();
 
-            DX11Display.Scene = Renderer.Singleton;
+                DX11Display.Scene = Renderer.Singleton;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+
             _mapper = new EmptyMapper();
 
             RedSea.Singleton.WPFWindow = this;

@@ -695,10 +695,6 @@ namespace FlowSharp
             _cutNeighbor = new CudaKernel("CutNeighbors", module, _context);
             _deformationTensorFTLE = new CudaKernel("DeformationTensorFTLE", module, _context);
             _scanStoreMeasure = new CudaKernel[Enum.GetValues(typeof(RedSea.DiffusionMeasure)).Length];
-            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.DENSITY] = new CudaKernel("ScanStoreDensity", module, _context);
-            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.MIN] = new CudaKernel("ScanStoreMin", module, _context);
-            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.MAX] = new CudaKernel("ScanStoreMax", module, _context);
-            //_scanStoreMeasure[(int)RedSea.DiffusionMeasure.RANGE] = new CudaKernel("ScanStoreRange", module, _context);
             foreach (RedSea.DiffusionMeasure measure in Enum.GetValues(typeof(RedSea.DiffusionMeasure)))
             {
                 _scanStoreMeasure[(int)measure] = new CudaKernel("ScanStore" + measure.ToString(), module, _context);

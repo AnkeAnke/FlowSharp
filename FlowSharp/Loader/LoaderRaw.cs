@@ -19,10 +19,16 @@ namespace FlowSharp
         /// </summary>
         protected int[] _dimIDs;
         protected int[] _dimLengths;
+
+        public int[] GetIDs() { return _dimIDs; }
+        public int[] GetLengths() { return _dimLengths; }
         //        protected string _fileName;
         public int NumDims { get { return _dimIDs.Length; } }
 
         protected static int _numOpenFiles = 0;
+        protected static int[] _dimensionIDs = new int[] { (int)RedSea.Dimension.GRID_X, (int)RedSea.Dimension.GRID_Y, (int)RedSea.Dimension.GRID_Z, (int)RedSea.Dimension.MEMBER, (int)RedSea.Dimension.TIME, (int)RedSea.Dimension.SUBTIME };
+
+        public SliceRange Range { get; set; }
 
         /// <summary>
         /// Create a Loader object and open a NetCDF file.
@@ -55,15 +61,19 @@ namespace FlowSharp
         //    _dimIDs = new int[] { (int)RedSea.Variable.GRID_X, (int)RedSea.Variable.GRID_Y, (int)RedSea.Variable.GRID_Z };
         //    _dimLengths = new int[] { 500, 500, 50 };
         //}
-        protected int _step;
-        protected int _substep;
+        //protected int _step;
+        //protected int _substep;
 
-        public LoaderRaw()
+        public LoaderRaw(RedSea.Variable var = RedSea.Variable.VELOCITY_X)
         {
             Debug.Assert(_numOpenFiles == 0, "Another file is still open!");
 
-            _dimIDs = new int[] { (int)RedSea.Dimension.GRID_X, (int)RedSea.Dimension.GRID_Y, (int)RedSea.Dimension.GRID_Z, (int)RedSea.Dimension.MEMBER, (int)RedSea.Dimension.TIME, (int)RedSea.Dimension.SUBTIME };
-            _dimLengths = new int[] { 500, 500, 50, 50, 160, 108 };
+            _dimIDs = (int[])_dimensionIDs.Clone(); // new int[] { (int)RedSea.Dimension.GRID_X, (int)RedSea.Dimension.GRID_Y, (int)RedSea.Dimension.GRID_Z, (int)RedSea.Dimension.MEMBER, (int)RedSea.Dimension.TIME, (int)RedSea.Dimension.SUBTIME };
+
+            _dimLengths = new int[] { 500, 500, 50, 50, RedSea.Singleton.NumSteps, RedSea.Singleton.NumSubsteps };
+
+            Range = new SliceRange(_dimIDs, var);
+            Range.CorrectEndian = false;
         }
 
         /// <summary>
@@ -84,7 +94,7 @@ namespace FlowSharp
             int numDimsField = 0;
 
             // Exclude time dimension. It will be treated differently.
-            for (int dim = 0; dim < spaceDims; ++dim)
+            for (int dim = 0; dim < offsets.Length; ++dim)
             {
 
                 if (offsets[dim] != -1 && sizeInFile[dim] > 1)
@@ -104,8 +114,9 @@ namespace FlowSharp
                     sizeField[numDimsField++] = sizeInFile[dim];
                 }
             }
-            Index fieldSize = new Index(numDimsField);
-            Array.Copy(sizeField, fieldSize.Data, numDimsField);
+            int numSpaceDims = ((sizeInFile[0] > 1) ? 1 : 0) + ((sizeInFile[1] > 1) ? 1 : 0) + ((sizeInFile[2] > 1) ? 1 : 0);
+            Index fieldSize = new Index(numSpaceDims);
+            Array.Copy(sizeField, fieldSize.Data, fieldSize.Length);
 
             Debug.Assert(sizeInFile[3] == 1, "How should I load several members into one data block???");
 
@@ -142,7 +153,7 @@ namespace FlowSharp
                             {
                                 // Set file reader position to right start point.
                                 reader.BaseStream.Seek(z * _dimLengths[0] * _dimLengths[1] + offsets[1] * _dimLengths[0] + offsets[0], SeekOrigin.Begin);
-                                for (int y = offsets[1]; z < offsets[1] + sizeInFile[1]; ++y)
+                                for (int y = offsets[1]; y < offsets[1] + sizeInFile[1]; ++y)
                                 {
                                     for (int x = offsets[0]; x < offsets[0] + sizeInFile[0]; ++x)
                                     {
@@ -154,6 +165,20 @@ namespace FlowSharp
                             }
                         }
                     }
+
+                    // Change Endian of data.
+                    if (!Range.CorrectEndian)
+                    {
+                        fields[indexTime].ChangeEndian();
+
+                        for (int i = 0; i < fields[indexTime].Data.Length; ++i)
+                        {
+                            if (fields[indexTime].Data[i] == 0)
+                                fields[indexTime].Data[i] = float.MaxValue;
+                        }
+                        fields[indexTime].InvalidValue = float.MaxValue;
+                    }
+
                     // Go on to next file.
                     indexTime++;
                 }
@@ -161,6 +186,17 @@ namespace FlowSharp
             }
 
             return new ScalarFieldUnsteady(fields, offsets[spaceDims] * _dimLengths[spaceDims+1] + offsets[spaceDims+1]); 
+        }
+
+        public ScalarField LoadFieldSlice()
+        {
+            return LoadFieldSlice(Range);
+        }
+
+        public ScalarField LoadFieldSlice(RedSea.Variable var)
+        {
+            Range.SetVariable(var);
+            return LoadFieldSlice(Range);
         }
 
         public override ScalarField LoadFieldSlice(SliceRange slice)
@@ -211,7 +247,7 @@ namespace FlowSharp
 
             int indexTime = 0;
 
-            Debug.Assert(sizeInFile[spaceDims] == 0 && sizeInFile[spaceDims + 1] == 0, "Define a single timestep, else use the method for ScalarFieldUnsteady.");
+            Debug.Assert(sizeInFile[spaceDims] == 1 && sizeInFile[spaceDims + 1] == 1, "Define a single timestep, else use the method for ScalarFieldUnsteady.");
             // Now, load one single file.
             string filename = RedSea.Singleton.GetFilename(offsets[spaceDims], offsets[spaceDims + 1], offsets[3], slice.GetVariable());
 
@@ -228,7 +264,7 @@ namespace FlowSharp
                     {
                         // Set file reader position to right start point.
                         reader.BaseStream.Seek(z * _dimLengths[0] * _dimLengths[1] + offsets[1] * _dimLengths[0] + offsets[0], SeekOrigin.Begin);
-                        for (int y = offsets[1]; z < offsets[1] + sizeInFile[1]; ++y)
+                        for (int y = offsets[1]; y < offsets[1] + sizeInFile[1]; ++y)
                         {
                             for (int x = offsets[0]; x < offsets[0] + sizeInFile[0]; ++x)
                             {
@@ -238,17 +274,18 @@ namespace FlowSharp
                             reader.BaseStream.Seek((_dimLengths[0] - sizeInFile[0]) * sizeof(float), SeekOrigin.Current);
                         }
                     }
-                    //// Change Endian of data.
-                    //if (!rightEndian)
-                    //{
-                    //    Array.Reverse(data);
-                    //    for (int i = 0; i < sliceSize; ++i)
-                    //    {
-                    //        field.Data[sliceSize - 1 - i] = BitConverter.ToSingle(data, i * 4);
-                    //    }
-                    //}
+                    // Change Endian of data.
+                    if (!Range.CorrectEndian)
+                    {
+                        field.ChangeEndian();
 
-                    // Write to scalar field!
+                        for (int i = 0; i < field.Data.Length; ++i)
+                        {
+                            if (field.Data[i] == 0)
+                                field.Data[i] = float.MaxValue;
+                        }
+                        field.InvalidValue = float.MaxValue;
+                    }
                 }
             }
 
@@ -263,6 +300,21 @@ namespace FlowSharp
                 fields[i] = LoadTimeSlices(slices[i]);
 
             return new VectorFieldUnsteady(fields);
+        }
+
+        public static VectorFieldUnsteady LoadTimeSeries(SliceRange[] slices)
+        {
+            ScalarFieldUnsteady[] fields = new ScalarFieldUnsteady[slices.Length];
+            LoaderRaw loader = new LoaderRaw(RedSea.Variable.VELOCITY_X);
+            for (int i = 0; i < slices.Length; ++i)
+                fields[i] = loader.LoadTimeSlices(slices[i]);
+
+            return new VectorFieldUnsteady(fields);
+        }
+
+        public class SliceRangeRaw : Loader.SliceRange
+        {
+            public SliceRangeRaw(RedSea.Variable var = RedSea.Variable.VELOCITY_X) : base(_dimensionIDs, var) { CorrectEndian = false; }
         }
 
     }

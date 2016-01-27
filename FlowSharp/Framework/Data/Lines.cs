@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace FlowSharp
 {
@@ -13,6 +14,27 @@ namespace FlowSharp
         public int Length { get { return Positions.Length; } }
         public VectorField.Integrator.Status Status;
         public float LineLength = 0;
+
+        public float DistanceToPointInZ(Vector3 position)
+        {
+            // Slow linear search. Khalas.
+            int i = 0;
+            for(; i < Positions.Length - 1; ++i)
+            {
+                if ((Positions[i].Z - position.Z) * (Positions[i + 1].Z - position.Z) <= 0)
+                    break;
+            }
+            if (i == Length - 2)
+                return float.MaxValue;
+
+            Vector3 p0 = Positions[i];
+            Vector3 p1 = Positions[i + 1];
+            float t = (position.Z - p0.Z) / (p1.Z - p0.Z);
+            Vector3 zNearest = (1 - t) * p0 + t * p1;
+            Debug.Assert(Math.Abs(position.Z - zNearest.Z) < 0.00000001f);
+
+            return (position - zNearest).Length();
+        }
     }
 
     class LineSet

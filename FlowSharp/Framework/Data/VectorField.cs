@@ -153,7 +153,7 @@ namespace FlowSharp
         public SquareMatrix SampleDerivative(Vector position)
         {
             //Debug.Assert(NumVectorDimensions == Size.Length);
-            SquareMatrix jacobian = new SquareMatrix(Size.Length);
+            SquareMatrix jacobian = new SquareMatrix(NumVectorDimensions);
 
             for (int dim = 0; dim < Size.Length; ++dim)
             {

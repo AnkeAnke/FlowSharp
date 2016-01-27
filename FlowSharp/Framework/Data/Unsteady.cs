@@ -37,7 +37,7 @@ namespace FlowSharp
 
         public override bool IsValid(Vector pos)
         {
-            return Scalars[0].IsValid(pos);
+            return ScalarsAsSFU[0].TimeSlices[0].Grid.InGrid(pos) && Scalars[0].IsValid(pos);
         }
 
         /// <summary>
@@ -139,7 +139,87 @@ namespace FlowSharp
                 }
             }
         }
+
+        public override VectorField GetSlicePlanarVelocity(int timeSlice)
+        {
+            ScalarField[] slices = new ScalarField[Size.Length - 1];
+
+            // Copy the grid - one dimension smaller!
+            RectlinearGrid grid = Grid as RectlinearGrid;
+            Index newSize = new Index(Size.Length - 1);
+            Array.Copy(Size.Data, newSize.Data, newSize.Length);
+
+            FieldGrid sliceGrid = new RectlinearGrid(newSize);
+            for (int i = 0; i < Size.Length - 1; ++i)
+            {
+                slices[i] = this._scalarsUnsteady[i].GetTimeSlice(timeSlice);
+                
+                slices[i].TimeSlice = timeSlice;
+            }
+            return new VectorField(slices);
+        }
     }
+
+    class VectorFieldUnsteadyAnalytical : VectorFieldUnsteady
+    {
+        //delegate Vector Evaluate(Vector inVec);
+        public delegate Vector Evaluate(Vector inVec, SquareMatrix inJ);
+
+        protected Evaluate _evaluate;
+        //protected int _numVectorDimensions = -1;
+        protected FieldGrid _outGrid;
+
+        public VectorFieldUnsteadyAnalytical(Evaluate func, VectorFieldUnsteady field, FieldGrid outGrid, bool useJacobian = false) : base(field.ScalarsAsSFU)
+        {
+            _evaluate = func;
+           // _numVectorDimensions = outDimensions;
+        }
+
+        public override int NumVectorDimensions
+        {
+            get
+            {
+                return _outGrid.Size.Length;
+            }
+        }
+
+        public override void ScaleToGrid(Vector scale)
+        {
+            base.ScaleToGrid(scale);
+        }
+
+        public override VectorField GetSlice(int slice)
+        {
+            return base.GetSlice(slice);
+        }
+
+        public override Field[] Scalars
+        {
+            get
+            {
+                return base.Scalars;
+            }
+        }
+
+    }
+
+    //class ScalarFieldUnsteadyAnalytical : ScalarFieldUnsteady
+    //{
+    //    public ScalarFieldUnsteadyAnalytical() : base(null)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
+
+    //class ScalarFieldUnsteadyAnalytical : ScalarFieldUnsteady
+    //{
+    //    public ScalarFieldUnsteadyAnalytical() : base(null)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
+
+
     class ScalarFieldUnsteady : Field
     {
         public override int NumDimensions { get { return Size.Length - 1; } }
@@ -282,6 +362,12 @@ namespace FlowSharp
         public override bool IsUnsteady()
         {
             return true;
+        }
+
+        public override void ChangeEndian()
+        {
+            foreach (ScalarField field in this.TimeSlices)
+                field.ChangeEndian();
         }
     }
 }

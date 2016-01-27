@@ -205,17 +205,33 @@ namespace FlowSharp
             // Only for rectlinear grids.
             RectlinearGrid grid = field.Grid as RectlinearGrid;
             Debug.Assert(grid != null);
-            Debug.Assert(grid.Size.Length == 2);
+//            Debug.Assert(grid.Size.Length == 2);
             _epsCriticalPoint = epsCriticalPoint;
 
             List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
-
+            List<Vector> cellList = new List<Vector>(6);
             Vector halfCell = new Vector(0.5f, 2);
             //Index numCells = field.Size - new Index(1, field.Size.Length);
             for (int x = 0; x < field.Size[0] - 1; ++x)
                 for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
                 {
-                    SubdivideCell(field, new Vec2(x, y), 0, numDivisions, cpList);
+                    //if (x == 362 && y == 32)
+                    //    Console.WriteLine("eiwoe;");
+                    SubdivideCell(field, new Vec2(x, y), 0, numDivisions, cellList);
+
+                    // Only take one CP per cell.
+                    // TODO: One for each CP type.
+                    if (cellList.Count > 0)
+                    {
+                        Vector center = new Vector(0, 2);
+                        foreach (Vector vec in cellList)
+                            center += vec;
+
+                        center /= cellList.Count;
+
+                        cpList.Add(center);
+                        cellList.Clear();
+                    }
                 }
 
             CriticalPoint2D[] points = new CriticalPoint2D[cpList.Count];
@@ -228,7 +244,7 @@ namespace FlowSharp
 
                 SquareMatrix J = field.SampleDerivative(cpList[index]);
 
-                points[index] = new CriticalPoint2D(pos, J)
+                points[index] = new CriticalPoint2D(pos, J.ToMat2x2())
                 {
                     Radius = pointSize ?? 1
                 };
@@ -276,6 +292,8 @@ namespace FlowSharp
             return new PointSet<Point>(points);
         }
 
+
+        static float _epsZero = 0f;
         /// <summary>
         /// Recursively check each subcell if a 0 can be interpolated. Stop after some level of detail. 
         /// </summary>
@@ -304,9 +322,9 @@ namespace FlowSharp
                     float value = field.Scalars[dim].Sample(position);
                     if (value == field.Scalars[dim].InvalidValue)
                         return;
-                    if (value >= 0)
+                    if (value >= -_epsZero)
                         pos = true;
-                    if (value <= 0)
+                    if (value <= _epsZero)
                         neg = true;
                 }
                 if (!pos || !neg)
@@ -506,12 +524,27 @@ namespace FlowSharp
             Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
 
             // Find points where v || f
-            Vec3 result =  Vec3.Cross(f, v.AsVec3()) * 10000;
+            Vec3 result =  Vec3.Cross(f*10, v.AsVec3()*10);
             if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
                 Console.WriteLine("NaN NaN?!");
 
             return result;
         }
+
+        public static Vector PathlineCoreScalar(Vector v, SquareMatrix J)
+        {
+            Debug.Assert(v.Length == 3 && J.Length == 3);
+            // FFF
+            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
+
+            // Find points where v || f
+            Vec3 result = Vec3.Cross(f * 100, v.AsVec3() * 100);
+            if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
+                Console.WriteLine("NaN NaN?!");
+
+            return (Vector)result.LengthSquared();
+        }
+
         public static Vector OkuboWeiss(Vector v, SquareMatrix timeJ)
         {
             SquareMatrix J = timeJ.ToMat2x2();

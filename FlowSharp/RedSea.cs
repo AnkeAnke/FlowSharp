@@ -20,10 +20,10 @@ namespace FlowSharp
         public LoaderBuilderNCF GetLoaderNCF;
         public FilenameBuilder GetFilename;
 
-        public int NumSteps = 160;
-        public int NumSubsteps = 108;
+        public int NumSteps = 60; //130;
+        public int NumSubsteps = 12;
 
-        public float DomainScale = 4.63f; //2.593f / 15;
+        public float DomainScale = 1.0f/4.63f; //2.593f / 15;
         public float TimeScale { get { return 1.0f/DomainScale; } }
         /// <summary>
         /// Relevant variables of Read Sea file.
@@ -93,7 +93,9 @@ namespace FlowSharp
             CUT_DIFFUSION_MAP,
             LOCAL_DIFFUSION_MAP,
             PATHLINE_RADIUS,
-            LINE_STATISTICS
+            LINE_STATISTICS,
+            SUBSTEP_VIEWER,
+            CORE_DISTANCE
         }
 
         public enum DisplayLines : int

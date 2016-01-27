@@ -26,6 +26,7 @@
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseVSHostingProcess>true</UseVSHostingProcess>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -97,6 +98,7 @@
     <Compile Include="Framework\Algorithms\CoherentSet.cs" />
     <Compile Include="Framework\Algorithms\LocalDiffusion.cs" />
     <Compile Include="Framework\Algorithms\FlowMapUncertain.cs" />
+    <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
     <Compile Include="Framework\Renderer\CUDAMappers.cs" />
     <Compile Include="Framework\Renderer\DataMapper.cs" />
     <Compile Include="Framework\Algorithms\FieldAnalysis.cs" />
