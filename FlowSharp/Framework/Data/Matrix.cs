@@ -113,6 +113,7 @@ namespace FlowSharp
 
         public void Eigenanalysis(out SquareMatrix eigenvalues, out SquareMatrix eigenvectors)
         {
+            Debug.Assert(Length == 2, "Only 2D eigenanalysis implemented so far.");
             eigenvectors = new SquareMatrix(2);
             eigenvalues = new SquareMatrix(2);
 
@@ -204,6 +205,47 @@ namespace FlowSharp
         public static SquareMatrix operator *(float a, SquareMatrix b)
         {
             return b * a;
+        }
+
+        public static SquareMatrix operator *(SquareMatrix a, SquareMatrix b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            SquareMatrix prod = new SquareMatrix(a.Length);
+
+            for(int x = 0; x < a.Length; ++x)
+            {
+                Vector row = a.Row(x);
+
+                for(int y = 0; y < b.Length; ++y)
+                {
+                    prod[x][y] = Vector.Dot(row, b[y]);
+                }
+            }
+            return prod;
+        }
+
+        public static Vector operator *(Vector a, SquareMatrix b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            Vector prod = new Vector(a.Length);
+
+            for (int x = 0; x < a.Length; ++x)
+            {
+                prod[x] = Vector.Dot(a, b[x]);
+            }
+            return prod;
+        }
+
+        public static Vector operator *(SquareMatrix a, Vector b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            Vector prod = new Vector(a.Length);
+
+            for (int y = 0; y < a.Length; ++y)
+            {
+                prod[y] = Vector.Dot(a.Row(y), b);
+            }
+            return prod;
         }
     }
 }

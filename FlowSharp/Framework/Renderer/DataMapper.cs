@@ -24,6 +24,138 @@ namespace FlowSharp
             }
         }
 
+        protected FieldPlane LoadPlane(int member, int time, int subtime = 0, bool timeOffset = false)
+        {
+            return LoadPlaneAndGrid(member, time, subtime, timeOffset).Item1;
+        }
+
+        protected FieldPlane LoadPlane(int member, int time, out RectlinearGrid grid, int subtime = 0)
+        {
+            var result = LoadPlaneAndGrid(member, time, subtime);
+            grid = result.Item2;
+            return result.Item1;
+        }
+
+        private Tuple<FieldPlane, RectlinearGrid> LoadPlaneAndGrid(int member, int time, int subtime = 0, bool timeOffset = false)
+        {
+            LoaderRaw loader = new LoaderRaw();
+            ScalarField[] scalars;// = new ScalarField[2];
+            // Read in the data.
+            //_ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
+            //_ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
+
+            //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(time);
+            loader.Range.SetMember(RedSea.Dimension.MEMBER, member);
+            loader.Range.SetMember(RedSea.Dimension.TIME, time);
+            loader.Range.SetMember(RedSea.Dimension.SUBTIME, subtime);
+            switch (_currentSetting.Measure)
+            {
+                case RedSea.Measure.VELOCITY:
+                case RedSea.Measure.DIVERGENCE:
+                case RedSea.Measure.VORTICITY:
+                case RedSea.Measure.SHEAR:
+                case RedSea.Measure.DIVERGENCE_2D:
+                    scalars = new ScalarField[2];
+
+                    LoadVelocity:
+
+                    loader.Range.SetMember(RedSea.Dimension.GRID_Z, _currentSetting.SliceHeight);
+                    //_variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.MEMBER, member);
+                    //_variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.MEMBER, member);
+                    //_variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+                    //_variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+
+                    scalars[0] = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
+                    scalars[1] = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
+                    //scalars[0] = ncFile.LoadFieldSlice( _variableRanges[(int)RedSea.Variable.VELOCITY_X]);
+                    //scalars[1] = ncFile.LoadFieldSlice(_variableRanges[(int)RedSea.Variable.VELOCITY_Y]);
+                    break;
+
+                default:
+                    RedSea.Measure var = _currentSetting.Measure;
+
+                    //_variableRanges[(int)var].SetMember(RedSea.Dimension.MEMBER, member);
+                    int sliceHeight = (var == RedSea.Measure.SURFACE_HEIGHT) ? 0 : _currentSetting.SliceHeight;
+                    loader.Range.SetMember(RedSea.Dimension.GRID_Z, sliceHeight);
+                    //_variableRanges[(int)var].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+
+
+                    // Maybe load vector field too.
+                    bool addVelocity = (_currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH);
+                    scalars = new ScalarField[addVelocity ? 3 : 1];
+                    scalars[scalars.Length - 1] = loader.LoadFieldSlice((RedSea.Variable)var); //ncFile.LoadFieldSlice(_variableRanges[(int)var]);
+                    if (addVelocity)
+                        goto LoadVelocity;
+
+                    break;
+            }
+            //ncFile.Close();
+
+            VectorField field;
+            switch (_currentSetting.Measure)
+            {
+                case RedSea.Measure.DIVERGENCE:
+                    {
+                        VectorField vel = new VectorField(scalars);
+
+                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
+                        scalars = new ScalarField[keepField ? 3 : 1];
+                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Divergence, 1, true).Scalars[0] as ScalarField;
+
+                        if (keepField)
+                        {
+                            scalars[0] = vel.Scalars[0] as ScalarField;
+                            scalars[1] = vel.Scalars[1] as ScalarField;
+                        }
+                        break;
+                    }
+                case RedSea.Measure.DIVERGENCE_2D:
+                    {
+                        VectorField vel = new VectorField(scalars);
+                        scalars = new VectorField(vel, FieldAnalysis.Div2D, 2, true).Scalars as ScalarField[];
+                        break;
+                    }
+                case RedSea.Measure.VORTICITY:
+                    {
+                        VectorField vel = new VectorField(scalars);
+
+                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
+                        scalars = new ScalarField[keepField ? 3 : 1];
+                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Vorticity, 1, true).Scalars[0] as ScalarField;
+
+                        if (keepField)
+                        {
+                            scalars[0] = vel.Scalars[0] as ScalarField;
+                            scalars[1] = vel.Scalars[1] as ScalarField;
+                        }
+                        break;
+                    }
+                case RedSea.Measure.SHEAR:
+                    {
+                        VectorField vel = new VectorField(scalars);
+
+                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
+                        scalars = new ScalarField[keepField ? 3 : 1];
+                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Shear, 1, true).Scalars[0] as ScalarField;
+
+                        if (keepField)
+                        {
+                            scalars[0] = vel.Scalars[0] as ScalarField;
+                            scalars[1] = vel.Scalars[1] as ScalarField;
+                        }
+                        break;
+                    }
+                default:
+                    break;
+            }
+            field = new VectorField(scalars);
+            field.TimeSlice = timeOffset ? time + (float)subtime / RedSea.Singleton.NumSubsteps : 0;
+            // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
+            RectlinearGrid grid = field.Grid as RectlinearGrid;
+
+            return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap), grid);
+        }
+
         #region IntersectionPlane
         private float _planeOffsetZ_intern = 0;
         protected float _planeOffsetZ
@@ -552,9 +684,9 @@ namespace FlowSharp
             Plane = plane;
             Mapping = LoadMembers;
 
-            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
+            //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
 
-            int sizeVar = ncFile.GetNumVariables();
+            //int sizeVar = ncFile.GetNumVariables();
             //_variableRanges = new LoaderNCF.SliceRange[sizeVar];
 
             ////LoaderNCF.SliceRange ensembleU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
@@ -579,126 +711,7 @@ namespace FlowSharp
             _loader = new LoaderRaw();
             _loader.Range.SetMember(RedSea.Dimension.SUBTIME, 0);
 
-            ncFile.Close();
-        }
-
-        private FieldPlane LoadPlane(int member, int time)
-        {
-
-            ScalarField[] scalars;// = new ScalarField[2];
-            // Read in the data.
-            //_ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
-            //_ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
-
-            //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(time);
-            _loader.Range.SetMember(RedSea.Dimension.MEMBER, member);
-            _loader.Range.SetMember(RedSea.Dimension.TIME, time);
-            switch (_currentSetting.Measure)
-            {
-                case RedSea.Measure.VELOCITY:
-                case RedSea.Measure.DIVERGENCE:
-                case RedSea.Measure.VORTICITY:
-                case RedSea.Measure.SHEAR:
-                case RedSea.Measure.DIVERGENCE_2D:
-                    scalars = new ScalarField[2];
-
-                    LoadVelocity:
-                    
-                    _loader.Range.SetMember(RedSea.Dimension.GRID_Z, _currentSetting.SliceHeight);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.MEMBER, member);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.MEMBER, member);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
-
-                    scalars[0] = _loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
-                    scalars[1] = _loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
-                    //scalars[0] = ncFile.LoadFieldSlice( _variableRanges[(int)RedSea.Variable.VELOCITY_X]);
-                    //scalars[1] = ncFile.LoadFieldSlice(_variableRanges[(int)RedSea.Variable.VELOCITY_Y]);
-                    break;
-
-                default:
-                    RedSea.Measure var = _currentSetting.Measure;
-                    
-                    //_variableRanges[(int)var].SetMember(RedSea.Dimension.MEMBER, member);
-                    int sliceHeight = (var == RedSea.Measure.SURFACE_HEIGHT) ? 0 : _currentSetting.SliceHeight;
-                    _loader.Range.SetMember(RedSea.Dimension.GRID_Z, sliceHeight);
-                        //_variableRanges[(int)var].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
-
-
-                    // Maybe load vector field too.
-                    bool addVelocity = (_currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH);
-                    scalars = new ScalarField[addVelocity ? 3 : 1];
-                    scalars[scalars.Length - 1] = _loader.LoadFieldSlice((RedSea.Variable)var); //ncFile.LoadFieldSlice(_variableRanges[(int)var]);
-                    if (addVelocity)
-                        goto LoadVelocity;
-
-                    break;
-            }
             //ncFile.Close();
-
-            VectorField field;
-            switch (_currentSetting.Measure)
-            {
-                case RedSea.Measure.DIVERGENCE:
-                    {
-                        VectorField vel = new VectorField(scalars);
-
-                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
-                        scalars = new ScalarField[keepField ? 3 : 1];
-                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Divergence, 1, true).Scalars[0] as ScalarField;
-
-                        if (keepField)
-                        {
-                            scalars[0] = vel.Scalars[0] as ScalarField;
-                            scalars[1] = vel.Scalars[1] as ScalarField;
-                        }
-                        break;
-                    }
-                case RedSea.Measure.DIVERGENCE_2D:
-                    {
-                        VectorField vel = new VectorField(scalars);
-                        scalars = new VectorField(vel, FieldAnalysis.Div2D, 2, true).Scalars as ScalarField[];
-                        break;
-                    }
-                case RedSea.Measure.VORTICITY:
-                    {
-                        VectorField vel = new VectorField(scalars);
-
-                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
-                        scalars = new ScalarField[keepField ? 3 : 1];
-                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Vorticity, 1, true).Scalars[0] as ScalarField;
-
-                        if (keepField)
-                        {
-                            scalars[0] = vel.Scalars[0] as ScalarField;
-                            scalars[1] = vel.Scalars[1] as ScalarField;
-                        }
-                        break;
-                    }
-                case RedSea.Measure.SHEAR:
-                    {
-                        VectorField vel = new VectorField(scalars);
-
-                        bool keepField = _currentSetting.Shader == FieldPlane.RenderEffect.LIC;
-                        scalars = new ScalarField[keepField ? 3 : 1];
-                        scalars[scalars.Length - 1] = new VectorField(vel, FieldAnalysis.Shear, 1, true).Scalars[0] as ScalarField;
-
-                        if (keepField)
-                        {
-                            scalars[0] = vel.Scalars[0] as ScalarField;
-                            scalars[1] = vel.Scalars[1] as ScalarField;
-                        }
-                        break;
-                    }
-                default:
-                    break;
-            }
-            field = new VectorField(scalars);
-            // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
-
-            _grid = field.Grid as RectlinearGrid;
-
-            return new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap);
         }
 
         /// <summary>
@@ -715,7 +728,7 @@ namespace FlowSharp
                 SliceHeightChanged ||
                 ShaderChanged)
             {
-                _fields[0] = LoadPlane(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
+                _fields[0] = LoadPlane(_currentSetting.MemberMain, _currentSetting.SliceTimeMain, out _grid);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
                 _fields[0].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), Vector2.Zero, extent);
             }
@@ -733,7 +746,7 @@ namespace FlowSharp
                 SliceHeightChanged ||
                 ShaderChanged)
             {
-                _fields[1] = LoadPlane(_currentSetting.MemberReference, _currentSetting.SliceTimeReference);
+                _fields[1] = LoadPlane(_currentSetting.MemberReference, _currentSetting.SliceTimeReference, out _grid);
                 Vector2 extent = new Vector2((float)_currentSetting.LineX / _grid.Size[0], 1);
                 _fields[1].SetToSubrangeFloat(Plane, _grid.Size.ToInt2(), new Vector2((float)_currentSetting.LineX / _grid.Size[0], 0), new Vector2(1 - (float)(_currentSetting.LineX - 1) / _grid.Size[0], 1));
             }

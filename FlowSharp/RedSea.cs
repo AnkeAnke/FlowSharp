@@ -20,8 +20,9 @@ namespace FlowSharp
         public LoaderBuilderNCF GetLoaderNCF;
         public FilenameBuilder GetFilename;
 
-        public int NumSteps = 60; //130;
+        public int NumSteps = 130;
         public int NumSubsteps = 12;
+        public int NumSubstepsTotal { get { return NumSteps * NumSubsteps; } }
 
         public float DomainScale = 1.0f/4.63f; //2.593f / 15;
         public float TimeScale { get { return 1.0f/DomainScale; } }

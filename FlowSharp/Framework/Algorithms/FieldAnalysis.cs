@@ -531,19 +531,28 @@ namespace FlowSharp
             return result;
         }
 
-        public static Vector PathlineCoreScalar(Vector v, SquareMatrix J)
+        public static Vector Acceleration(Vector v, SquareMatrix J)
         {
-            Debug.Assert(v.Length == 3 && J.Length == 3);
-            // FFF
-            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
-
-            // Find points where v || f
-            Vec3 result = Vec3.Cross(f * 100, v.AsVec3() * 100);
-            if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
-                Console.WriteLine("NaN NaN?!");
-
-            return (Vector)result.LengthSquared();
+            // Theoretically, add v_t. Assume to be zero.
+            return J * v; 
         }
+
+        //private static Vector PredictCore(Vector vec, SquareMatrix J)
+        //{
+        //    AlphaStableFFF = 0;
+        //    return StableFFF(vec, J);
+
+        //}
+
+        //private static float CorrectCore(Vector vec, SquareMatrix J, out Vector correction)
+        //{
+        //    float error = PathlineCore(vec, J).Length;
+        //}
+
+        //public static VectorField.IntegratorPredictorCorrector PathlineCoreIntegrator(VectorField field)
+        //{
+        //    return new VectorField.IntegratorPredictorCorrector(field, PredictCore, CorrectCore, true);
+        //}
 
         public static Vector OkuboWeiss(Vector v, SquareMatrix timeJ)
         {

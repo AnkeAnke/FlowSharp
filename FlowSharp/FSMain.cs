@@ -114,35 +114,35 @@ namespace FlowSharp
             RedSea.Singleton.GetFilename = RedSeaFilenames;
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
-            LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
-            ScalarField[] u = new ScalarField[numTimeSlices];
-            LoaderNCF.SliceRange sliceU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
-            sliceU.SetMember(RedSea.Dimension.TIME, 0);
-            sliceU.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            //sliceU.SetRange(RedSea.Dimension.GRID_X, 300, 100);
-            //sliceU.SetRange(RedSea.Dimension.CENTER_Y, 20, 100);
+            //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
+            //ScalarField[] u = new ScalarField[numTimeSlices];
+            //LoaderNCF.SliceRange sliceU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            //sliceU.SetMember(RedSea.Dimension.MEMBER, 0); // Average
+            //sliceU.SetMember(RedSea.Dimension.TIME, 0);
+            //sliceU.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            ////sliceU.SetRange(RedSea.Dimension.GRID_X, 300, 100);
+            ////sliceU.SetRange(RedSea.Dimension.CENTER_Y, 20, 100);
 
-            ScalarField[] v = new ScalarField[numTimeSlices];
-            LoaderNCF.SliceRange sliceV = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            sliceV.SetMember(RedSea.Dimension.MEMBER, 0);
-            sliceV.SetMember(RedSea.Dimension.TIME, 0);
-            sliceV.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            //sliceV.SetRange(RedSea.Dimension.CENTER_X, 300, 100);
-            //sliceV.SetRange(RedSea.Dimension.GRID_Y, 20, 100);
+            //ScalarField[] v = new ScalarField[numTimeSlices];
+            //LoaderNCF.SliceRange sliceV = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            //sliceV.SetMember(RedSea.Dimension.MEMBER, 0);
+            //sliceV.SetMember(RedSea.Dimension.TIME, 0);
+            //sliceV.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            ////sliceV.SetRange(RedSea.Dimension.CENTER_X, 300, 100);
+            ////sliceV.SetRange(RedSea.Dimension.GRID_Y, 20, 100);
 
-            ensembleU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            ensembleU.SetMember(RedSea.Dimension.TIME, 0);
-            ensembleU.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            ensembleU.SetRange(RedSea.Dimension.MEMBER, 2, 50);
-            //ensembleU.SetRange(RedSea.Dimension.GRID_X, 100, 160);
-            //ensembleU.SetRange(RedSea.Dimension.CENTER_Y, 10, 70);
-            ensembleV = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            ensembleV.SetMember(RedSea.Dimension.TIME, 0);
-            ensembleV.SetMember(RedSea.Dimension.CENTER_Z, 0);
-            ensembleV.SetRange(RedSea.Dimension.MEMBER, 2, 50);
-            //ensembleV.SetRange(RedSea.Dimension.CENTER_X, 100, 160);
-            //ensembleV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
+            //ensembleU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
+            //ensembleU.SetMember(RedSea.Dimension.TIME, 0);
+            //ensembleU.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            //ensembleU.SetRange(RedSea.Dimension.MEMBER, 2, 50);
+            ////ensembleU.SetRange(RedSea.Dimension.GRID_X, 100, 160);
+            ////ensembleU.SetRange(RedSea.Dimension.CENTER_Y, 10, 70);
+            //ensembleV = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
+            //ensembleV.SetMember(RedSea.Dimension.TIME, 0);
+            //ensembleV.SetMember(RedSea.Dimension.CENTER_Z, 0);
+            //ensembleV.SetRange(RedSea.Dimension.MEMBER, 2, 50);
+            ////ensembleV.SetRange(RedSea.Dimension.CENTER_X, 100, 160);
+            ////ensembleV.SetRange(RedSea.Dimension.GRID_Y, 10, 70);
 
             Loader.SliceRange rawU = new LoaderRaw.SliceRangeRaw(RedSea.Variable.VELOCITY_X);
             rawU.SetMember(RedSea.Dimension.GRID_Z, 0);
@@ -153,7 +153,7 @@ namespace FlowSharp
             rawV.SetMember(RedSea.Dimension.MEMBER, 0);
             rawV.SetMember(RedSea.Dimension.SUBTIME, 0);
 
-            ncFile.Close();
+            //ncFile.Close();
 
 
             if (loadData)
@@ -201,8 +201,8 @@ namespace FlowSharp
             RedSea.Singleton.SetMapper(RedSea.Display.MEMBER_COMPARISON, mapperComparison);
             RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);
 
-            mapperFlowMap = new FlowMapMapper(new LoaderNCF.SliceRange[] { ensembleU, ensembleV }, redSea, velocity);
-            RedSea.Singleton.SetMapper(RedSea.Display.FLOW_MAP_UNCERTAIN, mapperFlowMap);
+            //mapperFlowMap = new FlowMapMapper(new LoaderNCF.SliceRange[] { ensembleU, ensembleV }, redSea, velocity);
+            //RedSea.Singleton.SetMapper(RedSea.Display.FLOW_MAP_UNCERTAIN, mapperFlowMap);
 
             mapperPathLength = new PathlineLengthMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_LENGTH, mapperPathLength);
@@ -221,7 +221,7 @@ namespace FlowSharp
             DataMapper lineStatistics = new LineStatisticsMapper(velocity, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.LINE_STATISTICS, lineStatistics);
 
-            DataMapper coreDistance = new CoreDistanceMapper(1, redSea);
+            DataMapper coreDistance = new CoreDistanceMapper(24, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.CORE_DISTANCE, coreDistance);
 
             if (mapperOW != null)

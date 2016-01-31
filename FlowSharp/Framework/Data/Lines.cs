@@ -40,6 +40,7 @@ namespace FlowSharp
     class LineSet
     {
         protected Line[] _lines;
+        public int Length { get { return _lines.Length; } }
         
         public Line[] Lines
         {
@@ -90,8 +91,11 @@ namespace FlowSharp
         public PointSet<EndPoint> GetEndPoints()
         {
             EndPoint[] points = new EndPoint[Lines.Length];
+            int currentWriteIdx = 0;
             for (int idx = 0; idx < points.Length; ++idx)
-                points[idx] = new EndPoint() { Position = Lines[idx].Positions.Last(), LengthLine = Lines[idx].LineLength, Status = Lines[idx].Status };
+                if(Lines[idx].Positions.Length > 0)
+                    points[currentWriteIdx++] = new EndPoint() { Position = Lines[idx].Positions.Last(), LengthLine = Lines[idx].LineLength, Status = Lines[idx].Status };
+            Array.Resize(ref points, currentWriteIdx);
             return new PointSet<EndPoint>(points);
         }
         public PointSet<EndPoint> GetEndPoints(VectorField.Integrator.Status select)

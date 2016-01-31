@@ -68,19 +68,19 @@ namespace FlowSharp
             DropDownDisplayLines.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayLines)).Cast<RedSea.DisplayLines>();
             DropDownDisplayLines.SelectedIndex = 0;
 
-            DropDownSlice0.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumTimeSlices);
+            DropDownSlice0.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumSteps);
             DropDownSlice0.SelectedIndex = 0;
 
-            DropDownSlice1.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumTimeSlices);
+            DropDownSlice1.ItemsSource = Enumerable.Range(0, RedSea.Singleton.NumSteps);
             DropDownSlice1.SelectedIndex = 0;
 
-            DropDownMember0.ItemsSource = Enumerable.Range(0, 52);
+            DropDownMember0.ItemsSource = Enumerable.Range(0, 10);
             DropDownMember0.SelectedIndex = 0;
 
-            DropDownMember1.ItemsSource = Enumerable.Range(0, 52);
+            DropDownMember1.ItemsSource = Enumerable.Range(0, 10);
             DropDownMember1.SelectedIndex = 0;
 
-            DropDownHeight.ItemsSource = Enumerable.Range(0, 50);
+            DropDownHeight.ItemsSource = Enumerable.Range(0, 10);
             DropDownHeight.SelectedIndex = 0;
 
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();

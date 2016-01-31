@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SlimDX.Direct3D11;
+using System.Diagnostics;
 
 namespace FlowSharp
 {
@@ -116,9 +117,10 @@ namespace FlowSharp
         {
             if (UsedMap == null)
                 return;
-            _effect.GetVariableByName("colormap")?.AsResource().SetResource(ColorMapping.GetColormapTexture((Colormap)UsedMap));
-            _effect.GetVariableByName("minMap")?.AsScalar().Set(LowerBound);
-            _effect.GetVariableByName("maxMap")?.AsScalar().Set(UpperBound);
+            System.Diagnostics.Debug.Assert(_effect != null);
+            _effect?.GetVariableByName("colormap")?.AsResource().SetResource(ColorMapping.GetColormapTexture((Colormap)UsedMap));
+            _effect?.GetVariableByName("minMap")?.AsScalar().Set(LowerBound);
+            _effect?.GetVariableByName("maxMap")?.AsScalar().Set(UpperBound);
         }
 
         public override void Render(Device device)

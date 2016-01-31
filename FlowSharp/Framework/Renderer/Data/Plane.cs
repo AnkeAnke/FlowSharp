@@ -84,6 +84,7 @@ namespace FlowSharp
         protected VectorField _field;
         protected int _width, _height;
         protected float _invalid;
+        protected Plane _timePlane;
         public FieldPlane.RenderEffect Effect
         {
             get; protected set;
@@ -306,6 +307,7 @@ namespace FlowSharp
         {
             Vector extent = (Vector)size;
             Vector3 origin = plane.Origin + plane.ZAxis * timeOffset + minBox[0] * plane.XAxis + minBox[1] * plane.YAxis;
+            _timePlane = new Plane(plane, timeOffset * Vector3.UnitZ);
             Vector3 maximum = origin 
                 + extentBox[0] * plane.XAxis 
                 + extentBox[1] * plane.YAxis 
@@ -345,6 +347,11 @@ namespace FlowSharp
                 Usage = ResourceUsage.Default
             });
             stream.Dispose();
+        }
+
+        public Plane GetIntersectionPlane()
+        {
+            return new Plane(_timePlane);
         }
 
         public override void Render(Device device)

@@ -72,7 +72,7 @@ namespace FlowSharp
 
             _dimLengths = new int[] { 500, 500, 50, 50, RedSea.Singleton.NumSteps, RedSea.Singleton.NumSubsteps };
 
-            Range = new SliceRange(_dimIDs, var);
+            Range = new SliceRangeRaw();
             Range.CorrectEndian = false;
         }
 
@@ -314,7 +314,12 @@ namespace FlowSharp
 
         public class SliceRangeRaw : Loader.SliceRange
         {
-            public SliceRangeRaw(RedSea.Variable var = RedSea.Variable.VELOCITY_X) : base(_dimensionIDs, var) { CorrectEndian = false; }
+            public SliceRangeRaw(RedSea.Variable var = RedSea.Variable.VELOCITY_X) : base(_dimensionIDs, var)
+            {
+                CorrectEndian = false;
+                SetMember(RedSea.Dimension.MEMBER, 0);
+                SetMember(RedSea.Dimension.GRID_Z, 0);
+            }
         }
 
     }

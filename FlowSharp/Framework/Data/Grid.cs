@@ -206,11 +206,14 @@ namespace FlowSharp
         public override bool InGrid(Vector position)
         {
             Debug.Assert(position.Length == Size.Length, "Trying to access " + Size.Length + "D field with " + position.Length + "D index.");
-            for (int dim = 0; dim < Size.Length; ++dim)
+            int dims = _timeOrigin == null ? Size.Length : Size.Length - 1;
+            for (int dim = 0; dim < dims; ++dim)
             {
                 if (position[dim] < 0 || position[dim] > Size[dim] - 1)
                     return false;
             }
+            if (_timeOrigin != null && (position.T < _timeOrigin || position.T > _timeOrigin + Size.T - 1))
+                return false;
             return true;
         }
     }

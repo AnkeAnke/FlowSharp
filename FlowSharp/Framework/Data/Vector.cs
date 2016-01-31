@@ -375,6 +375,11 @@ namespace FlowSharp
         {
             return new Vec2(vec.X, vec.Y);
         }
+
+        public static explicit operator Vec2(Vector3 vec)
+        {
+            return new Vec2(vec.X, vec.Y);
+        }
     }
 
     class Vec3 : Vector

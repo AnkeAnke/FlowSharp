@@ -307,7 +307,7 @@ namespace FlowSharp
         public override float Sample(Vector position)
         {
             Debug.Assert(_operationsAllowed, "The field data is not scaled to its grid yet.");
-            float time = position[position.Length - 1];
+            float time = position.T - Grid.TimeOrigin??0;
             Vector samplePos = position;
 
             Debug.Assert(time >= 0 && time < _slices.Length);

@@ -13,6 +13,7 @@ namespace FlowSharp
     /// </summary>
     class VectorField
     {
+        #region VF
         private Field[] _scalars;
         public virtual Field[] Scalars { get { return _scalars; } /*protected set { _scalars = value; }*/ }
         public Field this[int index]
@@ -297,7 +298,9 @@ namespace FlowSharp
 
             return new PointSet<Point>(points);
         }
+        #endregion VF
 
+        #region Integrators
         public abstract class Integrator
         {
             public enum Status
@@ -340,8 +343,8 @@ namespace FlowSharp
             public virtual StreamLine<Vector3> IntegrateLineForRendering(Vector pos, float? maxTime = null)
             {
                 StreamLine<Vector3> line = new StreamLine<Vector3>((int)(Field.Size.Max() * 1.5f / StepSize)); // Rough guess.
-                line.Points.Add((Vector3)pos);
-                float timeBorder = maxTime ?? (((Field as VectorFieldUnsteady) == null) ? float.MaxValue : Field.Size.T);
+                //line.Points.Add((Vector3)pos);
+                float timeBorder = maxTime ?? (((Field as VectorFieldUnsteady) == null) ? float.MaxValue : (Field.Grid.TimeOrigin??0) +  Field.Size.T);
 
                 Vector point;
                 Vector next = pos;
@@ -433,6 +436,26 @@ namespace FlowSharp
                     Direction = !Direction;                   
                 }
                 return result;
+            }
+
+            public void IntegrateFurther(LineSet positions, float? maxTime = null)
+            {
+                Debug.Assert(Field.NumVectorDimensions <= 3);
+                
+                LineSet result;
+                PointSet<EndPoint> ends = positions.GetEndPoints();
+                if (ends.Length == 0)
+                    return;
+                for (int index = 0; index < positions.Length; ++index)
+                {
+                    if (ends.Points[index] == null)
+                        continue;
+                    StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
+                    positions.Lines[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
+                    positions.Lines[index].Status = streamline.Status;
+                    positions.Lines[index].LineLength += streamline.LineLength;
+                }
+                //return new LineSet(lines) { Color = (Vector3)Direction };
             }
 
             protected Status CheckPosition(Vector pos)
@@ -529,12 +552,13 @@ namespace FlowSharp
             {
                 scaled = vec;
                 float length = vec.LengthEuclidean();
-                if (length < EpsCriticalPoint)
-                    return false;
                 if (NormalizeField)
                     scaled = scaled / length;
-
                 scaled *= StepSize * (int)Direction;
+
+                if (length < EpsCriticalPoint)
+                    return false;
+
                 return true;
             }
 
@@ -611,6 +635,118 @@ namespace FlowSharp
                 return CheckPosition(stepped);
             }
         }
+
+
+        public class IntegratorPredictorCorrector : IntegratorEuler
+        {
+            public float EpsCorrector = 0.00001f;
+            public int MaxNumCorrectorSteps = 20;
+
+            public delegate Vector Predictor(Vector v, SquareMatrix J);
+            /// <summary>
+            /// Check and correct a vector.
+            /// </summary>
+            /// <param name="position">Velocity.</param>
+            /// <param name="J">Jacobian.</param>
+            /// <param name="correction">Direction to correct to.</param>
+            /// <returns>Error. Will be tested to check result.</returns>
+            public delegate float Corrector(Vector v, SquareMatrix J, out Vector correction);
+
+            protected Predictor _predict;
+            protected Corrector _correct;
+            protected bool _computeJ;
+            public IntegratorPredictorCorrector(VectorField field, Predictor predictor, Corrector corrector, bool needJ = true) : base(field)
+            {
+                _predict = predictor;
+                _correct = corrector;
+                _computeJ = needJ;
+            }
+
+            public Status StepPredictor(Vector pos, out Vector stepped, out float stepLength)
+            {
+                stepped = new Vector(pos);
+                stepLength = 0;
+                // Sample field.
+                Vector v = Field.Sample(pos);
+                SquareMatrix J = null;
+                if (_computeJ)
+                    J = Field.SampleDerivative(pos);
+                // Feed sampled data to predictor.
+                Vector dir = _predict(v, J);
+
+                if (!ScaleAndCheckVector(dir, out dir))
+                    return Status.CP;
+
+                if (float.IsNaN(dir[0]))
+                    Console.WriteLine("NaN NaN NaN NaN WATMAN!");
+
+                stepped += dir;
+                stepLength += dir.LengthEuclidean();
+
+                return CheckPosition(stepped);
+            }
+
+            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
+            {
+                Status status = StepPredictor(pos, out stepped, out stepLength);
+                // Predictor ran into cp / border.
+                if (status != Status.OK)
+                    return status;
+
+                // Check against corrector.
+                Vector next = new Vector(stepped);
+                Vector correction;
+                int i = MaxNumCorrectorSteps;
+                for(; i >= 0; ++i)
+                {
+                    Vector v = Field.Sample(next);
+                    SquareMatrix J = null;
+                    if (_computeJ)
+                        J = Field.SampleDerivative(next);
+                    float value = _correct(v, J, out correction);
+
+                    // Scale with step size.
+                    ScaleAndCheckVector(correction, out correction);
+
+                    // Test end point for validity.
+                    next += correction;
+                    Status check = base.CheckPosition(next);
+                    if (check != Status.OK)
+                        return status;
+
+                    // We are close enough to the truth. Break.
+                    if (Math.Abs(value) < EpsCorrector)
+                    {
+                        break;
+                    }
+                }
+                // Is out new value good enough?
+                if(i == 0)
+                {
+                    stepped = pos;
+                    stepLength = 0;
+                    return Status.CP;
+                }
+
+                stepped = next;
+                stepLength = (next - pos).LengthEuclidean();
+                return Status.OK;
+
+            }
+
+            //TODO: Correct.
+            public override bool StepBorder(Vector position, out Vector stepped, out float stepLength)
+            {
+                return StepPredictor(position, out stepped, out stepLength) == Status.OK;
+            }
+
+            //TODO: Correct.
+            public override bool StepBorderTime(Vector position, float timeBorder, out Vector stepped, out float stepLength)
+            {
+                return StepPredictor(position, out stepped, out stepLength) == Status.OK;
+            }
+        }
+        #endregion Integrators
     }
 }
 
