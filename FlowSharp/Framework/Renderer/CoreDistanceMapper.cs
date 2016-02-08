@@ -23,7 +23,7 @@ namespace FlowSharp
         }
         private static int STEPS_IN_MEMORY = 30;
 
-        private Plane _linePlane;
+        private Plane _linePlane, _graphPlane;
         private VectorFieldUnsteady _velocity;
         private Vector2 _selection;
 
@@ -56,6 +56,7 @@ namespace FlowSharp
             _everyNthTimestep = everyNthField;
             Plane = new Plane(plane.Origin, plane.XAxis, plane.YAxis, (plane.ZAxis * RedSea.Singleton.NumSubsteps) / _everyNthTimestep, 1.0f, plane.PointSize);
             _linePlane = plane;
+            _graphPlane = new Plane(plane);
             _intersectionPlane = plane;
             Console.WriteLine("Min Core Length: {0}", MinLengthCore);
             Mapping = Map;
@@ -365,6 +366,7 @@ namespace FlowSharp
 
         protected void ComputeGraph(Line core, int time = 0)
         {
+            _graphPlane = new Plane(Plane, Vector3.UnitZ * _currentSetting.SliceTimeMain);
             bool remap = false;
             if (_lastSetting == null ||
                 NumLinesChanged ||
@@ -384,8 +386,12 @@ namespace FlowSharp
                 _coreAngleGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _pathlinesTime[0], _currentSetting.StepSize, _everyNthTimestep, false);
 
                 LineSet set = new LineSet(_coreAngleGraph);
-                GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + ".csv", set);
-                GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".donut", set);
+                GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
+                GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+
+                set = new LineSet(_coreDistancesGraph);
+                GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
+                GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
 
                 remap = true;
             }
@@ -402,7 +408,7 @@ namespace FlowSharp
                     graph = FieldAnalysis.CutLength(graph, length);
                         }
                 //var graph = //FieldAnalysis.BuildGraph(Plane, new LineSet(starLines), values, _currentSetting.IntegrationTime, _currentSetting.LineSetting, _currentSetting.Colormap);
-                _graph = new LineBall[] { new LineBall(Plane, graph, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap/*, !_currentSetting.Flat*/) }; 
+                _graph = new LineBall[] { new LineBall(_graphPlane, graph, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap/*, !_currentSetting.Flat*/) }; 
                 //_graph = graph.Concat(_graph).ToArray();
             }
             else
@@ -538,16 +544,16 @@ namespace FlowSharp
             {
                 foreach (Renderable ball in _graph)
                 {
-                    (ball as LineBall).LowerBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain;
-                    (ball as LineBall).UpperBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain + _currentSetting.WindowWidth;
+                    (ball as LineBall).LowerBound = _currentSetting.WindowStart;
+                    (ball as LineBall).UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
                     (ball as LineBall).UsedMap = _currentSetting.Colormap;
                 }
-                _boundaryBallFunction.LowerBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain;
-                _boundaryBallFunction.UpperBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain + _currentSetting.WindowWidth;
+                _boundaryBallFunction.LowerBound = _currentSetting.WindowStart;
+                _boundaryBallFunction.UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
                 _boundaryBallFunction.UsedMap = ColorMapping.GetComplementary(_currentSetting.Colormap);
 
-                _pathlines[0].LowerBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain;
-                _pathlines[0].UpperBound = _currentSetting.WindowStart + _currentSetting.AlphaStable * _currentSetting.IntegrationTime + _currentSetting.SliceTimeMain + _currentSetting.WindowWidth;
+                _pathlines[0].LowerBound = _currentSetting.WindowStart ;
+                _pathlines[0].UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
                 _pathlines[0].UsedMap = ColorMapping.GetComplementary(_currentSetting.Colormap);
             }
 
@@ -622,7 +628,8 @@ namespace FlowSharp
     class DonutAnalyzer : DataMapper
     {
         // Load this.
-        private LineSet _loadedData;
+        private LineSet _loadedAngle;
+        private LineSet _loadedDistance;
         // Unroll this.
         private LineSet _blockData;
 
@@ -666,11 +673,14 @@ namespace FlowSharp
                 SliceTimeMainChanged)
             {
 
-                GeometryWriter.ReadFromFile(RedSea.Singleton.DonutFileName + ".donut", out _loadedData);
-                _loadedBall = new LineBall(Plane, _loadedData, LineBall.RenderEffect.HEIGHT);
-                _boundaryLoaded = FieldAnalysis.FindBoundaryFromDistanceDonut(_loadedData.Lines);
+                GeometryWriter.ReadFromFile(RedSea.Singleton.DonutFileName + ".angle", out _loadedAngle);
+                GeometryWriter.ReadFromFile(RedSea.Singleton.DonutFileName + ".distance", out _loadedDistance);
+                _loadedBall = new LineBall(Plane, _loadedAngle, LineBall.RenderEffect.HEIGHT);
 
-                _blockData = FieldAnalysis.PlotLines2D(_loadedData);
+                int[] indices;
+                _boundaryLoaded = FieldAnalysis.FindBoundaryFromDistanceAngleDonut(_loadedDistance.Lines, _loadedAngle.Lines, out indices);
+
+                _blockData = FieldAnalysis.PlotLines2D(_loadedAngle);
                 _boundaryBlock = FieldAnalysis.FindBoundaryFromDistanceDonut(_blockData.Lines);
 
                 update = true;
@@ -679,7 +689,7 @@ namespace FlowSharp
             if (update ||
                 FlatChanged)
             {
-                _loadedBall = new LineBall(Plane, _loadedData, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
+                _loadedBall = new LineBall(Plane, _loadedAngle, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
                 _boundaryLoadedBall = new LineBall(_fightPlane, new LineSet(new Line[] { _boundaryLoaded }) { Thickness = 0.2f }, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
 
                 _blockBall = new LineBall(Plane, _blockData, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);

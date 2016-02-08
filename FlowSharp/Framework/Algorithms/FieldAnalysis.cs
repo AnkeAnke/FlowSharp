@@ -745,10 +745,11 @@ namespace FlowSharp
                 {
                     // Outgoing direction.
                     Vector3 start = line.Positions[0];
+                    start.Z = 0;
                     Vector3 dir = line.Positions[0] - new Vector3(new Vector2(core[0].X, core[0].Y), line.Positions[0].Z); ; dir.Normalize();
 
                     // Scale such that step size does not scale the statistics.
-                    dir *= stepSize / (core.Length * RedSea.Singleton.NumSubstepsTotal) * everyNthTimeStep * 500;
+                    dir *= 100.0f / core.Length;
 
                     for (int p = 0; p < line.Length; ++p)
                     {
@@ -787,7 +788,7 @@ namespace FlowSharp
                 float lastBoundHit = 1; // Exactly in the middle. This leaves the first bound extremum either positive or negative.
                 int numBoundHits = 0;
 
-                Line line = distances[l];
+                Line line = angles[l];
                 for (int p = 1; p < line.Length - 1; ++p)
                 {
                     // Are we at a maximum near the the bound?
@@ -813,14 +814,17 @@ namespace FlowSharp
                         }
                     }
                 }
+
+                // Now, look at distance values and find highst slope.
                 int avgStepsBetweenExtrema = (int)((float)lastBoundExtremum / numBoundHits + 0.5f);
 
-                int cut = 0;
+                line = distances[l];
+                int cut = lastBoundExtremum;
                 float maxSlope = 0;
-                for (int p = Math.Max(0, lastBoundExtremum - avgStepsBetweenExtrema); p < Math.Min(distances.Length-1, lastBoundExtremum); ++p)
+                for (int p = Math.Max(0, lastBoundExtremum - avgStepsBetweenExtrema); p < Math.Min(line.Length - 2, lastBoundExtremum + avgStepsBetweenExtrema); ++p)
                 {
-                    float slope = line[p + 1].Z - line[p].Z;
-                    if(slope > maxSlope)
+                    float slope = line[p + 2].Z - line[p + 1].Z;
+                    if (slope > maxSlope)
                     {
                         cut = p;
                         maxSlope = slope;
@@ -828,7 +832,7 @@ namespace FlowSharp
                 }
                 indices[l] = cut;
 
-                boundary[l] = line[cut];
+                boundary[l] = angles[l][cut];
             }
 
             // Close circle.
