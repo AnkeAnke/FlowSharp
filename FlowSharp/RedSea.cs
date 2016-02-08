@@ -19,6 +19,8 @@ namespace FlowSharp
         public LoaderBuilder GetLoader { get { return _loader; } set { _loader = value; GetLoaderNCF = ((x) => _loader(x) as LoaderNCF); } }
         public LoaderBuilderNCF GetLoaderNCF;
         public FilenameBuilder GetFilename;
+        public string DonutFileName;
+        public string CoreFileName;
 
         public int NumSteps = 130;
         public int NumSubsteps = 12;
@@ -96,7 +98,8 @@ namespace FlowSharp
             PATHLINE_RADIUS,
             LINE_STATISTICS,
             SUBSTEP_VIEWER,
-            CORE_DISTANCE
+            CORE_DISTANCE,
+            DONUT_ANALYSIS
         }
 
         public enum DisplayLines : int

@@ -34,8 +34,8 @@ namespace FlowSharp
             set { Scalars[0].InvalidValue = value; }
         }
         public virtual float? TimeSlice {
-            get { return Scalars[0].TimeSlice; }
-            set { Scalars[0].TimeSlice = value; }
+            get { return Scalars[0].TimeOrigin; }
+            set { foreach(ScalarField field in Scalars) field.TimeOrigin = value; }
         }
         public virtual bool IsValid(Vector pos)
         {
@@ -256,7 +256,7 @@ namespace FlowSharp
 
                 slices[i] = new ScalarField(sliceGrid);
                 Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
-                slices[i].TimeSlice = posInLastDimension;
+                slices[i].TimeOrigin = posInLastDimension;
             }
             return new VectorField(slices);
         }
@@ -276,7 +276,7 @@ namespace FlowSharp
 
                 slices[i] = new ScalarField(sliceGrid);
                 Array.Copy(((ScalarField)this.Scalars[i]).Data, newSize.Product() * posInLastDimension, slices[i].Data, 0, newSize.Product());
-                slices[i].TimeSlice = posInLastDimension;
+                slices[i].TimeOrigin = posInLastDimension;
             }
             return new VectorField(slices);
         }
@@ -440,22 +440,28 @@ namespace FlowSharp
 
             public void IntegrateFurther(LineSet positions, float? maxTime = null)
             {
-                Debug.Assert(Field.NumVectorDimensions <= 3);
-                
-                LineSet result;
-                PointSet<EndPoint> ends = positions.GetEndPoints();
-                if (ends.Length == 0)
-                    return;
-                for (int index = 0; index < positions.Length; ++index)
-                {
-                    if (ends.Points[index] == null)
-                        continue;
-                    StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
-                    positions.Lines[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
-                    positions.Lines[index].Status = streamline.Status;
-                    positions.Lines[index].LineLength += streamline.LineLength;
+                try {
+                    Debug.Assert(Field.NumVectorDimensions <= 3);
+
+                    LineSet result;
+                    PointSet<EndPoint> ends = positions.GetEndPoints();
+                    if (ends.Length == 0)
+                        return;
+                    for (int index = 0; index < positions.Length; ++index)
+                    {
+                        if (ends.Points[index] == null)
+                            continue;
+                        StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
+                        positions.Lines[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
+                        positions.Lines[index].Status = streamline.Status;
+                        positions.Lines[index].LineLength += streamline.LineLength;
+                    }
+                    //return new LineSet(lines) { Color = (Vector3)Direction };
                 }
-                //return new LineSet(lines) { Color = (Vector3)Direction };
+                catch(Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
             }
 
             protected Status CheckPosition(Vector pos)

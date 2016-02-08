@@ -132,7 +132,7 @@ namespace FlowSharp
                 ShaderChanged)
             {
                 ScalarField f = _pathLengths.GetTimeSlice(_currentSetting.SliceTimeMain);
-                f.TimeSlice = 0;
+                f.TimeOrigin = 0;
                 VectorField vecField;
                 switch(_currentSetting.Shader)
                 {

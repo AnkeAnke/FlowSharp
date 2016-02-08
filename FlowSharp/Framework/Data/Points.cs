@@ -168,6 +168,19 @@ namespace FlowSharp
         }
     }
 
+    class FloatCP2D : CriticalPoint2D
+    {
+        public float Value;
+        public FloatCP2D(Vector3 position, SquareMatrix J, float value) : base(position, J)
+        {
+            Value = value;
+        }
+
+        public FloatCP2D(CriticalPoint2D cp, float value) : base(cp.Position, cp.Eigenvectors, cp.Eigenvalues)
+        {
+            Value = value;
+        }
+    }
     /// <summary>
     /// Object containing multiple points.
     /// </summary>

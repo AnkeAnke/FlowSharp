@@ -6,12 +6,12 @@
         xmlns:local="clr-namespace:FlowSharp"
         xmlns:WPFHost="clr-namespace:WPFHost"
         mc:Ignorable="d"
-        Title="WPF Window" Height="1157" Width="1650">
+        Title="WPF Window" Height="1200" Width="1920">
     <Grid Margin="0,0,0,30">
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="1046" Width="1328" Margin="10,10,0,0" VerticalAlignment="Top" Focusable="True" IsEnabled="True" MouseEnter="ActivateCamera" MouseLeave="DeactivateCamera" IsHitTestVisible="True"/>
+        <WPFHost:DPFCanvas x:Name="DX11Display" HorizontalAlignment="Left" Height="1130" Width="1598" Margin="10,10,0,0" VerticalAlignment="Top" Focusable="True" IsEnabled="True" MouseEnter="ActivateCamera" MouseLeave="DeactivateCamera" IsHitTestVisible="True"/>
         <ComboBox x:Name="DropDownDisplay" HorizontalAlignment="Right" Margin="0,39,18,0" VerticalAlignment="Top" Width="259"  SelectionChanged="OnChangeDisplay"/>
         <ComboBox x:Name="DropDownMeasure" HorizontalAlignment="Right" Margin="0,77,18,0" VerticalAlignment="Top" Width="120"  SelectionChanged="OnChangeMeasure"/>
         <ComboBox x:Name="DropDownDisplayLines" HorizontalAlignment="Right" Margin="0,77,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeDisplayLines"/>
@@ -34,7 +34,7 @@
         </StackPanel>
         <StackPanel x:Name="LineXBlock" HorizontalAlignment="Right" Height="86" Margin="0,550,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="LineXText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Comparison Line Position X / Neighbor ID" VerticalAlignment="Top" Width="200" FontSize="10"/>
-            <Slider x:Name="LineSlider" Maximum="720" Minimum ="0" TickPlacement="BottomRight" TickFrequency="15" Height="45" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine"/>
+            <Slider x:Name="LineSlider" Maximum="5000" Minimum ="0" TickPlacement="BottomRight" TickFrequency="15" Height="45" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine"/>
             <TextBox Text="{Binding Value, ElementName=LineSlider, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
         <StackPanel x:Name="Member0Block" Height="43" Margin="0,143,10,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="128">

@@ -701,5 +701,546 @@ namespace FlowSharp
 
             return result;
         }
+
+        public static LineSet BuildGraphLines(LineSet positions, float[] values, float scaleUp = 1.0f)
+        {
+            Debug.Assert(positions.NumExistentPoints == values.Length);
+            List<Renderable> result = new List<Renderable>(positions.Lines.Length);
+
+
+            int count = 0;
+            List<Line> lines = new List<Line>(positions.Length);
+            foreach (Line l in positions.Lines)
+            {
+                Vector3[] pos = new Vector3[l.Length];
+                for (int p = 0; p < l.Length; ++p)
+                    pos[p] = l.Positions[p] + Vector3.UnitZ * values[count++] * scaleUp;
+
+                lines.Add(new Line() { Positions = pos });
+            }
+
+
+            return new LineSet(lines.ToArray());
+        }
+
+        public static Line FindBoundaryFromDistanceDonut(Line[] distances)
+        {
+            int[] tmp;
+            return FindBoundaryFromDistanceDonut(distances, out tmp);
+        }
+
+        public static Line[] GetGraph(Line core, LineSet lines, float stepSize, int everyNthTimeStep, bool distance = true)
+        {
+            Line[] starLines = new Line[lines.Lines.Length];
+
+            int count = 0;
+            float[] values = new float[lines.NumExistentPoints];
+
+            for (int l = 0; l < lines.Lines.Length; ++l)
+            {
+                Line line = lines.Lines[l];
+                // Write star coordinates here.
+                Vector3[] starPos = new Vector3[line.Length];
+                if (line.Length > 0)
+                {
+                    // Outgoing direction.
+                    Vector3 start = line.Positions[0];
+                    Vector3 dir = line.Positions[0] - new Vector3(new Vector2(core[0].X, core[0].Y), line.Positions[0].Z); ; dir.Normalize();
+
+                    // Scale such that step size does not scale the statistics.
+                    dir *= stepSize / (core.Length * RedSea.Singleton.NumSubstepsTotal) * everyNthTimeStep * 500;
+
+                    for (int p = 0; p < line.Length; ++p)
+                    {
+                        if (distance)
+                            values[count++] = core.DistanceToPointInZ(line.Positions[p]); // Core selected. Take distance to the core, in the respective time slice.
+                        else
+                        {
+                            // Cos(angle)!!!
+                            Vector3 nearestCenter;
+                            core.DistanceToPointInZ(line[p], out nearestCenter);
+                            Vector3 rad = (line[p] - nearestCenter);
+                            rad.Normalize();
+                            values[count++] = 1 + (float)Math.Cos(Math.PI * Vector3.Dot(Vector3.UnitX, rad));
+                        }
+                        starPos[p] = start + p * dir;
+                    }
+                }
+                starLines[l] = new Line() { Positions = starPos };
+                lines.Lines[l].Attribute = new float[line.Length];
+                Array.Copy(values, count - line.Length, lines.Lines[l].Attribute, 0, line.Length);
+            }
+            return FieldAnalysis.BuildGraphLines(new LineSet(starLines), values).Lines;
+        }
+
+        public static Line FindBoundaryFromDistanceAngleDonut(Line[] distances, Line[] angles, out int[] indices)
+        {
+            Vector3[] boundary = new Vector3[distances.Length + 1];
+            indices = new int[distances.Length + 1];
+
+            // Vars.
+            float eps = 0.5f;
+
+            for (int l = 0; l < distances.Length; ++l)
+            {
+                int lastBoundExtremum = 0;
+                float lastBoundHit = 1; // Exactly in the middle. This leaves the first bound extremum either positive or negative.
+                int numBoundHits = 0;
+
+                Line line = distances[l];
+                for (int p = 1; p < line.Length - 1; ++p)
+                {
+                    // Are we at a maximum near the the bound?
+                    float slopeLeft = line[p].Z - line[p - 1].Z;
+                    float slopeRight = line[p + 1].Z - line[p].Z;
+
+                    // Extremum?
+                    if (slopeLeft * slopeRight < 0)
+                    {
+                        // Maximum (1 + 1) or minimum (-1 + 1)?
+                        float bound = slopeLeft > 0 ? 2 : 0;
+
+                        // Near the bound?
+                        if (Math.Abs(line[p].Z - bound) < eps)
+                        {
+                            // Different bound than last time?
+                            if ((lastBoundHit - 1) * (line[p].Z - 1) <= 0)
+                            {
+                                lastBoundHit = line[p].Z;
+                                numBoundHits++;
+                                lastBoundExtremum = p;
+                            }
+                        }
+                    }
+                }
+                int avgStepsBetweenExtrema = (int)((float)lastBoundExtremum / numBoundHits + 0.5f);
+
+                int cut = 0;
+                float maxSlope = 0;
+                for (int p = Math.Max(0, lastBoundExtremum - avgStepsBetweenExtrema); p < Math.Min(distances.Length-1, lastBoundExtremum); ++p)
+                {
+                    float slope = line[p + 1].Z - line[p].Z;
+                    if(slope > maxSlope)
+                    {
+                        cut = p;
+                        maxSlope = slope;
+                    }
+                }
+                indices[l] = cut;
+
+                boundary[l] = line[cut];
+            }
+
+            // Close circle.
+            boundary[boundary.Length - 1] = boundary[0];
+            indices[indices.Length - 1] = indices[0];
+
+
+            return new Line() { Positions = boundary };
+        }
+        public static Line FindBoundaryFromDistanceDonut(Line[] distances, out int[] indices)
+        {
+            Vector3[] boundary = new Vector3[distances.Length + 1];
+            indices = new int[distances.Length + 1];
+
+            // Vars.
+            float eps = 0.5f;
+
+            for(int l =0; l < distances.Length; ++l)
+            {
+                int lastBoundExtremum = 0;
+                float lastBoundHit = 1; // Exactly in the middle. This leaves the first bound extremum either positive or negative.
+                //int cut = 0;
+
+                Line line = distances[l];
+                for(int p = 1; p < line.Length - 1; ++p)
+                {
+                    // Are we at a maximum near the the bound?
+                    float slopeLeft = line[p].Z - line[p - 1].Z;
+                    float slopeRight = line[p + 1].Z - line[p].Z;
+
+                    // Extremum?
+                    if(slopeLeft * slopeRight < 0)
+                    {
+                        // Maximum (1 + 1) or minimum (-1 + 1)?
+                        float bound = slopeLeft > 0 ? 2 : 0;
+
+                        // Near the bound?
+                        if(Math.Abs(line[p].Z - bound) < eps)
+                        {
+                            // Different bound than last time?
+                            if ((lastBoundHit - 1) * (line[p].Z - 1) <= 0)
+                            {
+                                lastBoundHit = line[p].Z;
+                                lastBoundExtremum = p;
+                            }
+                        }
+                    }
+                }
+                indices[l] = lastBoundExtremum;
+
+                boundary[l] = line[lastBoundExtremum];
+            }
+
+            // Close circle.
+            boundary[boundary.Length - 1] = boundary[0];
+            indices[indices.Length - 1] = indices[0];
+
+
+            return new Line() { Positions = boundary };
+        }
+
+
+        public static Line FindBoundaryFromDistanceDonutAngle(Line[] distances, out int[] indices)
+        {
+            Vector3[] boundary = new Vector3[distances.Length + 1];
+            indices = new int[distances.Length + 1];
+
+            // Vars.
+            float eps = 0.5f;
+
+            for(int l =0; l < distances.Length; ++l)
+            {
+                int lastBoundExtremum = 0;
+                float lastBoundHit = 1; // Exactly in the middle. This leaves the first bound extremum either positive or negative.
+                //int cut = 0;
+
+                Line line = distances[l];
+                for(int p = 1; p < line.Length - 1; ++p)
+                {
+                    // Are we at a maximum near the the bound?
+                    float slopeLeft = line[p].Z - line[p - 1].Z;
+                    float slopeRight = line[p + 1].Z - line[p].Z;
+
+                    // Extremum?
+                    if(slopeLeft * slopeRight < 0)
+                    {
+                        // Maximum (1 + 1) or minimum (-1 + 1)?
+                        float bound = slopeLeft > 0 ? 2 : 0;
+
+                        // Near the bound?
+                        if(Math.Abs(line[p].Z - bound) < eps)
+                        {
+                            // Different bound than last time?
+                            if ((lastBoundHit - 1) * (line[p].Z - 1) <= 0)
+                            {
+                                lastBoundHit = line[p].Z;
+                                lastBoundExtremum = p;
+                            }
+                        }
+                    }
+                }
+                indices[l] = lastBoundExtremum;
+
+                boundary[l] = line[lastBoundExtremum];
+            }
+
+            // Close circle.
+            boundary[boundary.Length - 1] = boundary[0];
+            indices[indices.Length - 1] = indices[0];
+
+
+            return new Line() { Positions = boundary };
+        }
+        public static Line FindBoundaryFromDistanceDonutTwoLineFitSlopeDiff(Line[] distances, out int[] indices)
+        {
+            Vector3[] boundary = new Vector3[distances.Length + 1];
+            indices = new int[distances.Length + 1];
+
+            int start = 10;
+            for (int l = 0; l < indices.Length - 1; ++l)
+            {
+                Line line = distances[l];
+
+                int cut = 0;
+                float slopeDiff = 0;
+                for (int p = start; p < line.Length - start; ++p)
+                {
+                    StraightLine first = FieldAnalysis.FitLine(line, 0, p);
+                    StraightLine second = FieldAnalysis.FitLine(line, p);
+                    float diff = second.Slope - first.Slope;
+
+                    if (diff > slopeDiff)
+                    {
+                        slopeDiff = diff;
+                        cut = p;
+                    }
+                }
+                indices[l] = cut;
+
+                boundary[l] = line[cut];
+            }
+
+            // Close circle.
+            boundary[boundary.Length - 1] = boundary[0];
+            indices[indices.Length - 1] = indices[0];
+
+
+            return new Line() { Positions = boundary };
+        }
+        public static Line FindBoundaryFromDistanceDonutCuttingLine(Line[] distances, out int[] indices)
+        {
+            Vector3[] boundary = new Vector3[distances.Length * 3 + 1];
+            indices = new int[distances.Length + 1];
+
+            int numMinima = 3;
+
+            for (int l = 0; l < distances.Length; ++l)
+            {
+                Line line = distances[l];
+                StraightLine straight = null;
+
+                int minimaLeft = numMinima;
+                int minimaUsed = 0;
+                int lastMin = 0;
+
+                for(int p = 1; p < line.Length - 1 && minimaLeft > 0; ++ p)
+                {
+                    float leftSlope = line[p].Z - line[p - 1].Z;
+                    float rightSlope = line[p + 1].Z - line[p].Z;
+                    if(leftSlope < 0 && rightSlope > 0)
+                    {
+                        minimaLeft--;
+                        minimaUsed++;
+                        lastMin = p;
+
+                        if(minimaLeft == 0)
+                        {
+                            straight = FieldAnalysis.FitLine(line, 0, lastMin);
+
+                            // Slope facing downwards. Add more minima.
+                            if (straight.Slope < 0)
+                                minimaLeft++;
+                        }
+                    }
+                }
+
+                float averageDiffMinima = lastMin / minimaUsed;
+
+                if (straight == null)
+                {
+                    lastMin = line.Length - 1;
+                    straight = FieldAnalysis.FitLine(line, 0, lastMin);
+                }
+
+                float avgDistSquared = 0;
+                for(int p = 0; p < lastMin; ++p)
+                {
+                    float dist = line[p].Z - straight[p];
+                    avgDistSquared += dist * dist;
+                }
+                avgDistSquared /= lastMin;
+
+                float cutGraph = straight.CutLine2D(line, lastMin);
+                float lineEnd = lastMin;
+                while(cutGraph > 0)
+                {
+                    // Compute average error. If it is not too big compared to the beginning, take the new end.
+                    float avgDistSquaredCut = 0;
+                    for (int p = lastMin; p < cutGraph; ++p)
+                    {
+                        float dist = line[p].Z - straight[p];
+                        avgDistSquaredCut += dist * dist;
+                    }
+                    avgDistSquaredCut /= ((int)(cutGraph + 0.5f) - lastMin);
+
+                    // We allow 4 times the error that was measured in the beginning line.
+                    if (cutGraph - lastMin > averageDiffMinima * 3 || avgDistSquaredCut > avgDistSquared * 4)
+                        break;
+                    //if (cutGraph - lastMin > averageDiffMinima * 3)
+                    //    break;
+
+                    // We cut the graph again in reasonable time. Take this intersection as next possible border.
+                    lastMin = (int)Math.Ceiling(cutGraph);
+                    lineEnd = cutGraph;
+                    straight = FieldAnalysis.FitLine(line, 0, lastMin);
+                    cutGraph = straight.CutLine2D(line, lastMin);
+                }
+
+                indices [l] = lastMin;
+
+                boundary[l * 3] = line[0];
+                boundary[l * 3].Z = straight.YOffset;
+
+                boundary[l*3 + 1] = line.Value(lineEnd);
+                boundary[l*3 + 1].Z = straight[lineEnd];
+
+                boundary[l * 3 + 2] = boundary[l * 3];
+            }
+            // Close circle.
+            boundary[boundary.Length - 1] = boundary[0];
+            indices[indices.Length - 1] = indices[0];
+
+
+            return new Line() { Positions = boundary };
+        }
+        public static Line FindBoundaryFromDistanceDonutQuarters(Line[] distances, out int[] indices)
+        {
+            Vector3[] boundary = new Vector3[distances.Length + 1];
+            indices = new int[boundary.Length];
+
+            int startLength = 5;
+
+            for (int l = 0; l < distances.Length; ++l)
+            {
+                Line line = distances[l];
+
+                int cut = 0;
+                float maxHeightTillCut = -1;
+                int p = 0;
+
+                // We need a few steps to get a maximum that makes sense.
+                for(; p < startLength; ++p )
+                {
+                    if(line[p].Z > maxHeightTillCut)
+                    {
+                        cut = p;
+                        maxHeightTillCut = line[p].Z;
+                    }
+                }
+
+                LookForNewCut: // Find the next maximum
+                p = cut;
+                for (; p < line.Length - 1; ++p)
+                {
+                    if(line[p].Z > maxHeightTillCut)
+                    {
+                        // We found a new cut position. Save values.
+                        cut = p;
+                        maxHeightTillCut = line[p].Z;
+                        // Break cut search and try validating.
+                        break;
+                    }
+                }
+
+                // Validate this maximum: run over cut/2 and see if the cut value is minimal.
+                int max = Math.Min(line.Length - 1, (int)(1.5f * Math.Max(cut, startLength) + 0.5f));
+                for(; p < max; ++p)
+                {
+                    if (line[p].Z < maxHeightTillCut)
+                        goto LookForNewCut;
+                }
+                // We made it out of the loop. We either found an appropriate cut, or hit the end.
+                indices[l] = cut;
+                boundary[l] = line[indices[l]];
+            }
+            // Close circle.
+            boundary[distances.Length] = boundary[0];
+
+
+            return new Line() { Positions = boundary };
+        }
+
+        //public static Line FindBoundaryFromDistanceDonut(Line[] distances, out int[] indices)
+        //{
+        //    Vector3[] boundary = new Vector3[distances.Length + 1];
+        //    indices = new int[boundary.Length];
+        //    int countPoints = 0;
+
+        //    int hack = 19;
+
+        //    for (int l = 0; l < distances.Length; ++l)
+        //    {
+        //        Line line = distances[l];
+        //        indices[l] = Math.Min(line.Length - 1, hack);
+        //        boundary[l] = line[indices[l]];
+        //    }
+        //    boundary[distances.Length] = boundary[0];
+        //    return new Line() { Positions = boundary };
+        //}
+        public class StraightLine
+        {
+            public float YOffset;
+            public float Slope;
+            public float this[float pos] { get { return YOffset + Slope * pos; } }
+            /// <summary>
+            /// Returns the first index after cutting the line.
+            /// </summary>
+            /// <param name="line"></param>
+            /// <param name="startPos"></param>
+            /// <returns></returns>
+            public float CutLine2D(Line line, int startPos = 0)
+            {
+                float diff = 0;
+                for(int point = startPos; point < line.Length; ++point)
+                {
+                    float locDiff = line[point].Z - YOffset - (Slope * point);
+                    if (diff * locDiff < 0)
+                    {
+                        float slope = line[point].Z - line[point - 1].Z;
+                        return point - 1 + (this[point-1] - line[point - 1].Z) / (slope - Slope);
+                    }
+                    
+                    diff = locDiff;
+                }
+                return -1;
+            }
+        }
+        /// <summary>
+        /// Simple linear Regression.
+        /// </summary>
+        public static StraightLine FitLine(Line line, int offset = 0, int length = -1)
+        {
+            float sumX = 0;
+            float sumY = 0;
+            float sumXY = 0;
+            float sumXX = 0;
+
+            int end = (length >= 0) ? (offset + length) : line.Length;
+            int N = end - offset;
+            Debug.Assert(end <= line.Length);
+
+            for(int point = offset; point < end; ++point)
+            {
+                sumY += line[point].Z;
+                sumXY += line[point].Z * point;
+
+                // We could analytically compute these. Not doing that for now because of lazyness.
+                sumX += point;
+                sumXX += point * point;
+            }
+
+            StraightLine straight = new StraightLine();
+
+            // Slope(b) = (NΣXY - (ΣX)(ΣY)) / (NΣXX - (ΣX*ΣX))
+            straight.Slope = (N * sumXY - sumX * sumY) / (N * sumXX - sumX * sumX);
+
+            // Intercept(a) = (ΣY - b(ΣX)) / N
+            straight.YOffset = (sumY - straight.Slope * sumX) / N;
+
+            return straight;
+        }
+
+        public static LineSet PlotLines2D(LineSet lines, float? xScale = null, float? yScale = null)
+        {
+            float xMult = xScale ?? lines.Thickness;
+            float yMult = yScale ?? ((float)lines.Length / lines[0].Length) * lines.Thickness;
+            LineSet set = new LineSet(lines);
+            for(int x = 0; x < set.Length; ++x)
+            {
+                for(int y = 0; y < set[x].Length; ++y)
+                {
+                    Vector3 pos = new Vector3();
+                    pos.X = x * xMult;
+                    pos.Y = y * yMult;
+                    pos.Z = set[x][y].Z;
+                    set[x][y] = pos;
+                }           
+            }
+            return set;
+        }
+
+        public static LineSet CutLength(LineSet lines, int length)
+        {
+            Line[] shorties = new Line[lines.Length];
+
+            for(int s = 0; s < shorties.Length; ++s)
+            {
+                Vector3[] points = new Vector3[Math.Min(lines[s].Length, length)];
+                Array.Copy(lines[s].Positions, points, points.Length);
+                shorties[s] = new Line() { Positions = points };
+            }
+            return new LineSet(shorties);
+        }
     }
 }

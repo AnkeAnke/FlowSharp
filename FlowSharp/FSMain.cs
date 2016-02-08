@@ -74,8 +74,9 @@ namespace FlowSharp
             string dir = locDataFolder + (step + 1);
 
             // Look for raw file.
-            if (substep != null || var == RedSea.Variable.VELOCITY_Z)
-            {
+            //if (substep != null || var == RedSea.Variable.VELOCITY_Z)
+            //{
+                substep = substep ?? 0;
                 dir = locDataFolderSubstep + (step + 1);
 
                 // Not the W case: go into the inner folder.
@@ -89,12 +90,12 @@ namespace FlowSharp
                 Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
 
                 return rawDirs[0];
-            }
-            else
-            {
-                dir += locFileName;
-                return dir;
-            }
+            //}
+            //else
+            //{
+            //    dir += locFileName;
+            //    return dir;
+            //}
         }
 
         public static void LoadData()
@@ -112,6 +113,8 @@ namespace FlowSharp
 
             RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
             RedSea.Singleton.GetFilename = RedSeaFilenames;
+            RedSea.Singleton.DonutFileName = "E:/Anke/Dev/Data/Donuts/Donut";
+            RedSea.Singleton.CoreFileName = "E:/Anke/Dev/Data/Donuts/Core";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
@@ -223,6 +226,9 @@ namespace FlowSharp
 
             DataMapper coreDistance = new CoreDistanceMapper(24, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.CORE_DISTANCE, coreDistance);
+
+            DataMapper donut = new DonutAnalyzer(redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.DONUT_ANALYSIS, donut);
 
             if (mapperOW != null)
                 RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);

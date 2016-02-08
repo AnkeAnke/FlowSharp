@@ -87,6 +87,9 @@ namespace FlowSharp
                     return Colormap.Red;
                 case Colormap.Gray:
                     return Colormap.Parula;
+                case Colormap.ParulaIso:
+                case Colormap.ParulaLong:
+                    return Colormap.Heat;
                 default:
                     return Colormap.Gray;
             }
@@ -104,6 +107,7 @@ namespace FlowSharp
         Gray,
         Heatstep,
         Circular,
-        ParulaIso
+        ParulaIso,
+        ParulaLong
     }
 }

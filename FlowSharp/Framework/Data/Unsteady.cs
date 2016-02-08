@@ -10,6 +10,15 @@ namespace FlowSharp
 {
     class VectorFieldUnsteady : VectorField
     {
+        public float? TimeOrigin
+        {
+            get { return Grid.TimeOrigin; }
+            set
+            {
+                Grid.TimeOrigin = value;
+                foreach (ScalarFieldUnsteady field in _scalarsUnsteady) field.TimeOrigin = value;
+            }
+        }
         private ScalarFieldUnsteady[] _scalarsUnsteady;
         public override Field[] Scalars { get { return _scalarsUnsteady; } }
         public ScalarFieldUnsteady[] ScalarsAsSFU { get { return _scalarsUnsteady; } }
@@ -93,7 +102,10 @@ namespace FlowSharp
                 slices[scalar] = _scalarsUnsteady[scalar].GetTimeSlice(slice);
             }
 
-            return new VectorField(slices);
+            var result = new VectorField(slices);
+            result.TimeSlice = slice;
+            result.InvalidValue = InvalidValue;
+            return result;
         }
 
         public override VectorField GetSlice(int slice) { return (VectorField)GetTimeSlice(slice); }
@@ -110,12 +122,19 @@ namespace FlowSharp
                 ScalarField[] fields = new ScalarField[field.Size.T]; //(field.Grid);
 
                 for (int t = 0; t < field.Size.T; ++t)
+
+                {
                     fields[t] = new ScalarField(gridCopy);
+                }
 
                 _scalarsUnsteady[comp] = new ScalarFieldUnsteady(fields);
+                _scalarsUnsteady[comp].TimeOrigin = field[0].TimeOrigin ?? 0;
                 _scalarsUnsteady[comp].InvalidValue = field.InvalidValue;
             }
             this.InvalidValue = field.InvalidValue;
+            this.TimeOrigin = field.TimeOrigin;
+
+            Grid = field.Grid.Copy();
 
             // Since the time component is in the grid size as well, we do not need to account for time specially.
             GridIndex indexIterator = new GridIndex(field.Size);
@@ -154,7 +173,7 @@ namespace FlowSharp
             {
                 slices[i] = this._scalarsUnsteady[i].GetTimeSlice(timeSlice);
                 
-                slices[i].TimeSlice = timeSlice;
+                slices[i].TimeOrigin = timeSlice;
             }
             return new VectorField(slices);
         }
@@ -239,8 +258,20 @@ namespace FlowSharp
 
         private ScalarField[] _slices;
         public ScalarField[] TimeSlices { get { return _slices; } }
-        public ScalarField GetTimeSlice(int slice) { return _slices[slice]; }
+        public ScalarField GetTimeSlice(int slice) { return _slices[slice - (int)(TimeOrigin ?? 0 + 0.5f)]; }
         private FieldGrid _sliceGrid;
+        public override float? TimeOrigin
+        {
+            get
+            {
+                return Grid.TimeOrigin;
+            }
+
+            set
+            {
+                Grid.TimeOrigin = value;
+            }
+        }
         protected bool _operationsAllowed = false;
 
         public override bool IsValid(Vector pos)
@@ -272,14 +303,24 @@ namespace FlowSharp
 
         public int NumTimeSlices { get { return _slices.Length; } }
 
-        public ScalarFieldUnsteady(ScalarField[] fields, float timeStart = 0, float timeStep = 1.0f) : base()
+        public ScalarFieldUnsteady(ScalarField[] fields, float timeStart, float timeStep = 1.0f) : base()
         {
             _slices = fields;
             _sliceGrid = fields[0].Grid.GetAsTimeGrid(fields.Length, timeStart, timeStep);
-            for (int slice = 0; slice < _slices.Length; ++slice)
-            {
-                _slices[slice].TimeSlice = timeStart + timeStep * slice;
-            }
+            //for (int slice = 0; slice < _slices.Length; ++slice)
+            //{
+            //    _slices[slice].TimeOrigin = timeStart + timeStep * slice;
+            //}
+        }
+        public ScalarFieldUnsteady(ScalarField[] fields) : base()
+        {
+            _slices = fields;
+
+            Grid = fields[0].Grid.GetAsTimeGrid(fields.Length, fields[0].TimeOrigin??0, 1.0f);
+            //for (int slice = 0; slice < _slices.Length; ++slice)
+            //{
+            //    _slices[slice].TimeOrigin = (fields[0].TimeOrigin??0) + slice;
+            //}
         }
 
         public void ScaleToGrid(float dimwiseScale)

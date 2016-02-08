@@ -459,34 +459,34 @@ namespace FlowSharp
         }
 
         #region SettingChanged
-        public bool LineSettingChanged { get { return _currentSetting.LineSetting != _lastSetting.LineSetting; } }
-        public bool SliceTimeMainChanged { get { return _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain; } }
-        public bool SliceTimeReferenceChanged { get { return _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference; } }
-        public bool AlphaStableChanged { get { return _currentSetting.AlphaStable != _lastSetting.AlphaStable; } }
-        public bool StepSizeChanged { get { return _currentSetting.StepSize != _lastSetting.StepSize; } }
-        public bool IntegrationTypeChanged { get { return _currentSetting.IntegrationType != _lastSetting.IntegrationType; } }
-        public bool LineXChanged { get { return _currentSetting.LineX != _lastSetting.LineX; } }
-        public bool MemberMainChanged { get { return _currentSetting.MemberMain != _lastSetting.MemberMain; } }
-        public bool MemberReferenceChanged { get { return _currentSetting.MemberReference != _lastSetting.MemberReference; } }
-        public bool ColormapChanged { get { return _currentSetting.Colormap != _lastSetting.Colormap; } }
-        public bool ShaderChanged { get { return _currentSetting.Shader != _lastSetting.Shader; } }
-        public bool WindowWidthChanged { get { return _currentSetting.WindowWidth != _lastSetting.WindowWidth; } }
-        public bool TrackingChanged { get { return _currentSetting.Tracking != _lastSetting.Tracking; } }
-        public bool WindowStartChanged { get { return _currentSetting.WindowStart != _lastSetting.WindowStart; } }
-        public bool MeasureChanged { get { return _currentSetting.Measure != _lastSetting.Measure; } }
-        public bool SliceHeightChanged { get { return _currentSetting.SliceHeight != _lastSetting.SliceHeight; } }
-        public bool IntegrationTimeChanged { get { return _currentSetting.IntegrationTime != _lastSetting.IntegrationTime; } }
-        public bool DiffusionMeasureChanged { get { return _currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure; } }
-        public bool VarXChanged { get { return _currentSetting.VarX != _lastSetting.VarX; } }
-        public bool VarYChanged { get { return _currentSetting.VarY != _lastSetting.VarY; } }
-        public bool StartXChanged { get { return _currentSetting.StartX != _lastSetting.StartX; } }
-        public bool StartYChanged { get { return _currentSetting.StartY != _lastSetting.StartY; } }
-        public bool EndXChanged { get { return _currentSetting.EndX != _lastSetting.EndX; } }
-        public bool EndYChanged { get { return _currentSetting.EndY != _lastSetting.EndY; } }
-        public bool DimXChanged { get { return _currentSetting.DimX != _lastSetting.DimX; } }
-        public bool DimYChanged { get { return _currentSetting.DimY != _lastSetting.DimY; } }
-        public bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
-        public bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
+        public virtual bool LineSettingChanged { get { return _currentSetting.LineSetting != _lastSetting.LineSetting; } }
+        public virtual bool SliceTimeMainChanged { get { return _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain; } }
+        public virtual bool SliceTimeReferenceChanged { get { return _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference; } }
+        public virtual bool AlphaStableChanged { get { return _currentSetting.AlphaStable != _lastSetting.AlphaStable; } }
+        public virtual bool StepSizeChanged { get { return _currentSetting.StepSize != _lastSetting.StepSize; } }
+        public virtual bool IntegrationTypeChanged { get { return _currentSetting.IntegrationType != _lastSetting.IntegrationType; } }
+        public virtual bool LineXChanged { get { return _currentSetting.LineX != _lastSetting.LineX; } }
+        public virtual bool MemberMainChanged { get { return _currentSetting.MemberMain != _lastSetting.MemberMain; } }
+        public virtual bool MemberReferenceChanged { get { return _currentSetting.MemberReference != _lastSetting.MemberReference; } }
+        public virtual bool ColormapChanged { get { return _currentSetting.Colormap != _lastSetting.Colormap; } }
+        public virtual bool ShaderChanged { get { return _currentSetting.Shader != _lastSetting.Shader; } }
+        public virtual bool WindowWidthChanged { get { return _currentSetting.WindowWidth != _lastSetting.WindowWidth; } }
+        public virtual bool TrackingChanged { get { return _currentSetting.Tracking != _lastSetting.Tracking; } }
+        public virtual bool WindowStartChanged { get { return _currentSetting.WindowStart != _lastSetting.WindowStart; } }
+        public virtual bool MeasureChanged { get { return _currentSetting.Measure != _lastSetting.Measure; } }
+        public virtual bool SliceHeightChanged { get { return _currentSetting.SliceHeight != _lastSetting.SliceHeight; } }
+        public virtual bool IntegrationTimeChanged { get { return _currentSetting.IntegrationTime != _lastSetting.IntegrationTime; } }
+        public virtual bool DiffusionMeasureChanged { get { return _currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure; } }
+        public virtual bool VarXChanged { get { return _currentSetting.VarX != _lastSetting.VarX; } }
+        public virtual bool VarYChanged { get { return _currentSetting.VarY != _lastSetting.VarY; } }
+        public virtual bool StartXChanged { get { return _currentSetting.StartX != _lastSetting.StartX; } }
+        public virtual bool StartYChanged { get { return _currentSetting.StartY != _lastSetting.StartY; } }
+        public virtual bool EndXChanged { get { return _currentSetting.EndX != _lastSetting.EndX; } }
+        public virtual bool EndYChanged { get { return _currentSetting.EndY != _lastSetting.EndY; } }
+        public virtual bool DimXChanged { get { return _currentSetting.DimX != _lastSetting.DimX; } }
+        public virtual bool DimYChanged { get { return _currentSetting.DimY != _lastSetting.DimY; } }
+        public virtual bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
+        public virtual bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
         #endregion SettingChanged
     }
 

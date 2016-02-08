@@ -11,35 +11,88 @@ namespace FlowSharp
     class Line
     {
         public Vector3[] Positions;
+        public float[] Attribute;
         public int Length { get { return Positions.Length; } }
         public VectorField.Integrator.Status Status;
         public float LineLength = 0;
 
-        public float DistanceToPointInZ(Vector3 position)
+        public float DistanceToPointInZ(Vector3 position, out Vector3 zNearest)
         {
+            zNearest = Vector3.Zero;
+
+            if (Length < 2)
+                return float.MaxValue;
             // Slow linear search. Khalas.
             int i = 0;
             for(; i < Positions.Length - 1; ++i)
             {
+                // One point above, one below.
                 if ((Positions[i].Z - position.Z) * (Positions[i + 1].Z - position.Z) <= 0)
                     break;
             }
-            if (i == Length - 2)
+
+            // Did not find any?
+            if (i == Length - 1)
                 return float.MaxValue;
 
             Vector3 p0 = Positions[i];
             Vector3 p1 = Positions[i + 1];
             float t = (position.Z - p0.Z) / (p1.Z - p0.Z);
-            Vector3 zNearest = (1 - t) * p0 + t * p1;
+            zNearest = (1 - t) * p0 + t * p1;
             Debug.Assert(Math.Abs(position.Z - zNearest.Z) < 0.00000001f);
 
             return (position - zNearest).Length();
+        }
+
+        public float DistanceToPointInZ(Vector3 position)
+        {
+            Vector3 tmp;
+            return DistanceToPointInZ(position, out tmp);
+        }
+        //public Vector3 GetPointInZ(float z)
+        //{
+        //    // Slow linear search. Khalas.
+        //    int i = 0;
+        //    for (; i < Positions.Length - 1; ++i)
+        //    {
+        //        // One point above, one below.
+        //        if ((Positions[i].Z - z) * (Positions[i + 1].Z - z) <= 0)
+        //            break;
+        //    }
+        //    if (i == Length - 2)
+        //        return float.MaxValue;
+
+        //    Vector3 p0 = Positions[i];
+        //    Vector3 p1 = Positions[i + 1];
+        //    float t = (position.Z - p0.Z) / (p1.Z - p0.Z);
+        //    Vector3 zNearest = (1 - t) * p0 + t * p1;
+        //    Debug.Assert(Math.Abs(position.Z - zNearest.Z) < 0.00000001f);
+
+        //    return (position - zNearest).Length();
+        //}
+        public Line(Line cpy)
+        {
+            Positions = new Vector3[cpy.Length];
+            Array.Copy(cpy.Positions, Positions, cpy.Length);
+            Status = cpy.Status;
+            LineLength = cpy.LineLength;
+        }
+        public Line() { }
+        public Vector3 this[int index] { get { return Positions[index]; } set { Positions[index] = value; } }
+        public Vector3 Value(float index)
+        {
+            Vector3 p0 = this[(int)index];
+            Vector3 p1 = this[(int)index + 1];
+            float t = index - (int)index;
+            return (1.0f - t) * p0 + t * p1;
+
         }
     }
 
     class LineSet
     {
         protected Line[] _lines;
+        public Line this[int index] { get { return _lines[index]; } set { _lines[index] = value; } }
         public int Length { get { return _lines.Length; } }
         
         public Line[] Lines
@@ -86,6 +139,17 @@ namespace FlowSharp
         public LineSet(Line[] lines)
         {
             Lines = lines;
+        }
+
+        public LineSet(LineSet cpy) : base()
+        {
+            this.Color = cpy.Color;
+            this.Lines = new Line[cpy.Length];
+            this.Thickness = cpy.Thickness;
+            for(int line = 0; line < cpy.Length; ++line)
+            {
+                Lines[line] = new Line(cpy.Lines[line]);
+            }
         }
 
         public PointSet<EndPoint> GetEndPoints()

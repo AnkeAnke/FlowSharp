@@ -134,8 +134,9 @@ namespace FlowSharp
             Array.Copy(Size.Data, timeSize.Data, Size.Length);
             timeSize[Size.Length] = numTimeSlices;            
 
-            RectlinearGrid timeGrid = new RectlinearGrid(timeSize);
-            _timeDependent = true;
+            RectlinearGrid timeGrid = new RectlinearGrid(timeSize, timeStart);
+            //_timeDependent = true;
+            //TimeOrigin = timeStart;
             return timeGrid;
         }
 

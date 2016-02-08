@@ -86,9 +86,9 @@ namespace FlowSharp
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
             DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
 
-            StepSizeSlider.Value = 1;
+            StepSizeSlider.Value = 0.1;
             StepSizeSlider.Minimum = 0.000001;
-            AlphaSlider.Value = 0;
+            AlphaSlider.Value = 6;
 
             DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
             DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;
@@ -98,8 +98,6 @@ namespace FlowSharp
 
             DropDownTracking.ItemsSource = Enum.GetValues(typeof(RedSea.DisplayTracking)).Cast<RedSea.DisplayTracking>();
             DropDownTracking.SelectedIndex = (int)RedSea.DisplayTracking.LINE_POINTS;
-
-            StepSizeSlider.Value = 1.0;// 0.06;
 
             DropDownShader.ItemsSource = Enum.GetValues(typeof(FieldPlane.RenderEffect)).Cast<FieldPlane.RenderEffect>();
             DropDownShader.SelectedIndex = (int)FieldPlane.RenderEffect.COLORMAP;

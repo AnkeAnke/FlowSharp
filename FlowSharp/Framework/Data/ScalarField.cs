@@ -20,12 +20,14 @@ namespace FlowSharp
         /// Number of grid edges in every dimension.
         /// </summary>
         public Index Size { get { return Grid.Size; } }
-        //private float? _timeSlice = null;
-        public virtual float? TimeSlice { get { return Grid.TimeOrigin; } set { Grid.TimeOrigin = value; } }
-        //{
-        //    get { return _timeSlice; }
-        //    set { _timeSlice = value; }
-        //}
+
+        // Not Grid.TimeOrigin, because a steady field should not have a time origin in the grid (for sampling logic).
+        private float? _timeSlice = null;
+        public virtual float? TimeOrigin //{ get { return Grid.TimeOrigin; } set { Grid.TimeOrigin = value; } }
+        {
+            get { return _timeSlice; }
+            set { _timeSlice = value; }
+        }
 
         public abstract float this[int index]
         { get; set; }
@@ -119,19 +121,19 @@ namespace FlowSharp
             set { _data[index] = value; }
         }
 
-        private float? _timeSlice = null;
-        public override float? TimeSlice
-        {
-            get
-            {
-                return _timeSlice;
-            }
+        //private float? _timeSlice = null;
+        //public override float? TimeSlice
+        //{
+        //    get
+        //    {
+        //        return Grid.TimeOrigin;
+        //    }
 
-            set
-            {
-                _timeSlice = value;
-            }
-        }
+        //    set
+        //    {
+        //        Grid.TimeOrigin = value;
+        //    }
+        //}
 
         /// <summary>
         /// Instanciate a new field. The dimension is derived from the fields size.
