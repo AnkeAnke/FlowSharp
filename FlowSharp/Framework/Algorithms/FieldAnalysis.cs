@@ -729,7 +729,7 @@ namespace FlowSharp
             return FindBoundaryFromDistanceDonut(distances, out tmp);
         }
 
-        public static Line[] GetGraph(Line core, LineSet lines, float stepSize, int everyNthTimeStep, bool distance = true)
+        public static Line[] GetGraph(Line core, Vector2 center, LineSet lines, float stepSize, int everyNthTimeStep, bool distance = true)
         {
             Line[] starLines = new Line[lines.Lines.Length];
 
@@ -746,7 +746,7 @@ namespace FlowSharp
                     // Outgoing direction.
                     Vector3 start = line.Positions[0];
                     start.Z = 0;
-                    Vector3 dir = line.Positions[0] - new Vector3(new Vector2(core[0].X, core[0].Y), line.Positions[0].Z); ; dir.Normalize();
+                    Vector3 dir = line.Positions[0] - new Vector3(center/*new Vector2(core[0].X, core[0].Y)*/, line.Positions[0].Z); ; dir.Normalize();
 
                     // Scale such that step size does not scale the statistics.
                     dir *= 100.0f / core.Length;
@@ -779,6 +779,7 @@ namespace FlowSharp
             Vector3[] boundary = new Vector3[distances.Length + 1];
             indices = new int[distances.Length + 1];
 
+            int numBoundaryPoints = 0;
             // Vars.
             float eps = 0.5f;
 
@@ -830,10 +831,14 @@ namespace FlowSharp
                         maxSlope = slope;
                     }
                 }
-                indices[l] = cut;
-
-                boundary[l] = angles[l][cut];
+                
+                    indices[l] = angles[l].Length > 0 ? cut : -1;
+                if (angles[l].Length > 0)
+                    boundary[numBoundaryPoints++] = angles[l][cut];
             }
+
+            if (numBoundaryPoints + 1 < boundary.Length)
+                Array.Resize(ref boundary, numBoundaryPoints + 1);
 
             // Close circle.
             boundary[boundary.Length - 1] = boundary[0];
@@ -1246,5 +1251,13 @@ namespace FlowSharp
             }
             return new LineSet(shorties);
         }
+
+        //public static float FindFirstOccurenceZ(Line line, float value)
+        //{
+        //    for(int p = 0; p < line.Length-1; ++p)
+        //    {
+        //        if((line[p].Z - value) * 
+        //    }
+        //}
     }
 }

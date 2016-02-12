@@ -488,6 +488,69 @@ namespace FlowSharp
         public virtual bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
         public virtual bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
         #endregion SettingChanged
+
+        #region CurrentSetting
+        protected RedSea.DisplayLines LineSetting
+        { get { return _currentSetting.LineSetting; } }
+
+        protected int SliceTimeMain
+        { get { return _currentSetting.SliceTimeMain; } }
+
+        protected int SliceTimeReference
+        { get { return _currentSetting.SliceTimeReference; } }
+
+        protected float AlphaStable
+        { get { return _currentSetting.AlphaStable; } }
+
+        protected float StepSize
+        { get { return _currentSetting.StepSize; } }
+
+        protected VectorField.Integrator.Type IntegrationType
+        { get { return _currentSetting.IntegrationType; } }
+
+        protected int LineX
+        { get { return _currentSetting.LineX; } }
+
+        protected int MemberMain
+        { get { return _currentSetting.MemberMain; } }
+
+        protected int MemberReference
+        { get { return _currentSetting.MemberReference; } }
+
+        protected RedSea.DisplayTracking Tracking
+        { get { return _currentSetting.Tracking; } }
+
+        protected Colormap Colormap
+        { get { return _currentSetting.Colormap; } }
+
+        protected FieldPlane.RenderEffect Shader
+        { get { return _currentSetting.Shader; } }
+
+        protected float WindowWidth
+        { get { return _currentSetting.WindowWidth; } }
+
+        protected float WindowStart
+        { get { return _currentSetting.WindowStart; } }
+
+        protected RedSea.Measure Measure
+        { get { return _currentSetting.Measure; } }
+
+        protected int SliceHeight
+        { get { return _currentSetting.SliceHeight; } }
+
+        protected float IntegrationTime
+        { get { return _currentSetting.IntegrationTime; } }
+
+        protected RedSea.DiffusionMeasure DiffusionMeasure
+        { get { return _currentSetting.DiffusionMeasure; } }
+
+        protected Sign Flat
+        { get { return _currentSetting.Flat; } }
+
+        protected Sign Graph
+        { get { return _currentSetting.Graph; } }
+        #endregion CurrentSetting
+
     }
 
     class CriticalPointTracking : DataMapper
@@ -811,10 +874,15 @@ namespace FlowSharp
         public OkuboWeiss(VectorFieldUnsteady velocity, Plane plane)
         {
             Debug.Assert(velocity.NumVectorDimensions == 2 + 1);
-            _fieldOW = new VectorFieldUnsteady(velocity, FieldAnalysis.OkuboWeiss, 1);
+            _fieldOW = velocity;
 
             Plane = plane;
             Mapping = GetTimeSlice;
+        }
+
+        protected void Initialize()
+        {
+            _fieldOW = new VectorFieldUnsteady(_fieldOW, FieldAnalysis.OkuboWeiss, 1);
 
             float mean, fill;
             _fieldOW.ScalarsAsSFU[0].TimeSlices[0].ComputeStatistics(out fill, out mean, out _standardDeviation);
@@ -827,6 +895,9 @@ namespace FlowSharp
         /// <returns></returns>
         public List<Renderable> GetTimeSlice()
         {
+            if (_lastSetting == null)
+                Initialize();
+
             if (_lastSetting == null ||
                 SliceTimeMainChanged)
             {
@@ -933,7 +1004,7 @@ namespace FlowSharp
                 default:
                     RedSea.Measure var = _currentSetting.Measure;
 
-                   // Maybe load vector field too.
+                    // Maybe load vector field too.
                     bool addVelocity = (_currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH);
                     scalars = new ScalarField[addVelocity ? 3 : 1];
                     file.Range.SetVariable((RedSea.Variable)var);
@@ -1199,7 +1270,7 @@ namespace FlowSharp
             }
 
             if (_graph != null &&
-                _currentSetting.LineSetting == RedSea.DisplayLines.LINE &&(
+                _currentSetting.LineSetting == RedSea.DisplayLines.LINE && (
                 _lastSetting == null || rebuilt ||
                 WindowWidthChanged ||
                 WindowStartChanged ||

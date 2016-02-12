@@ -447,14 +447,18 @@ namespace FlowSharp
                     PointSet<EndPoint> ends = positions.GetEndPoints();
                     if (ends.Length == 0)
                         return;
+
+                    int validPoints = 0;
                     for (int index = 0; index < positions.Length; ++index)
                     {
-                        if (ends.Points[index] == null)
+                        if (positions[index].Length == 0)
                             continue;
-                        StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
-                        positions.Lines[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
-                        positions.Lines[index].Status = streamline.Status;
-                        positions.Lines[index].LineLength += streamline.LineLength;
+                        StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[validPoints].Position).ToVec(Field.NumVectorDimensions), maxTime);
+                        positions[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
+                        positions[index].Status = streamline.Status;
+                        positions[index].LineLength += streamline.LineLength;
+
+                        validPoints++;
                     }
                     //return new LineSet(lines) { Color = (Vector3)Direction };
                 }
@@ -476,15 +480,18 @@ namespace FlowSharp
             public enum Type
             {
                 EULER,
-                RUNGE_KUTTA_4
+                RUNGE_KUTTA_4,
+                REPELLING_RUNGE_KUTTA
             }
 
-            public static Integrator CreateIntegrator(VectorField field, Type type)
+            public static Integrator CreateIntegrator(VectorField field, Type type, Line core = null, float force = 0.1f)
             {
                 switch(type)
                 {
                     case Type.RUNGE_KUTTA_4:
                         return new IntegratorRK4(field);
+                    case Type.REPELLING_RUNGE_KUTTA:
+                        return new IntegratorRK4Repelling(field, core, force);
                     default:
                         return new IntegratorEuler(field);
                 }
@@ -628,6 +635,71 @@ namespace FlowSharp
 
                 // v3
                 Vector v3 = Field.Sample(pos + v2);
+                if (!ScaleAndCheckVector(v3, out v3))
+                    return Status.CP;
+                status = CheckPosition(pos + v2);
+                if (status != Status.OK)
+                    return status;
+
+                Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
+                stepped += dir;
+                stepLength = dir.LengthEuclidean();
+
+                return CheckPosition(stepped);
+            }
+        }
+
+        public class IntegratorRK4Repelling : IntegratorEuler
+        {
+            public Line Core { get; set; }
+            public float Force { get; set; }
+            public IntegratorRK4Repelling(VectorField field, Line core, float outwardForce) : base(field)
+            {
+                Core = core;
+                Force = outwardForce;
+            }
+
+            protected Vector Repell(Vector pos)
+            {
+                Vector3 dir;
+                float dist = Core.DistanceToPointInZ((Vector3)pos, out dir);
+                dir = (Vector3)pos - dir;
+                dir /= dist;
+                return ((Vec3)(dir * Force)).ToVec(pos.Length);
+            }
+
+            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
+            {
+                stepped = new Vector(pos);
+                stepLength = 0;
+                Status status;
+
+                // v0
+                Vector v0 = Field.Sample(pos) + Repell(pos);
+                if (!ScaleAndCheckVector(v0, out v0))
+                    return Status.CP;
+                status = CheckPosition(pos + v0 / 2);
+                if (status != Status.OK)
+                    return status;
+
+                // v1
+                Vector v1 = Field.Sample(pos + v0 / 2) + Repell(pos + v0 /2);
+                if (!ScaleAndCheckVector(v1, out v1))
+                    return Status.CP;
+                status = CheckPosition(pos + v1 / 2);
+                if (status != Status.OK)
+                    return status;
+
+                // v2
+                Vector v2 = Field.Sample(pos + v1 / 2) + Repell(pos + v1 / 2);
+                if (!ScaleAndCheckVector(v2, out v2))
+                    return Status.CP;
+                status = CheckPosition(pos + v2);
+                if (status != Status.OK)
+                    return status;
+
+                // v3
+                Vector v3 = Field.Sample(pos + v2) + Repell(pos + v2);
                 if (!ScaleAndCheckVector(v3, out v3))
                     return Status.CP;
                 status = CheckPosition(pos + v2);

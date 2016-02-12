@@ -86,7 +86,7 @@ namespace FlowSharp
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
             DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
 
-            StepSizeSlider.Value = 0.1;
+            StepSizeSlider.Value = 0.5;
             StepSizeSlider.Minimum = 0.000001;
             AlphaSlider.Value = 6;
 

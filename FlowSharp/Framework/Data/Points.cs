@@ -12,7 +12,17 @@ namespace FlowSharp
     {
         public SlimDX.Vector3 Position;
         public virtual SlimDX.Vector3 Color { get; set; } = SlimDX.Vector3.UnitY;
-        public virtual float Radius { get; set; } = 0.01f;
+        public virtual float Radius { get; set; } = 0.1f;
+        public Point() { }
+        public Point(Vector3 pos) { Position = pos; }
+        public static explicit operator Point(Vector3 pos)
+        {
+            return new Point(pos);
+        }
+        public static explicit operator Vector3(Point pos)
+        {
+            return pos.Position;
+        }
     }
 
     class EndPoint : Point

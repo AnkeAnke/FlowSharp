@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Integrator = FlowSharp.VectorField.Integrator;
 
 namespace FlowSharp
 {
@@ -27,10 +28,10 @@ namespace FlowSharp
         private VectorFieldUnsteady _velocity;
         private Vector2 _selection;
 
-        private LineBall[] _pathlines;
-        private LineSet[] _pathlinesTime;
+        private LineBall _pathlines;
+        private LineSet _pathlinesTime;
         private LineBall[] _graph;
-        private Line[] _coreDistancesGraph;
+        private Line[] _coreDistanceGraph;
         private Line[] _coreAngleGraph;
         private FieldPlane _timeSlice, _compareSlice;
 
@@ -43,10 +44,13 @@ namespace FlowSharp
 
         private int _everyNthTimestep;
 
-        private Line[] _boundaries;
+        private LineSet _boundaries;
         private LineBall _boundaryBallFunction;
-        private Line[] _boundariesSpacetime;
+        private LineSet _boundariesSpacetime;
         private LineBall _boundaryBallSpacetime;
+
+        private List<Point> _allBoundaryPoints;
+        private PointCloud _boundaryCloud;
 
         private float _lastActiveGraphScale = -1;
 
@@ -61,17 +65,19 @@ namespace FlowSharp
             Console.WriteLine("Min Core Length: {0}", MinLengthCore);
             Mapping = Map;
 
-            //ComputeCoreOrigins(_currentSetting.MemberMain, 0);
+            //ComputeCoreOrigins(MemberMain, 0);
 
-            //TraceCore(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
+            //TraceCore(MemberMain, SliceTimeMain);
 
-            _boundaries = new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep];
-            _boundariesSpacetime = new Line[_boundaries.Length];
+            _boundaries = new LineSet(new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
+            _boundariesSpacetime = new LineSet(new Line[_boundaries.Length]);
             for (int l = 0; l < _boundaries.Length; ++l)
             {
                 _boundaries[l] = new Line() { Positions = new Vector3[0] };
                 _boundariesSpacetime[l] = new Line() { Positions = new Vector3[0] };
             }
+
+            _allBoundaryPoints = new List<Point>(10000);
         }
         /// <summary>
         /// Load a stack of 30 field. This should be small enough to have memory free for other operations.
@@ -125,7 +131,7 @@ namespace FlowSharp
         {
             // Load 2 slices only for computing core origins.
             LoadField(startSubstep, member, 2);
-            //LoaderRaw file = (RedSea.Singleton.GetLoader(_currentSetting.SliceTimeMain, 0, member, RedSea.Variable.SURFACE_HEIGHT) as LoaderRaw);
+            //LoaderRaw file = (RedSea.Singleton.GetLoader(SliceTimeMain, 0, member, RedSea.Variable.SURFACE_HEIGHT) as LoaderRaw);
 
             //ScalarField height = file.LoadFieldSlice();
 
@@ -145,9 +151,15 @@ namespace FlowSharp
         {
             string corename = RedSea.Singleton.CoreFileName + ".line";
             if (System.IO.File.Exists(corename))
+            {
                 GeometryWriter.ReadFromFile(corename, out _cores);
+                LoadField(0, MemberMain);
+            }
             else
             {
+                // Re-compute cores.
+                ComputeCoreOrigins(MemberMain, 0);
+
                 // How often do we have to load a VF stack? 
                 int numBlocks = (int)Math.Ceiling((float)(RedSea.Singleton.NumSubstepsTotal - startSubstep) / (_everyNthTimestep * STEPS_IN_MEMORY));
 
@@ -297,7 +309,7 @@ namespace FlowSharp
                     return;
                 }
 
-                Vector3 selection3D = new Vector3(pos, _currentSetting.SliceTimeMain);
+                Vector3 selection3D = new Vector3(pos, SliceTimeMain);
 
                 float minDist = float.MaxValue;
                 _selectedCore = -1;
@@ -311,10 +323,12 @@ namespace FlowSharp
                         minDist = dist;
                         _selectedCore = core;
                         Debug.Assert(Math.Abs(nearest.Z - selection3D.Z) < 0.00001);
-                        _selection = new Vector2(nearest.X, nearest.Y);
-                        _coreBall = new LineBall(_linePlane, new LineSet(new Line[] { _cores[_selectedCore] }) { Color = new Vector3(0.8f, 0.1f, 0.1f), Thickness = 0.3f});
+                        // TODO: DEBUG
+                        _selection = pos; //new Vector2(nearest.X, nearest.Y);
                     }
                 }
+
+                _coreBall = new LineBall(_linePlane, new LineSet(new Line[] { _cores[_selectedCore] }) { Color = new Vector3(0.8f, 0.1f, 0.1f), Thickness = 0.3f });
                 Debug.Assert(_selectedCore >= 0 && _selectedCore < _cores.Length, "The nearest core is invalid.");
 
             }
@@ -322,142 +336,46 @@ namespace FlowSharp
                 Console.WriteLine("Selection not within field range.");
         }
 
-        protected void IntegrateLines(Line core, int time = 0)
-        {
-            int numLines = _currentSetting.LineX;
-
-            // Compute starting positions.
-            Point[] circle = new Point[numLines];
-            float offset = _currentSetting.AlphaStable;
-            float angleDiff = 2 * (float)(Math.PI / numLines);
-            for (int dir = 0; dir < numLines; ++dir)
-            {
-                float x = (float)(Math.Sin(angleDiff * dir + Math.PI / 2));
-                float y = (float)(Math.Cos(angleDiff * dir + Math.PI / 2));
-                circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offset, _selection.Y + y * offset, _currentSetting.SliceTimeMain) };
-            }
-
-
-            VectorField.Integrator integrator = VectorField.Integrator.CreateIntegrator(_velocity, _currentSetting.IntegrationType);
-            integrator.StepSize = _currentSetting.StepSize;
-
-            // Do we need to load new data/is the selected time step in the currently loaded field?
-            LineSet[] lineSets;
-            if (_velocity.TimeOrigin > time || _velocity.Size.T < time)
-                LoadField(time, _currentSetting.MemberMain);
-            integrator.Field = _velocity;
-            lineSets = integrator.Integrate<Point>(new PointSet<Point>(circle));
-
-            while (_currentEndStep < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
-            {
-                LoadField(_currentEndStep, _currentSetting.MemberMain);
-                integrator.Field = _velocity;
-                integrator.IntegrateFurther(lineSets[0]);
-            }
-            integrator.Field = _velocity;
-            integrator.IntegrateFurther(lineSets[0]);
-
-            if ((_currentSetting.SliceTimeMain * _everyNthTimestep) / RedSea.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
-                LoadField(_currentSetting.SliceTimeMain, _currentSetting.MemberMain, 2);
-
-            //Console.WriteLine(lineSets[0].Lines[0].Positions.Last());
-            _pathlinesTime = new LineSet[] { lineSets[0] };
-        }
-
-        protected void ComputeGraph(Line core, int time = 0)
-        {
-            _graphPlane = new Plane(Plane, Vector3.UnitZ * _currentSetting.SliceTimeMain);
-            bool remap = false;
-            if (_lastSetting == null ||
-                NumLinesChanged ||
-                OffsetRadiusChanged ||
-                StepSizeChanged ||
-                IntegrationTypeChanged ||
-                GraphScaleChanged ||
-                _selectionChanged ||
-                _currentSetting.IntegrationTime != _lastActiveGraphScale)
-            {
-                //lineSets[1].FlattenLines(_currentSetting.SliceTimeMain);
-                _graph = new LineBall[0];
-                // Compute values (distance to start point).
-                LineSet lines = _pathlinesTime[0];
-
-                _coreDistancesGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _pathlinesTime[0], _currentSetting.StepSize, _everyNthTimestep, true);
-                _coreAngleGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _pathlinesTime[0], _currentSetting.StepSize, _everyNthTimestep, false);
-
-                LineSet set = new LineSet(_coreAngleGraph);
-                GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-                GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
-
-                set = new LineSet(_coreDistancesGraph);
-                GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-                GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
-
-                remap = true;
-            }
-
-            // Compute and show statistics. Since we computed the lines anew, they are not yet flat!
-            if ((remap  || FlatChanged || SliceTimeReferenceChanged) &&
-                _currentSetting.Graph)
-            {
-                LineSet graph = new LineSet(_coreAngleGraph);
-                if (_currentSetting.SliceTimeReference > _currentSetting.SliceTimeMain)
-                {
-                    int length = _currentSetting.SliceTimeReference - _currentSetting.SliceTimeMain;
-                    length =  (int)((float)length / _currentSetting.StepSize + 0.5f);
-                    graph = FieldAnalysis.CutLength(graph, length);
-                        }
-                //var graph = //FieldAnalysis.BuildGraph(Plane, new LineSet(starLines), values, _currentSetting.IntegrationTime, _currentSetting.LineSetting, _currentSetting.Colormap);
-                _graph = new LineBall[] { new LineBall(_graphPlane, graph, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap/*, !_currentSetting.Flat*/) }; 
-                //_graph = graph.Concat(_graph).ToArray();
-            }
-            else
-                _graph = null;
-        }
-
         protected void MapLines()
         {
-            if (_currentSetting.Flat)
+            if (Flat)
             {
                 // Flatten after line integration. Else, the start point would always be taken.
-                LineSet flat = new LineSet(_pathlinesTime[0]);
-                flat.FlattenLines(_currentSetting.SliceTimeMain);
-                _pathlines = new LineBall[] { new LineBall(_linePlane, flat, LineBall.RenderEffect.HEIGHT)/*, new LineBall(Plane, lineSets[1]) */};
+                LineSet flat = new LineSet(_pathlinesTime);
+                flat.FlattenLines(SliceTimeMain);
+                _pathlines = new LineBall(_linePlane, flat, LineBall.RenderEffect.HEIGHT)/*, new LineBall(Plane, lineSets[1]) */;
             }
             else
-                _pathlines = new LineBall[] { new LineBall(_linePlane, _pathlinesTime[0], LineBall.RenderEffect.HEIGHT) };
+                _pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT);
         }
 
         public List<Renderable> Map()
         {
-            List<Renderable> renderables = new List<Renderable>(3 + _currentSetting.LineX);
-            int numLines = _currentSetting.LineX;
+            List<Renderable> renderables = new List<Renderable>(3 + LineX);
+            int numLines = LineX;
 
-
-            if(_lastSetting == null ||
+            #region BackgroundPlanes
+            if (_lastSetting == null ||
                 MeasureChanged ||
                 SliceTimeMainChanged ||
                 MemberMainChanged)
             {
-                int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, _currentSetting.SliceTimeMain);
+                // Computing which field to load as background.
+                int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, SliceTimeMain);
                 int time = (totalTime * _everyNthTimestep) / RedSea.Singleton.NumSubsteps;
                 int subtime = (totalTime * _everyNthTimestep) % RedSea.Singleton.NumSubsteps;
-                //if (_lastSetting == null || MeasureChanged || MemberMainChanged)
-                //    _baseSlice = LoadPlane(_currentSetting.MemberMain, 0, 0, false);
 
-                _timeSlice = LoadPlane(_currentSetting.MemberMain, time, subtime, true);
-                _intersectionPlane = _timeSlice.GetIntersectionPlane();//new Plane(Plane, Vector3.UnitZ * ((float)totalTime * _everyNthTimestep) / (RedSea.Singleton.NumSubsteps ));
-                                                                       // _debugCore = _velocity.GetTimeSlice(_currentSetting.SliceTimeMain);
-                                                                       // New Core Tracking.
+                _timeSlice = LoadPlane(MemberMain, time, subtime, true);
+                _intersectionPlane = _timeSlice.GetIntersectionPlane();
+
                 if (_lastSetting == null ||
                     MemberMainChanged)
                 {
-                    // Re-compute cores.
-                    ComputeCoreOrigins(_currentSetting.MemberMain, 0);
+                    // Trace / load cores.
+                    TraceCore(MemberMain, SliceTimeMain);
 
-                    TraceCore(_currentSetting.MemberMain, _currentSetting.SliceTimeMain);
-
-                    _boundaries = new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep];
+                    // Reset boundaries.
+                    _boundaries = new LineSet(new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
                     for (int l = 0; l < _boundaries.Length; ++l)
                         _boundaries[l] = new Line() { Positions = new Vector3[0] };
                 }
@@ -465,10 +383,11 @@ namespace FlowSharp
 
             if (_lastSetting == null || SliceTimeReferenceChanged)
             {
-                int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, _currentSetting.SliceTimeReference);
+                // Reference slice.
+                int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, SliceTimeReference);
                 int time = (totalTime * _everyNthTimestep) / RedSea.Singleton.NumSubsteps;
                 int subtime = (totalTime * _everyNthTimestep) % RedSea.Singleton.NumSubsteps;
-                _compareSlice = LoadPlane(_currentSetting.MemberMain, time, subtime, true);
+                _compareSlice = LoadPlane(MemberMain, time, subtime, true);
             }
 
             if (_lastSetting == null ||
@@ -477,66 +396,59 @@ namespace FlowSharp
                 WindowStartChanged ||
                 WindowWidthChanged)
             {
-                _timeSlice.SetRenderEffect(_currentSetting.Shader);
-                _timeSlice.UsedMap = _currentSetting.Colormap;
+                _timeSlice.SetRenderEffect(Shader);
+                _timeSlice.UsedMap = Colormap;
+                _timeSlice.LowerBound = WindowStart;
+                _timeSlice.UpperBound = WindowWidth + WindowStart;
 
-                _timeSlice.LowerBound = _currentSetting.WindowStart;
-                _timeSlice.UpperBound = _currentSetting.WindowWidth + _currentSetting.WindowStart;
+                _compareSlice.SetRenderEffect(Shader);
+                _compareSlice.UsedMap = Colormap;
+                _compareSlice.LowerBound = WindowStart;
+                _compareSlice.UpperBound = WindowWidth + WindowStart;
             }
+
             // First item in list: plane.
             renderables.Add(_timeSlice);
-            if(_coreCloud != null)
+            if (_coreCloud != null)
                 renderables.Add(_coreCloud);
             if (_coreBall != null)
                 renderables.Add(_coreBall);
+            #endregion BackgroundPlanes
 
             // Add Point to indicate clicked position.
-            renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, _currentSetting.SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.6f } })));
+            renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.4f } })));
             bool rebuilt = false;
 
             // Recompute lines if necessary.
-            if (_lastSetting == null ||
+            if (numLines > 0 && (
+                _lastSetting == null ||
                 NumLinesChanged ||
                 OffsetRadiusChanged ||
                 StepSizeChanged ||
                 IntegrationTypeChanged ||
-                GraphScaleChanged ||
-                FlatChanged ||
-                GraphChanged ||
-                _selectionChanged)
+                _selectionChanged ||
+                SliceTimeMainChanged))
             {
-                if (/*_velocity.IsValid(new Vec3((Vec2)_selection, _currentSetting.) && */numLines > 0)
-                {
-                    if (_lastSetting == null ||
-                        NumLinesChanged ||
-                        OffsetRadiusChanged ||
-                        StepSizeChanged ||
-                        IntegrationTypeChanged ||
-                        _selectionChanged)
-                    {
-                        IntegrateLines(_cores?.Lines[_selectedCore], _currentSetting.SliceTimeMain);
-                        _lastActiveGraphScale = -1;
-                    }
-                    //if(!_currentSetting.Graph)
-                        
-                    if (_currentSetting.Graph &&
-                        _lastActiveGraphScale != _currentSetting.IntegrationTime)
-                    {
-                        ComputeGraph(_cores?.Lines[_selectedCore], _currentSetting.SliceTimeMain);
-                        ExtractCurrentBoundary(_currentSetting.SliceTimeMain);
+                FindBoundary();
 
-                        _lastActiveGraphScale = _currentSetting.IntegrationTime;
-                    }
-                    MapLines();
-                }
                 _selectionChanged = false;
                 rebuilt = true;
             }
-            else if (SliceTimeReferenceChanged)
-                ComputeGraph(_cores?.Lines[_selectedCore], _currentSetting.SliceTimeMain);
+            if (rebuilt || (Graph && SliceTimeReferenceChanged))
+            {
+                UpdateBoundary();
+            }
+            if (_lastSetting != null &&
+                FlatChanged &&
+                _pathlinesTime != null)
+            {
+                _pathlines = new LineBall(_linePlane, _pathlinesTime, Flat? LineBall.RenderEffect.DEFAULT : LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
+            }
+            //else if (SliceTimeReferenceChanged)
+            //    ComputeGraph(_cores?.Lines[_selectedCore], SliceTimeMain);
 
             if (_graph != null &&
-                _currentSetting.LineSetting == RedSea.DisplayLines.LINE && (
+                LineSetting == RedSea.DisplayLines.LINE && (
                 _lastSetting == null || rebuilt ||
                 WindowWidthChanged ||
                 WindowStartChanged ||
@@ -544,30 +456,33 @@ namespace FlowSharp
             {
                 foreach (Renderable ball in _graph)
                 {
-                    (ball as LineBall).LowerBound = _currentSetting.WindowStart;
-                    (ball as LineBall).UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
-                    (ball as LineBall).UsedMap = _currentSetting.Colormap;
+                    (ball as LineBall).LowerBound = WindowStart;
+                    (ball as LineBall).UpperBound = WindowStart + WindowWidth;
+                    (ball as LineBall).UsedMap = Colormap;
                 }
-                _boundaryBallFunction.LowerBound = _currentSetting.WindowStart;
-                _boundaryBallFunction.UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
-                _boundaryBallFunction.UsedMap = ColorMapping.GetComplementary(_currentSetting.Colormap);
+                _boundaryBallFunction.LowerBound = WindowStart;
+                _boundaryBallFunction.UpperBound = WindowStart + WindowWidth;
+                _boundaryBallFunction.UsedMap = ColorMapping.GetComplementary(Colormap);
 
-                _pathlines[0].LowerBound = _currentSetting.WindowStart ;
-                _pathlines[0].UpperBound = _currentSetting.WindowStart + _currentSetting.WindowWidth;
-                _pathlines[0].UsedMap = ColorMapping.GetComplementary(_currentSetting.Colormap);
+                _pathlines.LowerBound = WindowStart;
+                _pathlines.UpperBound = WindowStart + WindowWidth;
+                _pathlines.UsedMap = ColorMapping.GetComplementary(Colormap);
             }
 
             // Add the lineball.
             if (_pathlines != null)
-                renderables.AddRange(_pathlines);
-            if (_graph != null && _currentSetting.Graph)
+                renderables.Add(_pathlines);
+            if (_graph != null && Graph)
                 renderables = renderables.Concat(_graph.ToList()).ToList();
-            if (_boundaryBallFunction != null && _currentSetting.Graph)
+            if (_boundaryBallFunction != null && Graph)
                 renderables.Add(_boundaryBallFunction);
-            if (_boundaryBallSpacetime != null && _currentSetting.Graph)// && !_currentSetting.Flat)
+            if (_boundaryBallSpacetime != null && Graph && !Flat)// && !Flat)
                 renderables.Add(_boundaryBallSpacetime);
-            if(_currentSetting.SliceTimeMain != _currentSetting.SliceTimeReference)
+            if (SliceTimeMain != SliceTimeReference)
                 renderables.Add(_compareSlice);
+            if (_boundaryCloud != null && Graph)
+                renderables.Add(_boundaryCloud);
+
             return renderables;
         }
 
@@ -601,28 +516,560 @@ namespace FlowSharp
             }
         }
 
+        protected void FindBoundary()
+        {
+
+            bool output = false;
+        // ~~~~~~~~~~~ Variable Initializations ~~~~~~~~~~~~~ \\
+
+            // Find out: Where do we want the boundary to be?
+            // "One day": Take Okubo etc as predictor.
+            float preferredBoundaryTime = 20.0f / StepSize;
+            float stepSizeStreamlines = StepSize;
+
+            // At which point did we find the Boundary?
+            int[] boundaryIndices, boundaryIndicesLast;
+            // At which point did we find the Boundary last time? Initalize 0.
+            boundaryIndicesLast = new int[LineX];
+            for (int i = 0; i < boundaryIndicesLast.Length; i++)
+                boundaryIndicesLast[i] = int.MaxValue;
+
+            // Keep the chosen lines in here.
+            LineSet chosenPathlines = new LineSet(new Line[LineX]);
+            Line[] lastPathlines = new Line[LineX];
+
+            // ~~~~~~~~~~~~ Inner Circle ~~~~~~~~~~~~~~~~~~~~~~~~ \\
+
+            //for (float offsetInnerCircle = 7; offsetInnerCircle < 10; offsetInnerCircle += 0.1f)
+            float offsetInnerCircle = AlphaStable;
+            {
+                chosenPathlines = new LineSet(new Line[LineX]);
+
+                Console.WriteLine("Current offset: {0}", offsetInnerCircle);
+                //      float offsetInnerCircle = AlphaStable;
+
+                // Save where to transit steady -> unsteady integration.
+                float[] offsetSeeds = new float[LineX];
+                for (int i = 0; i < offsetSeeds.Length; i++)
+                    offsetSeeds[i] = offsetInnerCircle;
+                // Create small circle around selection.
+                Point[] circle = new Point[LineX];
+
+                // A small circle around selection for integration.
+                // Overwrite with pathline seeds lates.
+                float angleDiff = 2 * (float)(Math.PI / LineX);
+                for (int dir = 0; dir < circle.Length; ++dir)
+                {
+                    float x = (float)(Math.Sin(angleDiff * dir + Math.PI / 2));
+                    float y = (float)(Math.Cos(angleDiff * dir + Math.PI / 2));
+
+                    // Take the selection as center.
+                    circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offsetInnerCircle, _selection.Y + y * offsetInnerCircle, SliceTimeMain) };
+                }
+
+                // Seeds for pathlines.
+                PointSet<Point> seeds = new PointSet<Point>(circle);
+
+                // ~~~~~~~~~~~~ Integrate Pathlines and Adapt ~~~~~~~~~~~~~~~~~~~~~~~~ \\
+                // Setup integrator.
+                Integrator pathlineIntegrator = Integrator.CreateIntegrator(null, IntegrationType, _cores[_selectedCore], 1);
+                pathlineIntegrator.StepSize = StepSize;
+
+                // Count out the runs for debugging.
+                int run = 0;
+
+                while (seeds.Length > 0)
+                {
+                 //   if (output)
+                        Console.WriteLine("Starting run {0}, {1} seeds left.", run++, seeds.Length);
+
+                    // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
+
+                    // Do we need to load a field first?
+                    if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
+                        LoadField(SliceTimeMain, MemberMain);
+
+                    // Integrate first few steps.
+                    pathlineIntegrator.Field = _velocity;
+                    LineSet pathlines = pathlineIntegrator.Integrate(seeds, false)[0];
+
+                    // Append integrated lines of next loaded vectorfield time slices.
+                    float timeLength = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep; //preferredBoundaryTime * 2;
+                    while (_currentEndStep + 1 < timeLength)
+                    {
+                        // Don't load more steps than we need to!
+                        int numSteps = (int)Math.Min(timeLength - _currentEndStep, STEPS_IN_MEMORY);
+                        LoadField(_currentEndStep, MemberMain, numSteps);
+
+                        // Integrate further.
+                        pathlineIntegrator.Field = _velocity;
+                        pathlineIntegrator.IntegrateFurther(pathlines);
+                    }
+
+                    // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
+                    // The two needes functions.
+                    Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, StepSize, _everyNthTimestep, true);
+                    Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, StepSize, _everyNthTimestep, false);
+
+                    // Find the boundary based on angle and distance.
+                    FieldAnalysis.FindBoundaryFromDistanceAngleDonut(distances, angles, out boundaryIndices);
+
+                    // ~~~~~~~~~~~~ Chose or Offset Pathlines ~~~~~~~~~~~~ \\
+                    int numNewSeeds = 0;
+                    int numPathlines = 0;
+                    // Recompute start points.
+                    for (int idx = 0; idx < LineX; ++idx)
+                    {
+                        // We already have an optimal line here. Continue.
+                        if (chosenPathlines[idx] != null)
+                            continue;
+
+                        // Should we save this line?
+                        //  Console.WriteLine("Run {0}, idx {1}, numPathlines {2}, numNewSeeds{3}", run, idx, numPathlines, numNewSeeds);
+                        bool worseThanLast = Math.Abs(boundaryIndices[numPathlines] - preferredBoundaryTime) > Math.Abs(boundaryIndicesLast[idx] - preferredBoundaryTime);
+
+                        Vector3 pos;
+                        // Save this point
+                        if (boundaryIndices[numPathlines] >= 0)
+                        {
+                             pos = pathlines[numPathlines][boundaryIndices[numPathlines]];
+                            _allBoundaryPoints.Add(new Point(pos) { Color = new Vector3(0.1f, pos.Z * _everyNthTimestep / RedSea.Singleton.NumSubstepsTotal, 0.1f) });
+                        }
+                        // Finally found it?
+           // TODOD: DEBUG!!!!!!!!!!!!!!!!111!!!!!!!!!!!!!!!!!!elf!!!!!!!!!!!!!!!!
+                        if (boundaryIndices[numPathlines] > 0)// == preferredBoundaryTime) // We reached the spot! Take this line!
+                        {
+                            chosenPathlines[idx] = pathlines[numPathlines];
+                            if (output)
+                                Console.WriteLine("Line {0} was chosen because it is perfect!", idx);
+                        }
+                        else if (boundaryIndices[numPathlines] < 0 || // We cannot even integrate a line here. We are out of the field. Take best shot until now.
+                                worseThanLast) // The last guess we had was better. Take the old one.)
+                        {
+                            // Take the last line we integrated.
+                            chosenPathlines[idx] = lastPathlines[idx];
+
+                            if (boundaryIndices[numPathlines] >= 0)
+                                _allBoundaryPoints.RemoveAt(_allBoundaryPoints.Count - 1);
+                            pos = lastPathlines[idx][boundaryIndicesLast[idx]];
+                            _allBoundaryPoints.Add(new Point(pos) { Color = new Vector3(0.1f, pos.Z * _everyNthTimestep / RedSea.Singleton.NumSubstepsTotal, 0.1f) });
+
+                            if (boundaryIndices[numPathlines] < 0 && output)
+                                Console.WriteLine("Line {0} was chosen because the next one in line could not be integrated.", idx);
+                            if (worseThanLast && output)
+                                Console.WriteLine("Line {0} was chosen because it is even worse than the last one.", idx);
+                        }
+                        else
+                        {
+                            // Integrate this line again.
+                            boundaryIndicesLast[idx] = boundaryIndices[numPathlines];
+                            // We save these in case the next one is worse.
+                            lastPathlines[idx] = pathlines[numPathlines];
+
+                            // Add new seed to seed list.
+                            float scale = boundaryIndices[numPathlines] / preferredBoundaryTime;
+                            offsetSeeds[numNewSeeds] += (scale > 1) ? StepSize : -StepSize;
+
+                            // Recompute position on circle.
+                            float x = (float)(Math.Sin(angleDiff * idx + Math.PI / 2));
+                            float y = (float)(Math.Cos(angleDiff * idx + Math.PI / 2));
+
+                            // Take the selection as center.
+                            seeds.Points[numNewSeeds] = new Point() { Position = new Vector3(_selection.X + x * offsetSeeds[numNewSeeds], _selection.Y + y * offsetSeeds[numNewSeeds], SliceTimeMain) };
+
+                            // Count up number of new seeds.
+                            numNewSeeds++;
+                        }
+
+                        // We do not count up this value if there is a chosen pathline at this index already.
+                        numPathlines++;
+                    }
+
+                    // We maybe need less seeds now?
+                    if (numNewSeeds < seeds.Length)
+                        Array.Resize(ref seeds.Points, numNewSeeds);
+                }
+            }
+            // ~~~~~~~~~~~~ Get Boundary for Rendering~~~~~~~~~~~~~~~~~~~~~~~~ \\
+
+            // The two needes functions.
+            _coreDistanceGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, chosenPathlines, StepSize, _everyNthTimestep, true);
+            _coreAngleGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, chosenPathlines, StepSize, _everyNthTimestep, false);
+
+            // Find the boundary based on angle and distance.
+            _boundaryBallFunction =  new LineBall(_linePlane, new LineSet(new Line[] { FieldAnalysis.FindBoundaryFromDistanceAngleDonut(_coreDistanceGraph, _coreAngleGraph, out boundaryIndices) }));
+
+            // Find the boundary in space-time.
+            int time = SliceTimeMain;
+            _boundariesSpacetime[time] = new Line() { Positions = new Vector3[LineX + 1] };
+            for (int l = 0; l < LineX; ++l)
+                _boundariesSpacetime[time][l] = chosenPathlines[l][boundaryIndices[l]];
+            _boundariesSpacetime[time][LineX] = _boundariesSpacetime[time][0];
+            _boundaryBallSpacetime = new LineBall(_linePlane, _boundariesSpacetime, LineBall.RenderEffect.HEIGHT, Colormap);
+
+            // Pathlines for rendering.
+            _pathlinesTime = chosenPathlines;
+            _pathlines = new LineBall(_linePlane, chosenPathlines, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
+
+            
+            Console.WriteLine("Khalas. Boundary indices:");
+            float sumTime = 0;
+            for (int i = 0; i < chosenPathlines.Length; i++)
+            {
+                float atTime = chosenPathlines[i][boundaryIndices[i]].Z;
+                sumTime += atTime;
+                Console.WriteLine("\tTime at {0}: {1}", i, atTime);
+            }
+            Console.WriteLine("Aerage time: {0}", sumTime / chosenPathlines.Length);
+
+
+            _boundaryCloud = new PointCloud(_linePlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
+
+            LineSet set = new LineSet(_coreAngleGraph);
+            GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
+            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+
+            set = new LineSet(_coreDistanceGraph);
+            GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
+            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+        }
+
+        protected void UpdateBoundary()
+        {
+            LineSet cutLines;
+            if (SliceTimeReference > SliceTimeMain)
+            {
+                // _graph = cut version of _coreAngleGraph.
+                int length = SliceTimeReference - SliceTimeMain;
+                length = (int)((float)length / StepSize + 0.5f);
+                cutLines = FieldAnalysis.CutLength(new LineSet(_coreAngleGraph), length);
+            }
+            else
+                cutLines = new LineSet(_coreAngleGraph);
+
+            _graph = new LineBall[] { new LineBall(_linePlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap) };
+        }
+        //protected void IntegrateLines(Line core, int time = 0)
+        //{
+        //    int numLines = LineX;
+
+        //    // Compute starting positions.
+        //    Point[] circle = new Point[numLines];
+        //    float offset = AlphaStable;
+        //    float angleDiff = 2 * (float)(Math.PI / numLines);
+        //    for (int dir = 0; dir < numLines; ++dir)
+        //    {
+        //        float x = (float)(Math.Sin(angleDiff * dir + Math.PI / 2));
+        //        float y = (float)(Math.Cos(angleDiff * dir + Math.PI / 2));
+        //        circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offset, _selection.Y + y * offset, SliceTimeMain) };
+        //    }
+
+
+        //    VectorField.Integrator integrator = VectorField.Integrator.CreateIntegrator(_velocity, IntegrationType);
+        //    integrator.StepSize = StepSize;
+
+        //    // Do we need to load new data/is the selected time step in the currently loaded field?
+        //    LineSet[] lineSets;
+        //    if (_velocity.TimeOrigin > time || _velocity.Size.T < time)
+        //        LoadField(time, MemberMain);
+        //    integrator.Field = _velocity;
+        //    lineSets = integrator.Integrate<Point>(new PointSet<Point>(circle));
+
+        //    while (_currentEndStep < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
+        //    {
+        //        LoadField(_currentEndStep, MemberMain);
+        //        integrator.Field = _velocity;
+        //        integrator.IntegrateFurther(lineSets[0]);
+        //    }
+        //    integrator.Field = _velocity;
+        //    integrator.IntegrateFurther(lineSets[0]);
+
+        //    if ((SliceTimeMain * _everyNthTimestep) / RedSea.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
+        //        LoadField(SliceTimeMain, MemberMain, 2);
+
+        //    //Console.WriteLine(lineSets[0].Lines[0].Positions.Last());
+        //    _pathlinesTime = new LineSet[] { lineSets[0] };
+        //}
+
+        #region IntegrationAndGraph
+
+        protected void IntegrateLines(Line core, int time = 0, bool[] doOffset = null, float offsetBy = 0)
+        {
+            int numLines = LineX;
+
+            // Compute starting positions.
+            Point[] circle = new Point[numLines];
+            float offset = AlphaStable;
+            float angleDiff = 2 * (float)(Math.PI / numLines);
+
+            int newCount = 0;
+            for (int dir = 0; dir < numLines; ++dir)
+            {
+                float x = (float)(Math.Sin(angleDiff * dir + Math.PI / 2));
+                float y = (float)(Math.Cos(angleDiff * dir + Math.PI / 2));
+
+                float scale = offset;
+                if (doOffset != null && doOffset[dir])
+                {
+                    scale += offsetBy;
+                }
+                circle[newCount] = new Point() { Position = new Vector3(_selection.X + x * scale, _selection.Y + y * scale, SliceTimeMain) };
+
+                if (doOffset == null || doOffset[dir])
+                    newCount++;
+            }
+
+            if (doOffset != null)
+                Array.Resize(ref circle, newCount);
+
+            VectorField.Integrator integrator = VectorField.Integrator.CreateIntegrator(_velocity, IntegrationType);
+            integrator.StepSize = StepSize;
+
+            // Do we need to load new data/is the selected time step in the currently loaded field?
+            LineSet lineSet;
+            if (_velocity.TimeOrigin > time || _velocity.Size.T < time)
+                LoadField(time, MemberMain);
+            integrator.Field = _velocity;
+            lineSet = integrator.Integrate<Point>(new PointSet<Point>(circle))[0];
+
+            while (_currentEndStep < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
+            {
+                LoadField(_currentEndStep, MemberMain);
+                integrator.Field = _velocity;
+                integrator.IntegrateFurther(lineSet);
+            }
+            integrator.Field = _velocity;
+            integrator.IntegrateFurther(lineSet);
+
+            if ((SliceTimeMain * _everyNthTimestep) / RedSea.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
+                LoadField(SliceTimeMain, MemberMain, 2);
+
+            //Console.WriteLine(lineSets[0].Lines[0].Positions.Last());
+            if (doOffset != null)
+            {
+                newCount = 0;
+                Line[] allLines = new Line[numLines];
+                for (int l = 0; l < numLines; ++l)
+                {
+                    allLines[l] = doOffset[l] ? lineSet[newCount++] : _pathlinesTime[l];
+                }
+
+                lineSet = new LineSet(allLines);
+            }
+            _pathlinesTime = lineSet;
+        }
+
+        protected void ComputeGraph(Line core, int time = 0)
+        {
+
+            //lineSets[1].FlattenLines(SliceTimeMain);
+            _graph = new LineBall[0];
+            // Compute values (distance to start point).
+            LineSet lines = _pathlinesTime;
+
+            _coreDistanceGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, _pathlinesTime, StepSize, _everyNthTimestep, true);
+            _coreAngleGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, _pathlinesTime, StepSize, _everyNthTimestep, false);
+            //    LineSet set = new LineSet(_coreAngleGraph);
+            //    GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
+            //    GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+
+            //    set = new LineSet(_coreDistancesGraph);
+            //    GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
+            //    GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+
+            //    remap = true;
+            //}
+
+            //// Compute and show statistics. Since we computed the lines anew, they are not yet flat!
+            //if ((remap || FlatChanged || SliceTimeReferenceChanged) &&
+            //    Graph)
+            //{
+            //    LineSet graph = new LineSet(_coreAngleGraph);
+            //    if (SliceTimeReference > SliceTimeMain)
+            //    {
+            //        int length = SliceTimeReference - SliceTimeMain;
+            //        length = (int)((float)length / StepSize + 0.5f);
+            //        graph = FieldAnalysis.CutLength(graph, length);
+            //    }
+            //    //var graph = //FieldAnalysis.BuildGraph(Plane, new LineSet(starLines), values, IntegrationTime, LineSetting, Colormap);
+            //    _graph = new LineBall[] { new LineBall(_graphPlane, graph, LineBall.RenderEffect.HEIGHT, Colormap/*, !Flat*/) };
+            //    //_graph = graph.Concat(_graph).ToArray();
+            //}
+            //else
+            //    _graph = null;
+        }
         protected void ExtractCurrentBoundary(int time = 0)
         {
-            if (_currentSetting.Graph)
+            if (Graph)
             {
+                int numLines = _coreDistanceGraph.Length;
                 int[] indices;
+                bool[] needsOffset = new bool[numLines];
+                bool[] needsInset = new bool[numLines];
+                float offsetValue = AlphaStable * 0.2f; // This is the stepsize with which we will expand the circle gradually.
+                //int firstMinDistance;
 
-                _boundaries[time] = FieldAnalysis.FindBoundaryFromDistanceAngleDonut(_coreDistancesGraph, _coreAngleGraph, out indices);
+                _boundaries[time] = FieldAnalysis.FindBoundaryFromDistanceAngleDonut(_coreDistanceGraph, _coreAngleGraph, out indices);
                 //_boundaries[time] = FieldAnalysis.FindBoundaryFromDistanceDonut(_coreDistancesGraph, out indices);
-                Console.WriteLine(indices.Length);
-                _boundaryBallFunction = new LineBall(Plane, new LineSet(_boundaries) { Thickness = 0.15f }, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap);
 
+
+                float maxDist = 2;
+
+                // Now, the offsetting begins.
+                int avgDistance = 0;
+
+                // Find minimum border. This will be our goal.
+                for (int dir = 0; dir < numLines; ++dir)
+                {
+                    //if(indices[dir] < minDistance)
+                    //{
+                    //    mindex = dir;
+                    //    minDistance = indices[dir];
+                    //}
+
+                    avgDistance += indices[dir];
+                    Console.WriteLine("Cut at index {0}: {1}", dir, indices[dir]);
+                }
+
+                avgDistance /= numLines;
+                Console.WriteLine("Goal (avg): {0}.\n", avgDistance);
+
+                int numIndicesToBig = 0;
+                for (int dir = 0; dir < numLines; ++dir)
+                {
+                    //if (indices[dir] > minDistance)
+                    //{
+                    //    needsOffset[dir] = true;
+                    //    numIndicesToBig++;
+                    //}
+                    //else
+                    //    needsOffset[dir] = false;
+
+                    if (indices[dir] - avgDistance > maxDist)
+                    {
+                        numIndicesToBig++;
+                        needsOffset[dir] = true;
+                    }
+                    else
+                        needsOffset[dir] = false;
+
+                    if (avgDistance - indices[dir] > maxDist)
+                    {
+                        numIndicesToBig++;
+                        needsInset[dir] = true;
+                    }
+                    else
+                        needsInset[dir] = false;
+                }
+
+                int run = 1;
+                while (numIndicesToBig > 0 && run <= 50)
+                {
+                    Console.WriteLine("-- Run no. {0}, offset {1} --", run, run * offsetValue);
+                    IntegrateLines(_cores[_selectedCore], time, needsOffset, offsetValue * (run));
+                    if (offsetValue * run < Math.Abs(AlphaStable))
+                        IntegrateLines(_cores[_selectedCore], time, needsInset, -offsetValue * (run));
+                    ComputeGraph(_cores[_selectedCore], time);
+
+                    run++;
+                    _boundaries[time] = FieldAnalysis.FindBoundaryFromDistanceAngleDonut(_coreDistanceGraph, _coreAngleGraph, out indices);
+
+                    numIndicesToBig = 0;
+                    int newAvg = 0;
+                    for (int dir = 0; dir < numLines; ++dir)
+                    {
+                        Console.WriteLine("Cut at index {0}: {1}", dir, indices[dir]);
+
+                        // The pathline is 0 points long. Just ignore it for now.
+                        if (indices[dir] < 0)
+                        {
+                            needsOffset[dir] = false;
+                            needsInset[dir] = false;
+                            continue;
+                        }
+                        if (indices[dir] - avgDistance > maxDist)
+                        {
+                            numIndicesToBig++;
+                            needsOffset[dir] = true;
+                        }
+                        else
+                            needsOffset[dir] = false;
+                        if (avgDistance - indices[dir] > maxDist)
+                        {
+                            numIndicesToBig++;
+                            needsInset[dir] = true;
+                        }
+                        else
+                            needsInset[dir] = false;
+
+                        newAvg += indices[dir];
+                        //if (indices[dir] > minDistance)
+                        //{
+                        //    needsOffset[dir] = true;
+                        //    numIndicesToBig++;
+                        //}
+                        //else
+                        //    needsOffset[dir] = false;
+                    }
+
+                    avgDistance = newAvg / numLines;
+                    Console.WriteLine("Goal (avg): {0}.\n", avgDistance);
+                }
+                if (numIndicesToBig > 0)
+                    Console.WriteLine("Too many runs!");
+
+                // Finally: Map boundary to lines.
+                _boundaryBallFunction = new LineBall(Plane, new LineSet(_boundaries) { Thickness = 0.15f }, LineBall.RenderEffect.HEIGHT, Colormap);
+
+                int numPoints = 0;
                 Vector3[] positionsSpacetime = new Vector3[indices.Length];
                 for (int p = 0; p < positionsSpacetime.Length - 1; ++p)
                 {
-                    positionsSpacetime[p] = _pathlinesTime[0][p][indices[p]];
+                    if (indices[p] >= 0)
+                    {
+                        positionsSpacetime[numPoints++] = _pathlinesTime[p][indices[p]];
+                    }
                 }
+
+                if (numPoints + 1 < positionsSpacetime.Length)
+                    Array.Resize(ref positionsSpacetime, numPoints + 1);
                 positionsSpacetime[positionsSpacetime.Length - 1] = positionsSpacetime[0];
                 _boundariesSpacetime[time] = new Line() { Positions = positionsSpacetime };
 
-                _boundaryBallSpacetime = new LineBall(_linePlane, new LineSet(_boundariesSpacetime), LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(_currentSetting.Colormap));
+                _boundaryBallSpacetime = new LineBall(_linePlane, new LineSet(_boundariesSpacetime), LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap));
             }
         }
+
+        protected void MapAllLines()
+        {
+            _graphPlane = new Plane(_linePlane, Vector3.UnitZ * SliceTimeMain);
+            if (Graph && (_lastSetting == null ||
+                NumLinesChanged ||
+                OffsetRadiusChanged ||
+                StepSizeChanged ||
+                IntegrationTypeChanged ||
+                GraphScaleChanged ||
+                _selectionChanged ||
+                IntegrationTime != _lastActiveGraphScale
+               || FlatChanged || SliceTimeReferenceChanged))
+            {
+                LineSet graph = new LineSet(_coreAngleGraph);
+                if (SliceTimeReference > SliceTimeMain)
+                {
+                    int length = SliceTimeReference - SliceTimeMain;
+                    length = (int)((float)length / StepSize + 0.5f);
+                    graph = FieldAnalysis.CutLength(graph, length);
+                }
+                //var graph = //FieldAnalysis.BuildGraph(Plane, new LineSet(starLines), values, IntegrationTime, LineSetting, Colormap);
+                _graph = new LineBall[] { new LineBall(_graphPlane, graph, LineBall.RenderEffect.HEIGHT, Colormap/*, !Flat*/) };
+                //_graph = graph.Concat(_graph).ToArray();
+            }
+            else
+                _graph = null;
+
+            MapLines();
+        }
+        #endregion IntegrationAndGraph
     }
 
     class DonutAnalyzer : DataMapper
@@ -654,7 +1101,7 @@ namespace FlowSharp
         }
         public override string GetName(Setting.Element element)
         {
-            switch(element)
+            switch (element)
             {
                 case Setting.Element.Flat:
                     return "Flat";
@@ -685,43 +1132,43 @@ namespace FlowSharp
 
                 update = true;
             }
-            
+
             if (update ||
                 FlatChanged)
             {
-                _loadedBall = new LineBall(Plane, _loadedAngle, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
-                _boundaryLoadedBall = new LineBall(_fightPlane, new LineSet(new Line[] { _boundaryLoaded }) { Thickness = 0.2f }, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
+                _loadedBall = new LineBall(Plane, _loadedAngle, LineBall.RenderEffect.HEIGHT, Colormap, Flat);
+                _boundaryLoadedBall = new LineBall(_fightPlane, new LineSet(new Line[] { _boundaryLoaded }) { Thickness = 0.2f }, LineBall.RenderEffect.HEIGHT, Colormap, Flat);
 
-                _blockBall = new LineBall(Plane, _blockData, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
-                _boundaryBlockBall = new LineBall(_fightPlane, new LineSet(new Line[] { _boundaryBlock }) { Thickness = 0.2f }, LineBall.RenderEffect.HEIGHT, _currentSetting.Colormap, _currentSetting.Flat);
+                _blockBall = new LineBall(Plane, _blockData, LineBall.RenderEffect.HEIGHT, Colormap, Flat);
+                _boundaryBlockBall = new LineBall(_fightPlane, new LineSet(new Line[] { _boundaryBlock }) { Thickness = 0.2f }, LineBall.RenderEffect.HEIGHT, Colormap, Flat);
 
                 update = true;
             }
-            if (_lastSetting == null||
+            if (_lastSetting == null ||
                 WindowStartChanged ||
                 WindowWidthChanged ||
                 ColormapChanged ||
                 update)
             {
-                _loadedBall.LowerBound = _currentSetting.WindowStart;
-                _loadedBall.UpperBound = _currentSetting.WindowWidth + _currentSetting.WindowStart;
-                _loadedBall.UsedMap = _currentSetting.Colormap;
+                _loadedBall.LowerBound = WindowStart;
+                _loadedBall.UpperBound = WindowWidth + WindowStart;
+                _loadedBall.UsedMap = Colormap;
 
-                _blockBall.LowerBound = _currentSetting.WindowStart;
-                _blockBall.UpperBound = _currentSetting.WindowWidth + _currentSetting.WindowStart;
-                _blockBall.UsedMap = _currentSetting.Colormap;
+                _blockBall.LowerBound = WindowStart;
+                _blockBall.UpperBound = WindowWidth + WindowStart;
+                _blockBall.UsedMap = Colormap;
 
-                _boundaryBlockBall.LowerBound = _currentSetting.WindowStart;
-                _boundaryBlockBall.UpperBound = _currentSetting.WindowWidth + _currentSetting.WindowStart;
-                _boundaryBlockBall.UsedMap = ColorMapping.GetComplementary(_currentSetting.Colormap);
+                _boundaryBlockBall.LowerBound = WindowStart;
+                _boundaryBlockBall.UpperBound = WindowWidth + WindowStart;
+                _boundaryBlockBall.UsedMap = ColorMapping.GetComplementary(Colormap);
 
-                _boundaryLoadedBall.LowerBound = _currentSetting.WindowStart;
-                _boundaryLoadedBall.UpperBound = _currentSetting.WindowWidth + _currentSetting.WindowStart;
-                _boundaryLoadedBall.UsedMap = ColorMapping.GetComplementary(_currentSetting.Colormap);
+                _boundaryLoadedBall.LowerBound = WindowStart;
+                _boundaryLoadedBall.UpperBound = WindowWidth + WindowStart;
+                _boundaryLoadedBall.UsedMap = ColorMapping.GetComplementary(Colormap);
             }
 
-            output.Add(_currentSetting.Graph ? _blockBall : _loadedBall);
-            output.Add(_currentSetting.Graph ? _boundaryBlockBall : _boundaryLoadedBall);
+            output.Add(Graph ? _blockBall : _loadedBall);
+            output.Add(Graph ? _boundaryBlockBall : _boundaryLoadedBall);
 
             return output;
         }

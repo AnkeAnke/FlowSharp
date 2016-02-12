@@ -190,8 +190,8 @@ namespace FlowSharp
             //mapperPathCore = new PathlineCoreTracking(velocity, redSea);
             //Console.WriteLine("Found Pathline Cores.");
             mapperComparison = new MemberComparison(/*new LoaderNCF.SliceRange[] { sliceU, sliceV },*/ redSea);
-            //mapperOW = new OkuboWeiss(velocity, redSea);
-           // Console.WriteLine("Computed Okubo-Weiss.");
+            mapperOW = new OkuboWeiss(velocity, redSea);
+            //Console.WriteLine("Computed Okubo-Weiss.");
 
 
             Console.WriteLine("Computed all data necessary.");
