@@ -209,6 +209,12 @@ namespace FlowSharp
         {
             return new PointSet<Point>(Points);
         }
+
+        public P this[int index]
+        {
+            get { return Points[index]; }
+            set { Points[index] = value; }
+        }
     }
 
     class CriticalPointSet2D : PointSet<CriticalPoint2D>

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using SlimDX;
+using Integrator = FlowSharp.VectorField.Integrator;
 
 namespace FlowSharp
 {
@@ -13,6 +14,7 @@ namespace FlowSharp
     /// </summary>
     static class FieldAnalysis
     {
+        #region DomainPoints
         private const float EPS_ZERO = 0.015f;
 
         /// <summary>
@@ -472,6 +474,9 @@ namespace FlowSharp
 
             return cpSet;
         }
+#endregion DomainPoints
+
+        #region FieldFunctions
 
         public static float AlphaStableFFF = 0;
         public static Vector StableFFF(Vector v, SquareMatrix J)
@@ -498,7 +503,9 @@ namespace FlowSharp
 
             if (float.IsNaN(f[0]) || float.IsNaN(g[0]))
                 Console.WriteLine("NaN NaN?!");
-            return f + AlphaStableFFF * g;
+            Vector res =  f + AlphaStableFFF * g;
+        //    res /= res.T; // Normalize time length.
+            return res;
         }
 
         public static Vector StableFFFNegative(Vector v, SquareMatrix J)
@@ -531,10 +538,33 @@ namespace FlowSharp
             return result;
         }
 
+        public static Vector PathlineCoreLength(Vector v, SquareMatrix J)
+        {
+            Debug.Assert(v.Length == 3 && J.Length == 3);
+            // FFF
+            Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
+
+            // Find points where v || f
+            Vec3 result = Vec3.Cross(f * 10, v.AsVec3() * 10);
+            if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
+                Console.WriteLine("NaN NaN?!");
+
+            return (Vector)result.LengthEuclidean();
+        }
+
+
         public static Vector Acceleration(Vector v, SquareMatrix J)
         {
             // Theoretically, add v_t. Assume to be zero.
-            return J * v; 
+            Vector vec = J * v;
+            //vec /= vec.T;
+            return vec.ToVec2();
+        }
+
+        public static Vector AccelerationLength(Vector v, SquareMatrix J)
+        {
+            // Theoretically, add v_t. Assume to be zero.
+            return (Vector)(J * v).LengthEuclidean();
         }
 
         //private static Vector PredictCore(Vector vec, SquareMatrix J)
@@ -605,6 +635,67 @@ namespace FlowSharp
             Debug.Assert(v.Length == 2); // If not, write other formula.
             return (Vector)(J.Vx + J.Uy);
         }
+
+        public static Vector NegativeGradient(Vector v, SquareMatrix J)
+        {
+           // Debug.Assert(v.Length == 1); // If not, write other formula.
+            return new Vec3((-J.Row(0)).ToVec2(), 0);
+        }
+
+        public static VectorField.IntegratorPredictorCorrector PathlineCoreIntegrator(VectorFieldUnsteady field, float stepsize)
+        {
+            VectorFieldUnsteady pathlineLength = new VectorFieldUnsteady(field, AccelerationLength, 1);
+            VectorField correctorF = new VectorField(pathlineLength, NegativeGradient, 3);
+
+            VectorFieldUnsteady acceleration = new VectorFieldUnsteady(field, Acceleration, 2);
+            VectorField predictorF = new VectorField(acceleration, StableFFF, 3);
+
+            Integrator predictor = new VectorField.IntegratorRK4(predictorF)
+            {
+                StepSize = stepsize,
+                Direction = Sign.POSITIVE,
+                EpsCriticalPoint = 0.00000000001f,
+                NormalizeField = true
+            };
+            Integrator corrector = new VectorField.IntegratorEuler(correctorF)
+            {
+                StepSize = stepsize / 10.0f,
+                NormalizeField = true,
+                MaxNumSteps = 10000,
+                Direction = Sign.POSITIVE,
+                EpsCriticalPoint = 0.00000000001f
+            };
+
+            return new VectorField.IntegratorPredictorCorrector(predictor, corrector);
+        }
+
+        public static VectorField.IntegratorPredictorCorrector StreamlineCoreIntegrator(VectorFieldUnsteady field, float stepsize)
+        {
+            VectorFieldUnsteady pathlineLength = new VectorFieldUnsteady(field, (v, J) => (Vector)v.LengthEuclidean(), 1);
+            VectorField correctorF = new VectorField(pathlineLength, NegativeGradient, 3);
+
+            VectorFieldUnsteady acceleration = new VectorFieldUnsteady(field, (v, J) => v.ToVec2(), 2);
+            VectorField predictorF = new VectorField(acceleration, StableFFF, 3);
+
+            Integrator predictor = new VectorField.IntegratorRK4(predictorF)
+            {
+                StepSize = stepsize,
+                Direction = Sign.POSITIVE,
+                EpsCriticalPoint = 0.00000000001f,
+                NormalizeField = true
+            };
+            Integrator corrector = new VectorField.IntegratorEuler(correctorF)
+            {
+                StepSize = stepsize / 10.0f,
+                NormalizeField = true,
+                MaxNumSteps = 10000,
+                Direction = Sign.POSITIVE,
+                EpsCriticalPoint = 0.00000000001f
+            };
+
+            return new VectorField.IntegratorPredictorCorrector(predictor, corrector);
+        }
+        #endregion FieldFunctions
 
         public static Renderable BuildGraph<P>(Plane basePlane, PointSet<P> positions, float[] values, float scaleUp, RedSea.DisplayLines lineSetting, Colormap colormap = Colormap.Parula) where P : Point
         {
@@ -723,6 +814,17 @@ namespace FlowSharp
             return new LineSet(lines.ToArray());
         }
 
+        public static LineSet WriteGraphToSun(Graph2D[] values, Vector3 center)
+        {
+            float angleDiff = (float)(Math.PI * 2 / values.Length);
+            Line[] lines = new Line[values.Length];
+            for(int l = 0; l < values.Length; ++l)
+            {
+                Vector3 dir = new Vector3((float)Math.Sin(l * angleDiff + PiH), (float)Math.Cos(l * angleDiff + PiH), 0);
+                lines[l] = values[l].SetLineHeightStraight(center, dir, Vector3.UnitZ);
+            }
+            return new LineSet(lines);
+        }
         public static Line FindBoundaryFromDistanceDonut(Line[] distances)
         {
             int[] tmp;
@@ -749,7 +851,7 @@ namespace FlowSharp
                     Vector3 dir = line.Positions[0] - new Vector3(center/*new Vector2(core[0].X, core[0].Y)*/, line.Positions[0].Z); ; dir.Normalize();
 
                     // Scale such that step size does not scale the statistics.
-                    dir *= 100.0f / core.Length;
+                    dir *= 100.0f / core.Positions.Last().Z * stepSize;
 
                     for (int p = 0; p < line.Length; ++p)
                     {
@@ -762,7 +864,7 @@ namespace FlowSharp
                             core.DistanceToPointInZ(line[p], out nearestCenter);
                             Vector3 rad = (line[p] - nearestCenter);
                             rad.Normalize();
-                            values[count++] = 1 + (float)Math.Cos(Math.PI * Vector3.Dot(Vector3.UnitX, rad));
+                            values[count++] = 1 + /*(float)Math.Cos(2 * Math.Acos(*/Vector3.Dot(Vector3.UnitX, rad);
                         }
                         starPos[p] = start + p * dir;
                     }
@@ -772,6 +874,178 @@ namespace FlowSharp
                 Array.Copy(values, count - line.Length, lines.Lines[l].Attribute, 0, line.Length);
             }
             return FieldAnalysis.BuildGraphLines(new LineSet(starLines), values).Lines;
+        }
+
+        #region ConcentricDistance
+        private static float Pi2 = (float)Math.PI * 2;
+        private static float PiH = (float)(Math.PI * 0.5);
+        private static float Pi3H = (float)(Math.PI * 1.5);
+        private delegate float AngleFunc(Vector3 vec);
+
+        public static Graph2D[] GetDistanceToAngle(Line core, Vector2 center, LineSet lines)
+        {
+            int count = 0;
+            float[][] angles = new float[lines.Length][];
+            float[][] distances = new float[lines.Length][];
+            Graph2D[] result = new Graph2D[lines.Length];
+            AngleFunc angleFunc = Angle2D;
+
+            for (int l = 0; l < lines.Lines.Length; ++l)
+            {
+                Line line = lines.Lines[l];
+                // Write star coordinates here.
+                Vector3[] starPos = new Vector3[line.Length];
+                if (line.Length > 0)
+                {
+                    // TODO: Count turns!
+                    float turnAdd = 0;
+                    int numCrossings = 0;
+
+                    angles[l] = new float[line.Length];
+                    distances[l] = new float[line.Length];
+                    for (int p = 0; p < line.Length; ++p)
+                    {
+                        distances[l][p] = core.DistanceToPointInZ(line.Positions[p]); // Core selected. Take distance to the core, in the respective time slice.
+                        
+                        // Cos(angle)!!!
+                        Vector3 nearestCenter;
+                        core.DistanceToPointInZ(line[p], out nearestCenter);
+                        Vector3 rad = (line[p] - nearestCenter);
+                        //rad.Z = 0;
+                        //rad.Normalize();
+                        float angle = angleFunc(rad);
+                        if (p > 0)
+                        {
+                            // Crossing the 360 degree border?
+                            if (angle < PiH && angles[l][p - 1] - turnAdd > Pi3H)
+                            {
+                                turnAdd += Pi2;
+                            }
+                            // Crossing the 360 degree border backwards?
+                            else if (angle > Pi3H && angles[l][p - 1] - turnAdd < PiH)
+                            {
+                                turnAdd -= Pi2;
+                            }
+                        }
+                        angles[l][p] = angle + turnAdd;
+                    }
+
+                    result[l] = new Graph2D(angles[l], distances[l]);
+                }
+                else
+                {
+                    result[l] = new Graph2D(new float[0], new float[0]) { Offset = 2 * result[l - 1].Offset - result[l - 2].Offset };
+                }
+
+            }
+
+            return result;
+        }
+
+        public static float Angle2D(Vector3 vec)
+        {
+            float angle = (float)Math.Atan2(vec.Y, vec.X);
+            if (angle < 0)
+                angle += Pi2;
+            return angle; 
+        }
+
+        public static Line WriteGraphToCircle(Graph2D graph, Vector3 center, float radius)
+        {
+            Graph2D circle = new Graph2D(graph);
+            circle.CutGraph(graph.Offset + Pi2);
+            Line obj = new Line() { Positions = new Vector3[circle.Length] };
+            for(int c = 0; c < circle.Length; ++c)
+            {
+                obj[c] = new Vector3((float)Math.Cos(circle.X[c]) * radius, (float)Math.Sin(circle.X[c]) * radius, circle.Fx[c]) + center;
+            }
+
+            return obj;
+        }
+
+        public static LineSet WriteGraphsToCircles(Graph2D[] graphs, Vector3 center)
+        {
+            Line[] lines = new Line[graphs.Length];
+            for (int g = 0; g < graphs.Length; ++g)
+                lines[g] = WriteGraphToCircle(graphs[g], center, graphs[g].Offset);
+
+            return new LineSet(lines);
+        }
+
+        public static Graph2D[] GraphDifferenceForward(Graph2D[] vals)
+        {
+            Graph2D[] diff = new Graph2D[vals.Length - 1];
+            for(int v = 0; v < vals.Length - 1; ++v)
+            {
+                // Make sure that the radius is still correct.
+                diff[v] = Graph2D.Distance(vals[v + 1], vals[v]);
+                if (diff[v].Length > 0 && float.IsNaN(diff[v].Fx[0]))
+                    Console.WriteLine("NaN NaN NaN NaN NaN Batman!");
+                diff[v].Offset = vals[v].Offset;
+            }
+
+            return diff;
+        }
+
+        public static int FindBoundaryInError(Graph2D error)
+        {
+
+            float tolerance = 0.1f;
+            for (int e = 0; e < error.Length; ++e)
+                if (error.Fx[e] > tolerance)
+                    return e;
+            return -1;
+            //// How often should we recompute the regression?
+            //int newRegressionStep = 4;
+            //// How much is the error allowed to vary?
+            //float tolerance = 0.25f;
+            //// Assume that the first 2 cells are inside the eddy!
+            //float safetyRegion = 2;
+            //int lastIndex = error.GetLastBelowX(error.Offset + safetyRegion);
+
+            //// Fit a line to the first 2 cells of points.
+            //StraightLine straight = FieldAnalysis.FitLine(error, lastIndex);
+            //float lineError = error.SquaredError(straight, lastIndex);
+
+            //int x = lastIndex;
+            //while (x < error.Length)
+            //{
+
+            //    for (int subX = 0; x < error.Length && subX < newRegressionStep; ++x, ++subX)
+            //    {
+            //        float err = straight.SquaredError(error.X[x], error.Fx[x]);
+            //        //if (subX == 0)
+            //            Console.WriteLine("Error at {0}: {1}", x, err);
+            //        // We found it!
+            //        if (err > tolerance)
+            //            return x;
+            //    }
+
+            //    // Fit a new line to the points we compared so far.
+            //    straight = FieldAnalysis.FitLine(error, x-1);
+            //    lineError = error.SquaredError(straight, x-1);
+            //   // Console.WriteLine("Reference Error: {0}", lineError);
+            //}
+            
+            //return -1;
+
+        }
+        #endregion ConcentricDistance
+
+        public static void WriteFxToLinesetAttribute(LineSet lines, Graph2D[] graphs)
+        {
+            for(int l =0; l < lines.Length; ++l)
+            {
+                lines[l].Attribute = graphs[l].Fx;
+            }
+        }
+
+        public static void WriteXToLinesetAttribute(LineSet lines, Graph2D[] graphs)
+        {
+            for (int l = 0; l < lines.Length; ++l)
+            {
+                lines[l].Attribute = graphs[l].X;
+            }
         }
 
         public static Line FindBoundaryFromDistanceAngleDonut(Line[] distances, Line[] angles, out int[] indices)
@@ -822,7 +1096,7 @@ namespace FlowSharp
                 line = distances[l];
                 int cut = lastBoundExtremum;
                 float maxSlope = 0;
-                for (int p = Math.Max(0, lastBoundExtremum - avgStepsBetweenExtrema); p < Math.Min(line.Length - 2, lastBoundExtremum + avgStepsBetweenExtrema); ++p)
+                for (int p = Math.Max(0, lastBoundExtremum - avgStepsBetweenExtrema / 2); p < Math.Min(line.Length - 2, lastBoundExtremum + avgStepsBetweenExtrema); ++p)
                 {
                     float slope = line[p + 2].Z - line[p + 1].Z;
                     if (slope > maxSlope)
@@ -1184,7 +1458,48 @@ namespace FlowSharp
                 }
                 return -1;
             }
+
+            public float SquaredError(float x, float fx)
+            {
+                float diff = this[x] - fx;
+                return diff * diff;
+            }
         }
+
+        /// <summary>
+        /// Simple linear Regression.
+        /// </summary>
+        public static StraightLine FitLine(Graph2D graph, int length = -1)
+        {
+            float sumX = 0;
+            float sumY = 0;
+            float sumXY = 0;
+            float sumXX = 0;
+
+            int end = (length >= 0) ? length : graph.Length;
+            Debug.Assert(end <= graph.Length);
+
+            for (int x = 0; x < end; ++x)
+            {
+                sumY += graph.Fx[x];
+                sumXY += graph.Fx[x] * graph.X[x];
+
+                
+                sumX += graph.X[x];
+                sumXX += graph.X[x] * graph.X[x];
+            }
+
+            StraightLine straight = new StraightLine();
+
+            // Slope(b) = (NΣXY - (ΣX)(ΣY)) / (NΣXX - (ΣX*ΣX))
+            straight.Slope = (end * sumXY - sumX * sumY) / (end * sumXX - sumX * sumX);
+
+            // Intercept(a) = (ΣY - b(ΣX)) / N
+            straight.YOffset = (sumY - straight.Slope * sumX) / end;
+
+            return straight;
+        }
+
         /// <summary>
         /// Simple linear Regression.
         /// </summary>

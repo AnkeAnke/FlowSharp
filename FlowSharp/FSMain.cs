@@ -83,9 +83,11 @@ namespace FlowSharp
                 if (substep != null)
                     dir += locFolderName + member + '/';
 
-                //string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
+            //string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
+            Console.WriteLine("Step {0}, Substep {1}", step, substep);
                 int numZeros = 10 - (substep == 0? 1 : (int)(Math.Log10((int)substep*9) + 1));
                 string filename = RedSea.GetShortName(var) + "." + new string('0', numZeros) + (substep*9) + ".data";
+            Console.WriteLine(filename);
                 string[] rawDirs = Directory.GetFiles(dir, filename, SearchOption.TopDirectoryOnly);
                 Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
 
@@ -159,19 +161,20 @@ namespace FlowSharp
             //ncFile.Close();
 
 
-            if (loadData)
-            {
-                //velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
-                velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { rawU, rawV });
-                // Scale the field from m/s to (0.1 degree per 3 days).
-                velocity.ScaleToGrid(new Vec2(RedSea.Singleton.TimeScale));
-            }
-            else
-            {
-                velocity = Tests.CreateCircle(new Vec2(0), 100, new Vec2(0/*.2f*/), numTimeSlices, 8);
-                //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
-                velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
-            }
+            //if (loadData)
+            //{
+            //    //velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
+            //    velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { rawU, rawV });
+            //    // Scale the field from m/s to (0.1 degree per 3 days).
+            //    velocity.ScaleToGrid(new Vec2(RedSea.Singleton.TimeScale));
+            //}
+            //else
+            //{
+            //    velocity = Tests.CreateCircle(new Vec2(0), 100, new Vec2(0/*.2f*/), numTimeSlices, 8);
+            //    //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
+            //    velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
+            //}
+            
 
             Console.WriteLine("Completed loading data.");
 
@@ -190,7 +193,7 @@ namespace FlowSharp
             //mapperPathCore = new PathlineCoreTracking(velocity, redSea);
             //Console.WriteLine("Found Pathline Cores.");
             mapperComparison = new MemberComparison(/*new LoaderNCF.SliceRange[] { sliceU, sliceV },*/ redSea);
-            mapperOW = new OkuboWeiss(velocity, redSea);
+            //mapperOW = new OkuboWeiss(velocity, redSea);
             //Console.WriteLine("Computed Okubo-Weiss.");
 
 
@@ -207,25 +210,31 @@ namespace FlowSharp
             //mapperFlowMap = new FlowMapMapper(new LoaderNCF.SliceRange[] { ensembleU, ensembleV }, redSea, velocity);
             //RedSea.Singleton.SetMapper(RedSea.Display.FLOW_MAP_UNCERTAIN, mapperFlowMap);
 
-            mapperPathLength = new PathlineLengthMapper(velocity, redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_LENGTH, mapperPathLength);
+            //mapperPathLength = new PathlineLengthMapper(velocity, redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_LENGTH, mapperPathLength);
 
-            mapperCutDiffusion = new DiffusionMapper(velocity, redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.CUT_DIFFUSION_MAP, mapperCutDiffusion);
+            //mapperCutDiffusion = new DiffusionMapper(velocity, redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.CUT_DIFFUSION_MAP, mapperCutDiffusion);
 
-            mapperLocalDiffusion = new LocalDiffusionMapper(velocity, redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.LOCAL_DIFFUSION_MAP, mapperLocalDiffusion);
+            //mapperLocalDiffusion = new LocalDiffusionMapper(velocity, redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.LOCAL_DIFFUSION_MAP, mapperLocalDiffusion);
 
-            DataMapper pathlines = new PathlineRadius(velocity, redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_RADIUS, pathlines);
-            SubstepViewer substep = new SubstepViewer(redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
+            //DataMapper pathlines = new PathlineRadius(velocity, redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_RADIUS, pathlines);
+            //SubstepViewer substep = new SubstepViewer(redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.SUBSTEP_VIEWER, substep);
 
-            DataMapper lineStatistics = new LineStatisticsMapper(velocity, redSea);
-            RedSea.Singleton.SetMapper(RedSea.Display.LINE_STATISTICS, lineStatistics);
+            //DataMapper lineStatistics = new LineStatisticsMapper(velocity, redSea);
+            //RedSea.Singleton.SetMapper(RedSea.Display.LINE_STATISTICS, lineStatistics);
 
-            DataMapper coreDistance = new CoreDistanceMapper(24, redSea);
+            DataMapper coreDistance = new CoreDistanceMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.CORE_DISTANCE, coreDistance);
+
+            DataMapper predCoreDistance = new PredictedCoreDistanceMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.PREDICTOR_CORE_ANGLE, predCoreDistance);
+
+            DataMapper circleCoreDistance = new ConcentricDistanceMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.CONCENTRIC_DISTANCE, circleCoreDistance);
 
             DataMapper donut = new DonutAnalyzer(redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.DONUT_ANALYSIS, donut);

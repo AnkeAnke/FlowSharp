@@ -98,8 +98,10 @@ namespace FlowSharp
             PATHLINE_RADIUS,
             LINE_STATISTICS,
             SUBSTEP_VIEWER,
+            DONUT_ANALYSIS,
             CORE_DISTANCE,
-            DONUT_ANALYSIS
+            PREDICTOR_CORE_ANGLE,
+            CONCENTRIC_DISTANCE
         }
 
         public enum DisplayLines : int

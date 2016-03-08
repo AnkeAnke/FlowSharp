@@ -24,7 +24,7 @@ namespace FlowSharp
             }
         }
 
-        protected FieldPlane LoadPlane(int member, int time, int subtime = 0, bool timeOffset = false)
+        protected virtual FieldPlane LoadPlane(int member, int time, int subtime = 0, bool timeOffset = false)
         {
             return LoadPlaneAndGrid(member, time, subtime, timeOffset).Item1;
         }
@@ -149,7 +149,7 @@ namespace FlowSharp
                     break;
             }
             field = new VectorField(scalars);
-            field.TimeSlice = timeOffset ? time + (float)subtime / RedSea.Singleton.NumSubsteps : 0;
+            field.TimeSlice = timeOffset ? time * RedSea.Singleton.NumSubsteps + subtime/*time + (float)subtime / RedSea.Singleton.NumSubsteps*/ : 0;
             // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
             RectlinearGrid grid = field.Grid as RectlinearGrid;
 
@@ -977,7 +977,7 @@ namespace FlowSharp
 
             int stepTime = time / 12;
             int substepTime = time - (stepTime * 12);
-            substepTime *= 9;
+           // substepTime *= 9;
 
 
             LoaderRaw file = RedSea.Singleton.GetLoader(stepTime, substepTime, member, RedSea.Variable.VELOCITY_X) as LoaderRaw;

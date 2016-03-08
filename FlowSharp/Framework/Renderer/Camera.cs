@@ -23,16 +23,21 @@ namespace FlowSharp
         /// </summary>
         protected bool _changed = false;
         protected Constants _globals;
+        protected Device _device;
         public Matrix View
         {
             get { return _globals.View; }
-            set { _globals.View = value; _changed = true; }
+            set { _globals.View = value;
+                if (_device != null)
+                    UpdateResources(_device); }//_changed = true; }
         }
 
         public Matrix Projection
         {
             get { return _globals.Projection; }
-            set { _globals.Projection = value; _changed = true; }
+            set { _globals.Projection = value;
+                if (_device != null)
+                    UpdateResources(_device); }//_changed = true; }
         }
         public bool Active = true;
 
@@ -48,7 +53,11 @@ namespace FlowSharp
             _aspect = aspectRatio;
             _fov = 1.3f;
             View = Matrix.LookAtLH(new Vector3(0, 0, -20f), Vector3.Zero, Vector3.UnitY);
-            Projection = Matrix.PerspectiveFovLH(_fov, aspectRatio, 0.0001f, 100000);
+            SetPerspective();
+
+
+            _device = device;
+            //Projection = Matrix.PerspectiveFovLH(_fov, aspectRatio, 0.0001f, 100000);
             //Projection = Matrix.OrthoLH(10 * _aspect, 10, 0.0001f, 100000);
 
             var data = new DataStream(Marshal.SizeOf(typeof(Constants)), true, true);
@@ -90,6 +99,15 @@ namespace FlowSharp
 
             device.ImmediateContext.UpdateSubresource(new DataBox(0, 0, data), _globalConstants, 0);
             //device.ImmediateContext.VertexShader.SetConstantBuffer(_globalConstants, 0);
+        }
+
+        public void SetOrthographic()
+        {
+            Projection = Matrix.OrthoLH(10 * _aspect, 10, 0.0001f, 100000);
+        }
+        public void SetPerspective()
+        { 
+            Projection = Matrix.PerspectiveFovLH(_fov, _aspect, 0.0001f, 100000);
         }
 
         // Movement factors.

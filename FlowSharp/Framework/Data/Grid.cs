@@ -13,7 +13,21 @@ namespace FlowSharp
     abstract class FieldGrid
     {
         public Index Size;
-        public abstract float? TimeOrigin { get; set; }
+        public virtual bool TimeDependant { get; set; }
+        public Vector Origin;
+        public virtual float? TimeOrigin{
+            get { return TimeDependant? (float?)Origin.T : null; }
+            set {
+                if (value != null)
+                {
+                    Origin.T = (float)value;
+                    TimeDependant = true;
+                }
+                else
+                {
+                    TimeDependant = false;
+                }
+            } }
 
         public abstract int NumAdjacentPoints();
         public virtual Vector Sample(VectorField field, Vector position)
@@ -84,36 +98,40 @@ namespace FlowSharp
     /// </summary>
     class RectlinearGrid : FieldGrid
     {
-        private float? _timeOrigin;
-        private bool _timeDependent = false;
-        public override float? TimeOrigin
-        {
-            get
-            {
-                return _timeOrigin;
-            }
+     //   private float? _timeOrigin;
+       // private bool _timeDependent = false;
+        //public override float? TimeOrigin
+        //{
+        //    get
+        //    {
+        //        return _timeOrigin;
+        //    }
 
-            set
-            {
-                //Debug.Assert((_timeDependent) == (value != null), "Please don't mess with time!");
-                _timeOrigin = value;// ?? 0;
-            }
-        }
+        //    set
+        //    {
+        //        //Debug.Assert((_timeDependent) == (value != null), "Please don't mess with time!");
+        //        _timeOrigin = value;// ?? 0;
+        //        Origin.T = value ?? Origin.T;
+        //    }
+        //}
 
         /// <summary>
         /// Create a new rectlinear grid descriptor.
         /// </summary>
         /// <param name="size">Number of cells in each dimension.</param>
         /// <param name="cellSize">Size of one cell, only used for rendering.</param>
-        public RectlinearGrid(Index size, float? timeOrigin = null)
+        public RectlinearGrid(Index size, Vector origin = null, float? timeOrigin = null)
         {
             Size = new Index(size);
-            _timeDependent = (timeOrigin != null);
-            TimeOrigin = timeOrigin;
+            Origin = origin ?? new Vector(0, size.Length);
+            TimeDependant = timeOrigin != null;
+            Origin.T = timeOrigin ?? Origin.T;
+            //_timeDependent = (timeOrigin != null);
+            //TimeOrigin = timeOrigin;
         }
         public override FieldGrid Copy()
         {
-            return new RectlinearGrid(new Index(Size), TimeOrigin);
+            return new RectlinearGrid(new Index(Size), new Vector(Origin), TimeOrigin);
         }
 
         public override int NumAdjacentPoints()
@@ -132,9 +150,9 @@ namespace FlowSharp
         {
             Index timeSize = new Index(Size.Length + 1);
             Array.Copy(Size.Data, timeSize.Data, Size.Length);
-            timeSize[Size.Length] = numTimeSlices;            
-
-            RectlinearGrid timeGrid = new RectlinearGrid(timeSize, timeStart);
+            timeSize[Size.Length] = numTimeSlices;
+            Vector origin = Origin.ToVec(Origin.Length + 1);
+            RectlinearGrid timeGrid = new RectlinearGrid(timeSize, origin, timeStart);
             //_timeDependent = true;
             //TimeOrigin = timeStart;
             return timeGrid;
@@ -157,8 +175,8 @@ namespace FlowSharp
 
             Debug.Assert(InGrid(position));
 
-            Index gridPos = Index.Min((Index)position, Size - new Index(1, Size.Length));
-            Vector relativePos = position - (Vector)gridPos;
+            Index gridPos = Index.Min((Index)(position - Origin), Size - new Index(1, Size.Length));
+            Vector relativePos = position - Origin - (Vector)gridPos;
 
             // Convert to int.
             int offsetScale = 1;
@@ -207,14 +225,18 @@ namespace FlowSharp
         public override bool InGrid(Vector position)
         {
             Debug.Assert(position.Length == Size.Length, "Trying to access " + Size.Length + "D field with " + position.Length + "D index.");
-            int dims = _timeOrigin == null ? Size.Length : Size.Length - 1;
-            for (int dim = 0; dim < dims; ++dim)
-            {
-                if (position[dim] < 0 || position[dim] > Size[dim] - 1)
+            //int dims = _timeOrigin == null ? Size.Length : Size.Length - 1;
+            //Vector relPos = position - Origin.ToVec(dims);
+            //for (int dim = 0; dim < dims; ++dim)
+            //{
+            //    if (relPos[dim] < 0 || relPos[dim] > Size[dim] - 1)
+            //        return false;
+            //}
+            //if (_timeOrigin != null && (position.T < _timeOrigin || position.T > _timeOrigin + Size.T - 1))
+            //    return false;
+            for (int dim = 0; dim < Size.Length; ++dim)
+                if (position[dim] < Origin[dim] || position[dim] >= Origin[dim] + Size[dim])
                     return false;
-            }
-            if (_timeOrigin != null && (position.T < _timeOrigin || position.T > _timeOrigin + Size.T - 1))
-                return false;
             return true;
         }
     }

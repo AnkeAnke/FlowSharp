@@ -12,7 +12,7 @@ namespace FlowSharp
     {
         public float? TimeOrigin
         {
-            get { return Grid.TimeOrigin; }
+            get { return Grid.TimeDependant ? (float?)Grid.TimeOrigin : null; }
             set
             {
                 Grid.TimeOrigin = value;
@@ -130,7 +130,9 @@ namespace FlowSharp
                 _scalarsUnsteady[comp] = new ScalarFieldUnsteady(fields);
                 _scalarsUnsteady[comp].TimeOrigin = field[0].TimeOrigin ?? 0;
                 _scalarsUnsteady[comp].InvalidValue = field.InvalidValue;
+                _scalarsUnsteady[comp].DoNotScale();
             }
+            
             this.InvalidValue = field.InvalidValue;
             this.TimeOrigin = field.TimeOrigin;
 
@@ -273,6 +275,10 @@ namespace FlowSharp
             }
         }
         protected bool _operationsAllowed = false;
+        public void DoNotScale()
+        {
+            _operationsAllowed = true;
+        }
 
         public override bool IsValid(Vector pos)
         {

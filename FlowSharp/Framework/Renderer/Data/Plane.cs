@@ -89,7 +89,7 @@ namespace FlowSharp
         {
             get; protected set;
         }
-
+        public int NumTextures { get { return _fieldTextures.Length; } }
 
 
         /// <summary>

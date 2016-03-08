@@ -86,9 +86,10 @@ namespace FlowSharp
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
             DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
 
-            StepSizeSlider.Value = 0.5;
+            StepSizeSlider.Value = 0.1;
             StepSizeSlider.Minimum = 0.000001;
-            AlphaSlider.Value = 6;
+            integrationTime.Value = 6;
+            AlphaSlider.Value = 10;
 
             DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
             DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;
@@ -411,6 +412,15 @@ namespace FlowSharp
         private void DeactivateCamera(object sender, MouseEventArgs e)
         {
             Renderer.Singleton.Camera.Active = false;
+        }
+
+        private void ChangeProjection(object sender, RoutedEventArgs e)
+        {
+            bool ortho = orthographic.IsChecked ?? false;
+            if (ortho)
+                Renderer.Singleton.Camera.SetOrthographic();
+            else
+                Renderer.Singleton.Camera.SetPerspective();
         }
     }
 }

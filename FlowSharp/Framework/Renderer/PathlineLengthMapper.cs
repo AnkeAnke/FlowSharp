@@ -92,7 +92,7 @@ namespace FlowSharp
                     _pathlineSegments[time - 1].Color = Vector3.UnitZ * (float)time / timeLength;
 
                     //                    if(time == timeLength - 1)
-                    _intersectTimeSlices[time] = _pathlineSegments[time - 1].GetEndPoints();//VectorField.Integrator.Status.BORDER);
+                    _intersectTimeSlices[time] = _pathlineSegments[time - 1].GetValidEndPoints();//VectorField.Integrator.Status.BORDER);
                     //else
                     //    _intersectTimeSlices[time] = _pathlineSegments[time - 1].GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
                     _points[time] = new PointCloud(Plane, _intersectTimeSlices[time].ToBasicSet());

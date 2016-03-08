@@ -57,7 +57,7 @@
         <ComboBox x:Name="DropDownTracking" HorizontalAlignment="Right" Margin="0,288,18,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeTracking"/>
         <StackPanel x:Name="WindowStartBlock" HorizontalAlignment="Right" Height="86" Margin="0,904,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="WindowStartText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Start" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="WindowStart" Maximum="20" Minimum ="-20" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowStart"/>
+            <Slider x:Name="WindowStart" Maximum="100" Minimum ="-20" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowStart"/>
             <TextBox Text="{Binding Value, ElementName=WindowStart, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
         <StackPanel x:Name="MemberHeightBlock" Height="43" Margin="1436,230,86,0" VerticalAlignment="Top" HorizontalAlignment="Right">
@@ -66,7 +66,7 @@
         </StackPanel>
         <StackPanel x:Name="IntegrationTimeBlock" HorizontalAlignment="Right" Height="86" Margin="0,636,18,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="IntegrationTimeText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Integration Time" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="integrationTime" Maximum="9" Minimum ="0" TickPlacement="BottomRight" TickFrequency="1" Height="45" SmallChange="0.05" LargeChange="0.2" AutoToolTipPlacement="BottomRight" PreviewMouseUp="OnChangeIntegrationTime"/>
+            <Slider x:Name="integrationTime" Maximum="500" Minimum ="0" TickPlacement="BottomRight" TickFrequency="1" Height="45" SmallChange="0.05" LargeChange="0.2" AutoToolTipPlacement="BottomRight" PreviewMouseUp="OnChangeIntegrationTime"/>
             <TextBox Text="{Binding Value, ElementName=integrationTime, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
         <ComboBox x:Name="DropDownDiffusionMeasure" HorizontalAlignment="Right" Margin="0,104,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeDiffusionMeasure"/>
@@ -82,6 +82,7 @@
         </WrapPanel>
         <CheckBox x:Name="DisplayFlat" Content="Flatten" HorizontalAlignment="Right" Margin="0,110,85,0" VerticalAlignment="Top" Checked="OnCheckFlat" Unchecked="OnCheckFlat"/>
         <CheckBox x:Name="ShowGraph" Content="Statistics" HorizontalAlignment="Right" Margin="0,110,18,0" VerticalAlignment="Top" Checked="OnCheckGraph" Unchecked="OnCheckGraph"/>
+        <CheckBox x:Name="orthographic" Content="Ortographic Projection" HorizontalAlignment="Left" Margin="1635,10,0,0" VerticalAlignment="Top" Checked="ChangeProjection" Unchecked="ChangeProjection"/>
 
     </Grid>
 </Window>

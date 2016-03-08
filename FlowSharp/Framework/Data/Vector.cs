@@ -366,6 +366,16 @@ namespace FlowSharp
         public Vec2(float xy) : base(xy, 2)
         { }
 
+        public static Vec2 operator +(Vec2 a, Vec2 b)
+        {
+            return new Vec2(a.X+ b.X, a.Y + b.Y);
+        }
+        public static Vec2 operator *(Vec2 a, float b)
+        {
+            return new Vec2(a.X * b, a.Y * b);
+        }
+        public static Vec2 operator *(float a, Vec2 b) { return b * a; }
+
         public static explicit operator Vec3(Vec2 vec)
         {
             return new Vec3(vec, 0);
