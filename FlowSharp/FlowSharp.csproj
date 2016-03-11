@@ -99,6 +99,7 @@
     <Compile Include="Framework\Algorithms\LocalDiffusion.cs" />
     <Compile Include="Framework\Algorithms\FlowMapUncertain.cs" />
     <Compile Include="Framework\Data\Graph.cs" />
+    <Compile Include="Framework\Data\Surface.cs" />
     <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
     <Compile Include="Framework\Renderer\CUDAMappers.cs" />
     <Compile Include="Framework\Renderer\DataMapper.cs" />
@@ -111,6 +112,7 @@
     <Compile Include="Framework\Renderer\Camera.cs" />
     <Compile Include="Framework\Renderer\Data\ColorMapping.cs" />
     <Compile Include="Framework\Renderer\Data\LineBall.cs" />
+    <Compile Include="Framework\Renderer\Data\Mesh.cs" />
     <Compile Include="Framework\Renderer\Data\PointCloud.cs" />
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
     <Compile Include="Framework\Renderer\Data\Renderable.cs" />
@@ -191,6 +193,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Framework\Renderer\Data\DataEffects\Lines.fx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Framework\Renderer\Data\DataEffects\Mesh.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <Content Include="Framework\Renderer\Resources\ColormapGray.png">

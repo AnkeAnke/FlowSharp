@@ -30,6 +30,11 @@ namespace FlowSharp
         protected SlimDX.Direct3D11.Buffer _vertices;
 
         /// <summary>
+        /// The optional buffer containing the indices for indexed rendering.
+        /// </summary>
+        protected SlimDX.Direct3D11.Buffer _indices;
+
+        /// <summary>
         /// Layout of the vertex buffer.
         /// </summary>
         protected InputLayout _vertexLayout;
@@ -43,6 +48,11 @@ namespace FlowSharp
         /// Number of vertices (to be drawn).
         /// </summary>
         protected int _numVertices;
+
+        /// <summary>
+        /// Number of indices (to be drawn).
+        /// </summary>
+        protected int _numindices = 0;
 
         /// <summary>
         /// Technique that is to be used.
@@ -85,6 +95,9 @@ namespace FlowSharp
             context.InputAssembler.PrimitiveTopology = _topology;
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(_vertices, _vertexSizeBytes, 0));
 
+            if (_indices != null)
+                context.InputAssembler.SetIndexBuffer(_indices, SlimDX.DXGI.Format.R32_SInt, 0);
+
             // Applying all passes of the first technique.
             for (int i = 0; i < _technique.Description.PassCount; ++i)
             {
@@ -92,7 +105,11 @@ namespace FlowSharp
                 device.ImmediateContext.VertexShader.SetConstantBuffer(Renderer.Singleton.Camera.ConstantBuffer, 0);
                 device.ImmediateContext.GeometryShader.SetConstantBuffer(Renderer.Singleton.Camera.ConstantBuffer, 0);
 
-                context.Draw(_numVertices, 0);
+                if (_indices == null || _numindices < 1)
+                    context.Draw(_numVertices, 0);
+
+                else
+                    context.DrawIndexed(_numindices, 0, 0);
             }
         }
 

@@ -115,8 +115,8 @@ namespace FlowSharp
 
             RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
             RedSea.Singleton.GetFilename = RedSeaFilenames;
-            RedSea.Singleton.DonutFileName = "E:/Anke/Dev/Data/Donuts/Donut";
-            RedSea.Singleton.CoreFileName = "E:/Anke/Dev/Data/Donuts/Core";
+            RedSea.Singleton.DonutFileName = "D//Donuts/Donut";
+            RedSea.Singleton.CoreFileName = "D:/Donuts/Core";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);

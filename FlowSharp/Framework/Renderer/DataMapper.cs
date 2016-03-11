@@ -1402,6 +1402,7 @@ namespace FlowSharp
             Mapping = (() => new List<Renderable>(0));
             _currentSetting = new Setting();
         }
+
         // We want to be able to make all settings before loading other data.
         public override bool IsUsed(Setting.Element element)
         {

@@ -85,6 +85,7 @@ namespace FlowSharp
                 ColorMapping.Initialize(Device);
                 PointCloud.Initialize();
                 LineBall.Initialize();
+                Mesh.Initialize();
                 
 
                 Device.ImmediateContext.OutputMerger.SetTargets(_host.RenderTargetView);
