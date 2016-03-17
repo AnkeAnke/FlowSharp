@@ -96,7 +96,7 @@ namespace FlowSharp
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(_vertices, _vertexSizeBytes, 0));
 
             if (_indices != null)
-                context.InputAssembler.SetIndexBuffer(_indices, SlimDX.DXGI.Format.R32_SInt, 0);
+                context.InputAssembler.SetIndexBuffer(_indices, SlimDX.DXGI.Format.R32_UInt, 0);
 
             // Applying all passes of the first technique.
             for (int i = 0; i < _technique.Description.PassCount; ++i)
@@ -114,6 +114,12 @@ namespace FlowSharp
         }
 
         public abstract void Update(TimeSpan totalTime);
+
+        public void Dispose()
+        {
+            _vertices?.Dispose();
+            _indices?.Dispose();
+        }
 
         private static int GlobalIndex = 0;
     }

@@ -117,6 +117,7 @@ namespace FlowSharp
             RedSea.Singleton.GetFilename = RedSeaFilenames;
             RedSea.Singleton.DonutFileName = "E:/Anke/Dev/Data/Donuts/Donut";
             RedSea.Singleton.CoreFileName = "E:/Anke/Dev/Data/Donuts/Core";
+            RedSea.Singleton.RingFileName = "E:/Anke/Dev/Data/Rings/Ring";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
@@ -233,7 +234,7 @@ namespace FlowSharp
             DataMapper predCoreDistance = new PredictedCoreDistanceMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PREDICTOR_CORE_ANGLE, predCoreDistance);
 
-            DataMapper circleCoreDistance = new ConcentricDistanceMapper(12, redSea);
+            DataMapper circleCoreDistance = new ConcentricTubeMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.CONCENTRIC_DISTANCE, circleCoreDistance);
 
             DataMapper donut = new DonutAnalyzer(redSea);

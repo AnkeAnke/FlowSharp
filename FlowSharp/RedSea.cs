@@ -21,6 +21,7 @@ namespace FlowSharp
         public FilenameBuilder GetFilename;
         public string DonutFileName;
         public string CoreFileName;
+        public string RingFileName;
 
         public int NumSteps = 130;
         public int NumSubsteps = 12;

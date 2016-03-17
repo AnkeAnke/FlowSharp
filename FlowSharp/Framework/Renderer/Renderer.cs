@@ -170,6 +170,10 @@ namespace FlowSharp
 
         public void ClearRenderables()
         {
+            //foreach(Renderable rnd in _renderables)
+            //{
+            //    rnd.Dispose();
+            //}
             _renderables.Clear();
         }
 

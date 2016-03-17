@@ -36,16 +36,16 @@ struct GS_IN_H
 
 struct PS_IN_H
 {
-	float3 pos : SV_POSITION;
+	float4 pos : SV_POSITION;
 	float height : HEIGHT;
 };
 
-GS_IN_H VS_Height(VS_IN input)
+PS_IN_H VS_Height(VS_IN input)
 {
-	PS_IN output = (GS_IN_H)0;
+	PS_IN_H output = (PS_IN_H)0;
 
-	output.pos = mul(view, float4(input.pos, 1)).xyz;
-	output.height = (input.scalar - minMap) / (maxMap - minMap);
+	output.pos = mul(projection, mul(view, float4(input.pos, 1)));
+	output.height = 0.5;// (input.scalar - minMap) / (maxMap - minMap);
 	//output.worldPos.z = 6;
 
 	return output;
@@ -69,12 +69,12 @@ BlendState SrcAlphaBlendingAdd
 	RenderTargetWriteMask[0] = 0x0F;
 };
 
-technique10 RenderHeight
+technique10 Height
 {
 	pass P0
 	{
 		SetVertexShader(CompileShader(vs_4_0, VS_Height()));
-		SetGeometryShader(CompileShader(0));
+		SetGeometryShader(0);
 		SetPixelShader(CompileShader(ps_4_0, PS_Height()));
 		SetBlendState(SrcAlphaBlendingAdd, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 	}

@@ -11,7 +11,8 @@ namespace FlowSharp
     class Graph2D
     {
         private float[] _x, _fx;
-        public float[] X {
+        public float[] X
+        {
             get { return _x; }
             set { _x = value; Debug.Assert(_x.Length == _fx.Length); }
         }
@@ -22,26 +23,26 @@ namespace FlowSharp
         }
         public int Length { get { return X.Length; } }
         private float? _offset;
-        public float Offset { get { return _offset ?? (Fx.Length > 0? Fx[0] : 0); } set { _offset = value; } }
+        public float Offset { get { return _offset ?? (Fx.Length > 0 ? Fx[0] : 0); } set { _offset = value; } }
         /// <summary>
         /// Samples the graph at a given X value. Linear segments.
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>
-       // protected float this[float index]
-            public float Sample(float index)
+        // protected float this[float index]
+        public float Sample(float index)
         {
             //get
             //{
-                int i = GetLastBelowX(index);
+            int i = GetLastBelowX(index);
             if (i == Length - 1)
             {
-                Console.WriteLine("NaN NaN  BATMAN!");
+               // Console.WriteLine("NaN NaN  BATMAN!");
                 return float.NaN;
             }
 
-                float t = (index - X[i]) / (X[i + 1] - X[i]);
-                return (1.0f - t) * Fx[i] + t * Fx[i + 1];
+            float t = (index - X[i]) / (X[i + 1] - X[i]);
+            return (1.0f - t) * Fx[i] + t * Fx[i + 1];
             //}
         }
         public int GetLastBelowX(float index)
@@ -76,7 +77,7 @@ namespace FlowSharp
 
         public void SetLineHeightSampleGraph(Line l, Range r)
         {
-            for(int i = 0; i < l.Length; ++i)
+            for (int i = 0; i < l.Length; ++i)
             {
                 float fx = Sample(r[i]);
                 if (float.IsNaN(fx))
@@ -92,7 +93,7 @@ namespace FlowSharp
             Vector3[] line = new Vector3[Length];
             for (int i = 0; i < Length; ++i)
             {
-                line[i] = start + (_x[i]-_x[0]) * unitStep + up * _fx[i];
+                line[i] = start + (_x[i] - _x[0]) * unitStep + up * _fx[i];
             }
             return new Line() { Positions = line };
         }
@@ -130,7 +131,7 @@ namespace FlowSharp
         {
             int end = length ?? Length;
             float sum = 0;
-            for(int x = 0; x < end; ++x)
+            for (int x = 0; x < end; ++x)
             {
                 float diff = line[_x[x]] - _fx[x];
                 sum += diff * diff;
@@ -139,10 +140,79 @@ namespace FlowSharp
             return sum;
         }
 
+        public List<int> Maxima()
+        {
+            List<int> pos = new List<int>(Length / 20);
+            for (int p = 1; p < Length - 1; ++p)
+            {
+                if (Fx[p - 1] < Fx[p] && Fx[p + 1] < Fx[p])
+                    pos.Add(p);
+            }
+            return pos;
+        }
+
+        public List<int> MaximaThreshold(float thresh)
+        {
+            List<int> pos = new List<int>(Length / 20);
+            for (int p = 1; p < Length - 1; ++p)
+            {
+                if (Fx[p] > thresh)
+                    return pos;
+                if (Fx[p - 1] < Fx[p] && Fx[p + 1] < Fx[p])
+                    pos.Add(p);
+            }
+            return pos;
+        }
+
+        public List<int> MaximaRange(float min, float max)
+        {
+            List<int> maxs = new List<int>(8);
+            int p = GetLastBelowX(min) + 1;
+
+            for (; p < Length-1; ++p)
+            {
+                if (X[p] > max)
+                    return maxs;
+                if (Fx[p - 1] < Fx[p] && Fx[p + 1] < Fx[p])
+                    maxs.Add(p);
+            }
+            return maxs;
+        }
+
+        public List<int> MaximaSides(float val, float maxDist)
+        {
+            List<int> maxs = new List<int>(8);
+            int mid = GetLastBelowX(val);
+            for (int dir = -1; dir <= 1; dir += 2)
+            {
+                for (int p = mid; p > 1 && p < Length - 1; p += dir)
+                {
+                    if (X[p] < val - maxDist || X[p] > val + maxDist)
+                        break;
+
+                    if (Fx[p - 1] < Fx[p] && Fx[p + 1] < Fx[p])
+                    {
+                        maxs.Add(p);
+                        break;
+                    }
+                }
+                mid++; // Don't test middle double.
+            }
+            return maxs;
+        }
+
+        public float Curvature(int pos)
+        {
+            Debug.Assert(pos > 0 && pos < Length - 1);
+            float leftS = (Fx[pos] - Fx[pos - 1]) / (X[pos] - X[pos - 1]);
+            float rightS = (Fx[pos + 1] - Fx[pos]) / (X[pos + 1] - X[pos]);
+            return rightS - leftS;
+        }
+
         public delegate float ValueOperator(float a, float b);
         protected static Graph2D Operate(Graph2D g0, Graph2D g1, ValueOperator func)
         {
-            if(g0.Length == 0 || g1.Length == 0)
+            if (g0.Length == 0 || g1.Length == 0)
             {
                 return new Graph2D(new float[0], new float[0]) { Offset = 0 };
             }
@@ -150,11 +220,11 @@ namespace FlowSharp
             float[] fx = new float[x.Length];
 
             int p0 = 0; int p1 = 0; int pCount = 0;
-            if(g0.X[0] < g1.X[0])
+            if (g0.X[0] < g1.X[0])
             {
                 p0 = g0.GetLastBelowX(g1.X[0]) + 1;
             }
-            if(g1.X[0] < g0.X[0])
+            if (g1.X[0] < g0.X[0])
             {
                 p1 = g1.GetLastBelowX(g0.X[0]) + 1;
             }
@@ -166,7 +236,7 @@ namespace FlowSharp
                 float v0 = p0 < g0.Length ? g0.X[p0] : float.MaxValue;
                 float v1 = p1 < g1.Length ? g1.X[p1] : float.MaxValue;
 
-                if(v0 < v1)
+                if (v0 < v1)
                 {
                     x[pCount] = v0;
                     fx[pCount] = func(g1.Sample(v0), g0.Fx[p0]);
@@ -178,7 +248,7 @@ namespace FlowSharp
                     fx[pCount] = func(g1.Fx[p1], g0.Sample(v1));
                     p1++;
                 }
-                if(v0 == v1)
+                if (v0 == v1)
                 {
                     x[pCount] = v0;
                     fx[pCount] = func(g1.Fx[p1], g0.Fx[p0]);
@@ -187,25 +257,25 @@ namespace FlowSharp
 
                 ++pCount;
             }
-            if(pCount < x.Length)
+            if (pCount < x.Length)
             {
                 Array.Resize(ref x, pCount);
                 Array.Resize(ref fx, pCount);
             }
             return new Graph2D(x, fx);
         }
-        public static Graph2D operator - (Graph2D g0, Graph2D g1)
+        public static Graph2D operator -(Graph2D g0, Graph2D g1)
         {
             return Operate(g0, g1, (a, b) => (a - b));
         }
-        public static Graph2D operator + (Graph2D g0, Graph2D g1)
+        public static Graph2D operator +(Graph2D g0, Graph2D g1)
         {
             return Operate(g0, g1, (a, b) => (a + b));
         }
 
         public static Graph2D Distance(Graph2D a, Graph2D b)
         {
-            return Operate(a, b, (x,y) => ((x - y) * (x - y)));
+            return Operate(a, b, (x, y) => ((x - y) * (x - y)));
         }
 
         public float Sum()
@@ -220,7 +290,7 @@ namespace FlowSharp
         {
             float sum = 0;
             int last = GetLastBelowX(endX);
-            for(int f = 0; f < last; ++f)
+            for (int f = 0; f < last; ++f)
             {
                 sum += _fx[f];
             }
@@ -236,13 +306,77 @@ namespace FlowSharp
             }
             return sum / last;
         }
+
+        //internal List<int> MaximaBroadth(float diameter)
+        //{
+        //    List<int> maxs = Maxima();
+        //    int maxLength = maxs.Count;
+        //    List<int> maxB = new List<int>(maxLength);
+        //    for(int m = 0; m < maxLength; ++m)
+        //    {
+
+        //    }
+        //}
+
+        public void SmoothLaplacian(float strength = 0.5f)
+        {
+            float[] newFx = new float[Fx.Length];
+            for(int p = 1; p < Length -1; ++p)
+            {
+                float est = Fx[p - 1] + Fx[p + 1];
+                est /= 2;
+                newFx[p] = Fx[p] * (1.0f - strength) + est * strength;
+            }
+
+            _fx = newFx;
+        }
+
+        public int Threshold(float thresh)
+        {
+            int p = 1;
+            if (Fx[1] > thresh)
+                for (; p < Length; ++p)
+                    if (Fx[p] < thresh)
+                        break;
+            for(; p< Length; ++p)
+            {
+                if (Fx[p] >= thresh && !float.IsInfinity(Fx[p]) && !float.IsNaN(Fx[p]))
+                {
+                    if (p < 20)
+                        Console.Write("Shorty!");
+                    return p;
+                }
+            }
+
+            return Length - 1;
+        }
+
+        public int ThresholdRange(int min, int max, float thresh)
+        {
+            int p = Math.Max(0, min);
+            if (Fx[p] > thresh)
+                for (; p < Length; ++p)
+                    if (Fx[p] < thresh)
+                        break;
+            for (; p < Math.Min(Length, max+1); ++p)
+            {
+                if (Fx[p] >= thresh && !float.IsInfinity(Fx[p]) && !float.IsNaN(Fx[p]))
+                {
+                    //if (p < 20)
+                    //    Console.Write("Shorty!");
+                    return p;
+                }
+            }
+
+            return Length - 1;
+        }
     }
     class Range
     {
         public int NumPoints;
         public float Start, StepSize;
         public float End { get { return Start + StepSize * (NumPoints - 1); } }
-        public Range(){ }
+        public Range() { }
         public Range(float start, float end, int numPoints)
         {
             Start = start; NumPoints = numPoints; StepSize = (end - start) / NumPoints;
@@ -252,7 +386,7 @@ namespace FlowSharp
             Start = start; NumPoints = numPoints; StepSize = stepSize;
         }
 
-        public float this[int index] { get { Debug.Assert(index < NumPoints);  return Start + index * StepSize; } }
+        public float this[int index] { get { Debug.Assert(index < NumPoints); return Start + index * StepSize; } }
         public float this[float index] { get { Debug.Assert(index < NumPoints); return Start + index * StepSize; } }
     }
 }

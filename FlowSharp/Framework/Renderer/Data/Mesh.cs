@@ -40,7 +40,7 @@ namespace FlowSharp
             _color = surf.Color;
             this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
             this._topology = PrimitiveTopology.TriangleList;
-
+            this.
             // Setting up the vertex buffer. 
             
             UsedMap = colormap;
@@ -48,6 +48,8 @@ namespace FlowSharp
             _planeNormal.Normalize();
             _effect = _meshEffect;
             SetRenderEffect(effect);
+
+            GenerateGeometry(plane, surf);
 
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
                 new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
@@ -64,15 +66,15 @@ namespace FlowSharp
         /// <param name="scale"></param>
         protected void GenerateGeometry(Plane plane, TileSurface surf)
         {
-            Vector4[] verts = surf.Vertices;
-            int[] idxs = surf.Indices;
+            Vector4[] verts = surf.GetVertices(plane);
+            uint[] idxs = surf.Indices;
 
             _numVertices = verts.Length;
             _numindices = idxs.Length;
 
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
-
+            stream.WriteRange(verts);
             stream.Position = 0;
 
             // Create and fill buffer.
@@ -86,14 +88,16 @@ namespace FlowSharp
             });
             stream.Dispose();
 
-            stream.WriteRange(surf.Indices);
+            stream = new DataStream(idxs.Length * sizeof(uint), true, true);
+            stream.WriteRange(idxs);
+            stream.Position = 0;
 
             _indices = new Buffer(_device, stream, new BufferDescription()
             {
                 BindFlags = BindFlags.IndexBuffer,
                 CpuAccessFlags = CpuAccessFlags.None,
                 OptionFlags = ResourceOptionFlags.None,
-                SizeInBytes = (int)stream.Length,
+                SizeInBytes = idxs.Length * sizeof(int),
                 Usage = ResourceUsage.Default
             });
         }
@@ -103,7 +107,7 @@ namespace FlowSharp
             switch (effect)
             {
                 default:
-                    this._technique = _meshEffect.GetTechniqueByName("RenderHeight");
+                    this._technique = _meshEffect.GetTechniqueByName("Height");
                     break;
 
             }
@@ -111,9 +115,9 @@ namespace FlowSharp
 
         public override void Render(Device device)
         {
-            _meshEffect.GetVariableByName("color").AsVector().Set(_color);
-            _meshEffect.GetVariableByName("worldNormal").AsVector().Set(_planeNormal);
-            _meshEffect.GetVariableByName("thickness").AsScalar().Set(_thickness);
+            //_meshEffect.GetVariableByName("color").AsVector().Set(_color);
+            //_meshEffect.GetVariableByName("worldNormal").AsVector().Set(_planeNormal);
+            //_meshEffect.GetVariableByName("thickness").AsScalar().Set(_thickness);
             base.Render(device);
         }
 

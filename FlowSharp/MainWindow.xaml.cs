@@ -84,12 +84,12 @@ namespace FlowSharp
             DropDownHeight.SelectedIndex = 0;
 
             DropDownIntegrator.ItemsSource = Enum.GetValues(typeof(VectorField.Integrator.Type)).Cast<VectorField.Integrator.Type>();
-            DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.EULER;
+            DropDownIntegrator.SelectedIndex = (int)VectorField.Integrator.Type.RUNGE_KUTTA_4;
 
-            StepSizeSlider.Value = 0.1;
+            StepSizeSlider.Value = 0.5;
             StepSizeSlider.Minimum = 0.000001;
-            integrationTime.Value = 6;
-            AlphaSlider.Value = 10;
+            integrationTime.Value = 30;
+            AlphaSlider.Value = 12;
 
             DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
             DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;

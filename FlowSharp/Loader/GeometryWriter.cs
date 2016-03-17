@@ -63,54 +63,66 @@ namespace FlowSharp
 
         public static void WriteGraphCSV(string file, Graph2D graph)
         {
-            // Open the file. If it already exists, overwrite.
-            using (FileStream fs = File.Open(@file, FileMode.Create))
-            {
-                using (StreamWriter writer = new StreamWriter(fs))
+            try {
+                // Open the file. If it already exists, overwrite.
+                using (FileStream fs = File.Open(@file, FileMode.Create))
                 {
-                    foreach (float f in graph.X)
+                    using (StreamWriter writer = new StreamWriter(fs))
                     {
-                        writer.Write("{0},", f);
-                    }
-                    writer.Write('\n');
-                    foreach (float f in graph.Fx)
-                    {
-                        if(!float.IsNaN(f))
+                        foreach (float f in graph.X)
+                        {
                             writer.Write("{0},", f);
-                    }
-                    writer.Write('\n');
+                        }
+                        writer.Write('\n');
+                        foreach (float f in graph.Fx)
+                        {
+                            if (!float.IsNaN(f))
+                                writer.Write("{0},", f);
+                        }
+                        writer.Write('\n');
 
+                    }
                 }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
             }
         }
 
         public static void WriteGraphCSV(string file, Graph2D[] graph)
         {
-            // Open the file. If it already exists, overwrite.
-            using (FileStream fs = File.Open(@file, FileMode.Create))
-            {
-                using (StreamWriter writer = new StreamWriter(fs))
+            try { 
+                // Open the file. If it already exists, overwrite.
+                using (FileStream fs = File.Open(@file, FileMode.Create))
                 {
-                    // X values in first row. Assume equal.
-                    foreach (float f in graph[0].X)
+                    using (StreamWriter writer = new StreamWriter(fs))
                     {
-                        writer.Write("{0},", f);
-                    }
-                    writer.Write('\n');
-
-                    // Fx values subsequent.
-                    foreach (Graph2D g in graph)
-                    {
-                        
-                        foreach (float f in g.Fx)
+                        // X values in first row. Assume equal.
+                        foreach (float f in graph[0].X)
                         {
                             writer.Write("{0},", f);
                         }
                         writer.Write('\n');
+
+                        // Fx values subsequent.
+                        foreach (Graph2D g in graph)
+                        {
+                        
+                            foreach (float f in g.Fx)
+                            {
+                                writer.Write("{0},", f);
+                            }
+                            writer.Write('\n');
+                        }
                     }
                 }
             }
-        }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+}
 
         public static void ReadFromFile(string file, out LineSet lineset)
         {

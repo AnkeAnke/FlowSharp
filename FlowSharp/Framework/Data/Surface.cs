@@ -8,10 +8,12 @@ using System.Diagnostics;
 
 namespace FlowSharp
 {
-    class Surface
+    abstract class Surface
     {
         public virtual Vector4[] Vertices { get; }
-        public virtual int[] Indices { get; }
+        public virtual uint[] Indices { get; }
+
+        public abstract Vector4[] GetVertices(Plane plane);
     }
     class TileSurface : Surface
     {
@@ -43,7 +45,8 @@ namespace FlowSharp
 
             for(int l = 0; l < lines.Length; ++l)
             {
-                Array.Copy(lines[l].Positions, 0, Positions, length * l, length);
+                for (int p = 0; p < lines[l].Length; ++p)
+                    Positions[p, l] = lines[l][p];
 
             }
 
@@ -64,29 +67,41 @@ namespace FlowSharp
             }
         }
 
-        public override int[] Indices
+        public override uint[] Indices
         {
             get
             {
-                int[] idxs = new int[(SizeX - 1) * (SizeY - 1) * 6];
+                uint[] idxs = new uint[(SizeX - 1) * (SizeY - 1) * 6];
                 for(int y = 0; y < SizeY -1; ++y)
                 {
                     for(int x = 0; x < SizeX -1;++x)
                     {
                         int idx = x + y * (SizeX - 1);
                         int idxPos = x + y * SizeX;
-                        idxs[idx + 0] = idxPos + 0;
-                        idxs[idx + 1] = idxPos + 1;
-                        idxs[idx + 2] = idxPos + SizeX + 1;
+                        idxs[idx*6 + 0] = (uint)(idxPos + 0);
+                        idxs[idx*6 + 1] = (uint)(idxPos + 1);
+                        idxs[idx*6 + 2] = (uint)(idxPos + SizeX + 1);
 
-                        idxs[idx + 3] = idxPos + 0;
-                        idxs[idx + 4] = idxPos + SizeX + 1;
-                        idxs[idx + 5] = idxPos + SizeX;
+                        idxs[idx*6 + 3] = (uint)(idxPos + 0);
+                        idxs[idx*6 + 4] = (uint)(idxPos + SizeX + 1);
+                        idxs[idx*6 + 5] = (uint)(idxPos + SizeX);
                     }
                 }
 
                 return idxs;
             }
+        }
+
+        public override Vector4[] GetVertices(Plane plane)
+        {
+            Vector4[] verts = new Vector4[Positions.Length];
+
+            for (int i = 0; i < verts.Length; ++i)
+            {
+                Vector3 pos = Positions[i % SizeX, (int)(i / SizeX)];
+                verts[i] = new Vector4( plane.Origin + pos.X * plane.XAxis + pos.Y * plane.YAxis + pos.Z * plane.ZAxis, Attribute?[i % SizeX, (int)(i / SizeX)] ?? pos.Z);
+            }
+            return verts;
         }
     }
 }

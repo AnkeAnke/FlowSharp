@@ -501,8 +501,8 @@ namespace FlowSharp
             // Add up fields.
             Vec3 g = Vec3.Cross(fNorm, d);
 
-            if (float.IsNaN(f[0]) || float.IsNaN(g[0]))
-                Console.WriteLine("NaN NaN?!");
+            //if (float.IsNaN(f[0]) || float.IsNaN(g[0]))
+            //    Console.WriteLine("NaN NaN?!");
             Vector res =  f + AlphaStableFFF * g;
         //    res /= res.T; // Normalize time length.
             return res;
@@ -532,8 +532,8 @@ namespace FlowSharp
 
             // Find points where v || f
             Vec3 result =  Vec3.Cross(f*10, v.AsVec3()*10);
-            if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
-                Console.WriteLine("NaN NaN?!");
+            //if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
+            //    Console.WriteLine("NaN NaN?!");
 
             return result;
         }
@@ -950,6 +950,13 @@ namespace FlowSharp
             return angle; 
         }
 
+        public static Vector3 SphericalPosition(Vector3 center, float part, float rad)
+        {
+            float x = (float)(Math.Sin(part * Pi2 + PiH));
+            float y = (float)(Math.Cos(part * Pi2 + PiH));
+            return center + new Vector3(x * rad, y * rad, 0);
+        }
+
         public static Line WriteGraphToCircle(Graph2D graph, Vector3 center, float radius)
         {
             Graph2D circle = new Graph2D(graph);
@@ -979,56 +986,176 @@ namespace FlowSharp
             {
                 // Make sure that the radius is still correct.
                 diff[v] = Graph2D.Distance(vals[v + 1], vals[v]);
-                if (diff[v].Length > 0 && float.IsNaN(diff[v].Fx[0]))
-                    Console.WriteLine("NaN NaN NaN NaN NaN Batman!");
+                //if (diff[v].Length > 0 && float.IsNaN(diff[v].Fx[0]))
+                //    Console.WriteLine("NaN NaN NaN NaN NaN Batman!");
                 diff[v].Offset = vals[v].Offset;
             }
 
             return diff;
         }
 
-        public static int FindBoundaryInError(Graph2D error)
+        public static LineSet FindBoundaryInErrors(Graph2D[] errors, Vector3 center, /*float time,*/ float rangeForTracking = 0.5f)
         {
+            float threshold = 1f;
+            Line thresholded = new Line() { Positions = new Vector3[errors.Length + 1] };
+            int tLast = 0;
+            for(int e = 0; e < errors.Length; ++e)
+            {
+                int t = errors[e].Threshold(threshold);
 
+                if (e > 0 && Math.Abs(t - tLast) > 20)
+                {
+                    t = errors[e].ThresholdRange(tLast - 20, tLast + 20, threshold*0.75f);
+                }
+
+                float angle = (float)e * Pi2 / errors.Length;
+                thresholded[e] = SphericalPosition(center, (float)e / errors.Length, errors[e].X[t]);
+                tLast = t;
+            }
+            thresholded[thresholded.Length - 1] = thresholded[0];
+
+            return new LineSet(new Line[] { thresholded });
+    /*        float debugOffset = 0.01f;
+
+
+            // Save lines.
+            List<Line> bounds = new List<Line>(16);
+
+            {
+                // Take intial direction. Find all maxima.
+                List<int> maxima = errors[0].Maxima();
+                float time = 0;
+
+                // Initalize lines for all extrema.
+                foreach (int max in maxima)
+                {
+                    Line l = new Line() { Positions = new Vector3[errors.Length + 1], Attribute = new float[errors.Length + 1] };
+                    l[0] = center + new Vector3(errors[0].X[max], 0, time);
+                    l.Attribute[0] = errors[0].Curvature(max);
+                    //TODO: DEBUG
+                    time += debugOffset;
+
+                    bounds.Add(l);
+                }
+            }
+            // Follow maxima.
+            for (int e = 1; e < errors.Length; ++e)
+            {
+                float angle = ((float)e * Pi2 / errors.Length);
+                float x = (float)(Math.Sin(angle + Math.PI / 2));
+                float y = (float)(Math.Cos(angle + Math.PI / 2));
+
+                int numLines = bounds.Count;
+                for(int l = 0; l < numLines; ++ l)
+                {
+                    Line line = bounds[l];
+                    // Line ended already?
+                    if (line.Length < errors.Length + 1)
+                        continue;
+                    float lastRad = (float)Math.Sqrt(line[e - 1].X * line[e - 1].X + line[e - 1].Y * line[e - 1].Y);
+                    List<int> maxima = errors[e].MaximaSides(lastRad, rangeForTracking);
+                    int maxCount = maxima.Count;
+
+                    // Cannot connect?
+                    if(maxCount < 1)
+                    {
+                        line.Resize(e);
+                        continue;
+                    }
+
+                    if(maxCount > 2)
+                    {
+                        Console.WriteLine("So many maxima!");
+                    }
+
+                    line[e] = center + new Vector3(x * errors[e].X[maxima[0]], y * errors[e].X[maxima[0]], line[e - 1].Z);
+                    line.Attribute[e] = -errors[e].Curvature(maxima[0]);
+
+                    //// If multiple possible maxima appear, add new line. Copy points so far.
+                    //for (int m = 1; m < maxCount; ++m)
+                    //{
+                    //    Line cpy = new Line(line);
+                    //    cpy[e] = new Vector3(x * errors[e].X[maxima[m]], y * errors[e].X[maxima[m]], line[e - 1].Z + debugOffset);
+                    //    bounds.Add(cpy);
+                    //}
+                }
+            }
+
+            foreach(Line l in bounds)
+            {
+                Console.WriteLine("Length line: {0}", l.Length);
+                if (l.Length == errors.Length + 1)
+                {
+                    l[l.Length - 1] = l[0];
+                    l.Attribute[l.Length - 1] = l.Attribute[0];
+                }
+            }
+
+            return new LineSet(bounds.ToArray());
+            */
+
+        }
+
+        public static int/*[]*/ FindBoundaryInError(Graph2D error)
+        {
+            /*            float threshold = 0.2f;
+                        //List<int> spikes = new List<int>(8);
+                        int bestMax = 0; float bestAspect = 0;
+                        /// Last index where left was turning to right (left bound of hill).
+                        int lastLeft = -1;
+                        /// Last index where right was turning to left (right bound of hill).
+                        int lastRight = -1;
+                        /// Last maximum.
+                        int lastMax = -1;
+                        bool currentlyRight = true; // Makes more sense than false here.
+                        for (int e = 1; e < error.Length-1; ++e)
+                        {
+                            if (error.Fx[e] > threshold)
+                                break;
+                            float leftSlope = error.Fx[e] - error.Fx[e - 1];
+                            float rightSlope = error.Fx[e + 1] - error.X[e];
+                            leftSlope /= error.X[e] - error.X[e - 1];
+                            rightSlope /= error.X[e + 1] - error.X[e];
+
+                            // Maximum?
+                            if(rightSlope < 0 && leftSlope > 0)
+                            {
+                                lastMax = e;
+                            }
+
+                            // Switched to right curving?
+                            if (rightSlope < leftSlope && !currentlyRight)
+                            {
+                                currentlyRight = true;
+                                lastLeft = e;
+                            }
+                            // Switched to left curving?
+                            if (rightSlope > leftSlope && currentlyRight)
+                            {
+                                currentlyRight = false;
+                                // lastRight = e;
+                                if(lastLeft >= 0 && lastMax - lastLeft > 0) // Includes lastMax >= 0 :D
+                                {
+                                    float aspect = error.Fx[lastMax] - Math.Min(error.Fx[lastLeft], error.Fx[e]);
+                                    aspect /= error.X[e] - error.X[lastLeft];
+                                    if(aspect > bestAspect)//1)
+                                    {
+                                        bestAspect = aspect;
+                                        bestMax = lastMax;
+                                        //spikes.Add(lastMax);
+                                    }
+                                }
+                            }
+
+                        }
+
+                        return bestMax; // spikes.ToArray();
+                        */
             float tolerance = 0.1f;
             for (int e = 0; e < error.Length; ++e)
                 if (error.Fx[e] > tolerance)
                     return e;
             return -1;
-            //// How often should we recompute the regression?
-            //int newRegressionStep = 4;
-            //// How much is the error allowed to vary?
-            //float tolerance = 0.25f;
-            //// Assume that the first 2 cells are inside the eddy!
-            //float safetyRegion = 2;
-            //int lastIndex = error.GetLastBelowX(error.Offset + safetyRegion);
-
-            //// Fit a line to the first 2 cells of points.
-            //StraightLine straight = FieldAnalysis.FitLine(error, lastIndex);
-            //float lineError = error.SquaredError(straight, lastIndex);
-
-            //int x = lastIndex;
-            //while (x < error.Length)
-            //{
-
-            //    for (int subX = 0; x < error.Length && subX < newRegressionStep; ++x, ++subX)
-            //    {
-            //        float err = straight.SquaredError(error.X[x], error.Fx[x]);
-            //        //if (subX == 0)
-            //            Console.WriteLine("Error at {0}: {1}", x, err);
-            //        // We found it!
-            //        if (err > tolerance)
-            //            return x;
-            //    }
-
-            //    // Fit a new line to the points we compared so far.
-            //    straight = FieldAnalysis.FitLine(error, x-1);
-            //    lineError = error.SquaredError(straight, x-1);
-            //   // Console.WriteLine("Reference Error: {0}", lineError);
-            //}
-            
-            //return -1;
-
         }
         #endregion ConcentricDistance
 

@@ -82,7 +82,7 @@
         </WrapPanel>
         <CheckBox x:Name="DisplayFlat" Content="Flatten" HorizontalAlignment="Right" Margin="0,110,85,0" VerticalAlignment="Top" Checked="OnCheckFlat" Unchecked="OnCheckFlat"/>
         <CheckBox x:Name="ShowGraph" Content="Statistics" HorizontalAlignment="Right" Margin="0,110,18,0" VerticalAlignment="Top" Checked="OnCheckGraph" Unchecked="OnCheckGraph"/>
-        <CheckBox x:Name="orthographic" Content="Ortographic Projection" HorizontalAlignment="Left" Margin="1635,10,0,0" VerticalAlignment="Top" Checked="ChangeProjection" Unchecked="ChangeProjection"/>
+        <CheckBox x:Name="orthographic" Content="Ortographic Projection" HorizontalAlignment="Right" Margin="0,10,139,0" VerticalAlignment="Top" Checked="ChangeProjection" Unchecked="ChangeProjection"/>
 
     </Grid>
 </Window>

@@ -74,6 +74,11 @@ namespace FlowSharp
         {
             Positions = new Vector3[cpy.Length];
             Array.Copy(cpy.Positions, Positions, cpy.Length);
+            if(cpy.Attribute != null)
+            {
+                Attribute = new float[cpy.Length];
+                Array.Copy(cpy.Attribute, Attribute, cpy.Length);
+            }
             Status = cpy.Status;
             LineLength = cpy.LineLength;
         }
@@ -85,7 +90,25 @@ namespace FlowSharp
             Vector3 p1 = this[(int)index + 1];
             float t = index - (int)index;
             return (1.0f - t) * p0 + t * p1;
+        }
+        public void CutHeight(float z)
+        {
+            for (int p = 0; p < Length; ++p)
+            {
+                // if(Attribute?[p] > z)
+                if ((Attribute != null && Attribute[p] > z) || (Attribute == null && this[p].Z > z))
+                {
+                    Array.Resize(ref Positions, p);
+                    return;
+                }
+            }
+        }
 
+        public void Resize(int length)
+        {
+            Array.Resize(ref Positions, length);
+            if (Attribute != null)
+                Array.Resize(ref Attribute, length);
         }
     }
 
@@ -219,6 +242,14 @@ namespace FlowSharp
         public void Cut(int index)
         {
             Array.Resize(ref _lines, index);
+        }
+
+        public void CutAllHeight(float maxZ)
+        {
+            foreach(Line l in _lines)
+            {
+                    l.CutHeight(maxZ);
+            }
         }
     }
 }
