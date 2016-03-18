@@ -311,7 +311,6 @@ namespace FlowSharp
     class LocalDiffusionMapper : SelectionMapper
     {
         private FieldPlane[] _dataMap;
-        private Plane _scaledPlane;
         private LocalDiffusion _diffusionMap;
 //        private FTLE _ftleMap;
         private VectorFieldUnsteady _velocity;

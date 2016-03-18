@@ -102,7 +102,8 @@ namespace FlowSharp
             DONUT_ANALYSIS,
             CORE_DISTANCE,
             PREDICTOR_CORE_ANGLE,
-            CONCENTRIC_DISTANCE
+            CONCENTRIC_DISTANCE,
+            FTLE_CONCENTRIC
         }
 
         public enum DisplayLines : int

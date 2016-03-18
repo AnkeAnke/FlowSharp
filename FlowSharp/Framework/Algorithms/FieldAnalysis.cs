@@ -207,7 +207,7 @@ namespace FlowSharp
             // Only for rectlinear grids.
             RectlinearGrid grid = field.Grid as RectlinearGrid;
             Debug.Assert(grid != null);
-//            Debug.Assert(grid.Size.Length == 2);
+            //            Debug.Assert(grid.Size.Length == 2);
             _epsCriticalPoint = epsCriticalPoint;
 
             List<Vector> cpList = new List<Vector>(field.Size.Product() / 10); // Rough guess.
@@ -364,7 +364,7 @@ namespace FlowSharp
         /// </summary>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static PointSet<T> ValidDataPoints<T>(VectorField field) where T :Point, new()
+        public static PointSet<T> ValidDataPoints<T>(VectorField field) where T : Point, new()
         {
             // Only for 2D rectlinear grids.
             Debug.Assert(field.Grid as RectlinearGrid != null);
@@ -411,10 +411,10 @@ namespace FlowSharp
             for (int index = 0; index < numPoints; ++index)
             {
                 Vector pos = new Vector(0, field.Size.Length);
-                pos[0] = (float)rnd.NextDouble() * (field.Size[0]-1);
-                pos[1] = (float)rnd.NextDouble() * (field.Size[1]-1);
+                pos[0] = (float)rnd.NextDouble() * (field.Size[0] - 1);
+                pos[1] = (float)rnd.NextDouble() * (field.Size[1] - 1);
                 float data = field.Scalars[0].Sample(pos);
-                if(data == field.InvalidValue)
+                if (data == field.InvalidValue)
                 {
                     index--;
                     continue;
@@ -474,7 +474,7 @@ namespace FlowSharp
 
             return cpSet;
         }
-#endregion DomainPoints
+        #endregion DomainPoints
 
         #region FieldFunctions
 
@@ -503,8 +503,8 @@ namespace FlowSharp
 
             //if (float.IsNaN(f[0]) || float.IsNaN(g[0]))
             //    Console.WriteLine("NaN NaN?!");
-            Vector res =  f + AlphaStableFFF * g;
-        //    res /= res.T; // Normalize time length.
+            Vector res = f + AlphaStableFFF * g;
+            //    res /= res.T; // Normalize time length.
             return res;
         }
 
@@ -531,7 +531,7 @@ namespace FlowSharp
             Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
 
             // Find points where v || f
-            Vec3 result =  Vec3.Cross(f*10, v.AsVec3()*10);
+            Vec3 result = Vec3.Cross(f * 10, v.AsVec3() * 10);
             //if (float.IsInfinity(result[0]) || float.IsNaN(result[0]))
             //    Console.WriteLine("NaN NaN?!");
 
@@ -638,7 +638,7 @@ namespace FlowSharp
 
         public static Vector NegativeGradient(Vector v, SquareMatrix J)
         {
-           // Debug.Assert(v.Length == 1); // If not, write other formula.
+            // Debug.Assert(v.Length == 1); // If not, write other formula.
             return new Vec3((-J.Row(0)).ToVec2(), 0);
         }
 
@@ -697,6 +697,7 @@ namespace FlowSharp
         }
         #endregion FieldFunctions
 
+        #region Graphs
         public static Renderable BuildGraph<P>(Plane basePlane, PointSet<P> positions, float[] values, float scaleUp, RedSea.DisplayLines lineSetting, Colormap colormap = Colormap.Parula) where P : Point
         {
             Debug.Assert(positions.Length == values.Length);
@@ -766,16 +767,16 @@ namespace FlowSharp
             switch (lineSetting)
             {
                 case RedSea.DisplayLines.LINE:
-                    foreach(Line l in positions.Lines)
+                    foreach (Line l in positions.Lines)
                     {
                         Vector3[] pos = new Vector3[l.Length];
                         for (int p = 0; p < l.Length; ++p)
                             pos[p] = l.Positions[p] + Vector3.UnitZ * values[count++] * scaleUp;
 
-                        LineSet lines = new LineSet(new Line[] { new Line() { Positions = pos } }) {Color = positions.Color};
+                        LineSet lines = new LineSet(new Line[] { new Line() { Positions = pos } }) { Color = positions.Color };
                         result.Add(new LineBall(basePlane, lines, LineBall.RenderEffect.HEIGHT, colormap));
                     }
-                    
+
                     break;
                 default:
                     Point[] point = new Point[positions.NumExistentPoints];
@@ -818,7 +819,7 @@ namespace FlowSharp
         {
             float angleDiff = (float)(Math.PI * 2 / values.Length);
             Line[] lines = new Line[values.Length];
-            for(int l = 0; l < values.Length; ++l)
+            for (int l = 0; l < values.Length; ++l)
             {
                 Vector3 dir = new Vector3((float)Math.Sin(l * angleDiff + PiH), (float)Math.Cos(l * angleDiff + PiH), 0);
                 lines[l] = values[l].SetLineHeightStraight(center, dir, Vector3.UnitZ);
@@ -906,7 +907,7 @@ namespace FlowSharp
                     for (int p = 0; p < line.Length; ++p)
                     {
                         distances[l][p] = core.DistanceToPointInZ(line.Positions[p]); // Core selected. Take distance to the core, in the respective time slice.
-                        
+
                         // Cos(angle)!!!
                         Vector3 nearestCenter;
                         core.DistanceToPointInZ(line[p], out nearestCenter);
@@ -947,7 +948,7 @@ namespace FlowSharp
             float angle = (float)Math.Atan2(vec.Y, vec.X);
             if (angle < 0)
                 angle += Pi2;
-            return angle; 
+            return angle;
         }
 
         public static Vector3 SphericalPosition(Vector3 center, float part, float rad)
@@ -962,7 +963,7 @@ namespace FlowSharp
             Graph2D circle = new Graph2D(graph);
             circle.CutGraph(graph.Offset + Pi2);
             Line obj = new Line() { Positions = new Vector3[circle.Length] };
-            for(int c = 0; c < circle.Length; ++c)
+            for (int c = 0; c < circle.Length; ++c)
             {
                 obj[c] = new Vector3((float)Math.Cos(circle.X[c]) * radius, (float)Math.Sin(circle.X[c]) * radius, circle.Fx[c]) + center;
             }
@@ -982,7 +983,7 @@ namespace FlowSharp
         public static Graph2D[] GraphDifferenceForward(Graph2D[] vals)
         {
             Graph2D[] diff = new Graph2D[vals.Length - 1];
-            for(int v = 0; v < vals.Length - 1; ++v)
+            for (int v = 0; v < vals.Length - 1; ++v)
             {
                 // Make sure that the radius is still correct.
                 diff[v] = Graph2D.Distance(vals[v + 1], vals[v]);
@@ -1161,7 +1162,7 @@ namespace FlowSharp
 
         public static void WriteFxToLinesetAttribute(LineSet lines, Graph2D[] graphs)
         {
-            for(int l =0; l < lines.Length; ++l)
+            for (int l = 0; l < lines.Length; ++l)
             {
                 lines[l].Attribute = graphs[l].Fx;
             }
@@ -1169,12 +1170,15 @@ namespace FlowSharp
 
         public static void WriteXToLinesetAttribute(LineSet lines, Graph2D[] graphs)
         {
+            Console.WriteLine("Num Lines: {0}", lines.Length);
             for (int l = 0; l < lines.Length; ++l)
             {
                 lines[l].Attribute = graphs[l].X;
             }
         }
+        #endregion Graphs
 
+        #region Boundaries
         public static Line FindBoundaryFromDistanceAngleDonut(Line[] distances, Line[] angles, out int[] indices)
         {
             Vector3[] boundary = new Vector3[distances.Length + 1];
@@ -1232,8 +1236,8 @@ namespace FlowSharp
                         maxSlope = slope;
                     }
                 }
-                
-                    indices[l] = angles[l].Length > 0 ? cut : -1;
+
+                indices[l] = angles[l].Length > 0 ? cut : -1;
                 if (angles[l].Length > 0)
                     boundary[numBoundaryPoints++] = angles[l][cut];
             }
@@ -1256,27 +1260,27 @@ namespace FlowSharp
             // Vars.
             float eps = 0.5f;
 
-            for(int l =0; l < distances.Length; ++l)
+            for (int l = 0; l < distances.Length; ++l)
             {
                 int lastBoundExtremum = 0;
                 float lastBoundHit = 1; // Exactly in the middle. This leaves the first bound extremum either positive or negative.
                 //int cut = 0;
 
                 Line line = distances[l];
-                for(int p = 1; p < line.Length - 1; ++p)
+                for (int p = 1; p < line.Length - 1; ++p)
                 {
                     // Are we at a maximum near the the bound?
                     float slopeLeft = line[p].Z - line[p - 1].Z;
                     float slopeRight = line[p + 1].Z - line[p].Z;
 
                     // Extremum?
-                    if(slopeLeft * slopeRight < 0)
+                    if (slopeLeft * slopeRight < 0)
                     {
                         // Maximum (1 + 1) or minimum (-1 + 1)?
                         float bound = slopeLeft > 0 ? 2 : 0;
 
                         // Near the bound?
-                        if(Math.Abs(line[p].Z - bound) < eps)
+                        if (Math.Abs(line[p].Z - bound) < eps)
                         {
                             // Different bound than last time?
                             if ((lastBoundHit - 1) * (line[p].Z - 1) <= 0)
@@ -1300,7 +1304,6 @@ namespace FlowSharp
             return new Line() { Positions = boundary };
         }
 
-
         public static Line FindBoundaryFromDistanceDonutAngle(Line[] distances, out int[] indices)
         {
             Vector3[] boundary = new Vector3[distances.Length + 1];
@@ -1309,27 +1312,27 @@ namespace FlowSharp
             // Vars.
             float eps = 0.5f;
 
-            for(int l =0; l < distances.Length; ++l)
+            for (int l = 0; l < distances.Length; ++l)
             {
                 int lastBoundExtremum = 0;
                 float lastBoundHit = 1; // Exactly in the middle. This leaves the first bound extremum either positive or negative.
                 //int cut = 0;
 
                 Line line = distances[l];
-                for(int p = 1; p < line.Length - 1; ++p)
+                for (int p = 1; p < line.Length - 1; ++p)
                 {
                     // Are we at a maximum near the the bound?
                     float slopeLeft = line[p].Z - line[p - 1].Z;
                     float slopeRight = line[p + 1].Z - line[p].Z;
 
                     // Extremum?
-                    if(slopeLeft * slopeRight < 0)
+                    if (slopeLeft * slopeRight < 0)
                     {
                         // Maximum (1 + 1) or minimum (-1 + 1)?
                         float bound = slopeLeft > 0 ? 2 : 0;
 
                         // Near the bound?
-                        if(Math.Abs(line[p].Z - bound) < eps)
+                        if (Math.Abs(line[p].Z - bound) < eps)
                         {
                             // Different bound than last time?
                             if ((lastBoundHit - 1) * (line[p].Z - 1) <= 0)
@@ -1404,17 +1407,17 @@ namespace FlowSharp
                 int minimaUsed = 0;
                 int lastMin = 0;
 
-                for(int p = 1; p < line.Length - 1 && minimaLeft > 0; ++ p)
+                for (int p = 1; p < line.Length - 1 && minimaLeft > 0; ++p)
                 {
                     float leftSlope = line[p].Z - line[p - 1].Z;
                     float rightSlope = line[p + 1].Z - line[p].Z;
-                    if(leftSlope < 0 && rightSlope > 0)
+                    if (leftSlope < 0 && rightSlope > 0)
                     {
                         minimaLeft--;
                         minimaUsed++;
                         lastMin = p;
 
-                        if(minimaLeft == 0)
+                        if (minimaLeft == 0)
                         {
                             straight = FieldAnalysis.FitLine(line, 0, lastMin);
 
@@ -1434,7 +1437,7 @@ namespace FlowSharp
                 }
 
                 float avgDistSquared = 0;
-                for(int p = 0; p < lastMin; ++p)
+                for (int p = 0; p < lastMin; ++p)
                 {
                     float dist = line[p].Z - straight[p];
                     avgDistSquared += dist * dist;
@@ -1443,7 +1446,7 @@ namespace FlowSharp
 
                 float cutGraph = straight.CutLine2D(line, lastMin);
                 float lineEnd = lastMin;
-                while(cutGraph > 0)
+                while (cutGraph > 0)
                 {
                     // Compute average error. If it is not too big compared to the beginning, take the new end.
                     float avgDistSquaredCut = 0;
@@ -1467,13 +1470,13 @@ namespace FlowSharp
                     cutGraph = straight.CutLine2D(line, lastMin);
                 }
 
-                indices [l] = lastMin;
+                indices[l] = lastMin;
 
                 boundary[l * 3] = line[0];
                 boundary[l * 3].Z = straight.YOffset;
 
-                boundary[l*3 + 1] = line.Value(lineEnd);
-                boundary[l*3 + 1].Z = straight[lineEnd];
+                boundary[l * 3 + 1] = line.Value(lineEnd);
+                boundary[l * 3 + 1].Z = straight[lineEnd];
 
                 boundary[l * 3 + 2] = boundary[l * 3];
             }
@@ -1500,20 +1503,20 @@ namespace FlowSharp
                 int p = 0;
 
                 // We need a few steps to get a maximum that makes sense.
-                for(; p < startLength; ++p )
+                for (; p < startLength; ++p)
                 {
-                    if(line[p].Z > maxHeightTillCut)
+                    if (line[p].Z > maxHeightTillCut)
                     {
                         cut = p;
                         maxHeightTillCut = line[p].Z;
                     }
                 }
 
-                LookForNewCut: // Find the next maximum
+            LookForNewCut: // Find the next maximum
                 p = cut;
                 for (; p < line.Length - 1; ++p)
                 {
-                    if(line[p].Z > maxHeightTillCut)
+                    if (line[p].Z > maxHeightTillCut)
                     {
                         // We found a new cut position. Save values.
                         cut = p;
@@ -1525,7 +1528,7 @@ namespace FlowSharp
 
                 // Validate this maximum: run over cut/2 and see if the cut value is minimal.
                 int max = Math.Min(line.Length - 1, (int)(1.5f * Math.Max(cut, startLength) + 0.5f));
-                for(; p < max; ++p)
+                for (; p < max; ++p)
                 {
                     if (line[p].Z < maxHeightTillCut)
                         goto LookForNewCut;
@@ -1558,6 +1561,9 @@ namespace FlowSharp
         //    boundary[distances.Length] = boundary[0];
         //    return new Line() { Positions = boundary };
         //}
+        #endregion Boundaries
+
+        #region Regression
         public class StraightLine
         {
             public float YOffset;
@@ -1572,15 +1578,15 @@ namespace FlowSharp
             public float CutLine2D(Line line, int startPos = 0)
             {
                 float diff = 0;
-                for(int point = startPos; point < line.Length; ++point)
+                for (int point = startPos; point < line.Length; ++point)
                 {
                     float locDiff = line[point].Z - YOffset - (Slope * point);
                     if (diff * locDiff < 0)
                     {
                         float slope = line[point].Z - line[point - 1].Z;
-                        return point - 1 + (this[point-1] - line[point - 1].Z) / (slope - Slope);
+                        return point - 1 + (this[point - 1] - line[point - 1].Z) / (slope - Slope);
                     }
-                    
+
                     diff = locDiff;
                 }
                 return -1;
@@ -1611,7 +1617,7 @@ namespace FlowSharp
                 sumY += graph.Fx[x];
                 sumXY += graph.Fx[x] * graph.X[x];
 
-                
+
                 sumX += graph.X[x];
                 sumXX += graph.X[x] * graph.X[x];
             }
@@ -1641,7 +1647,7 @@ namespace FlowSharp
             int N = end - offset;
             Debug.Assert(end <= line.Length);
 
-            for(int point = offset; point < end; ++point)
+            for (int point = offset; point < end; ++point)
             {
                 sumY += line[point].Z;
                 sumXY += line[point].Z * point;
@@ -1661,22 +1667,23 @@ namespace FlowSharp
 
             return straight;
         }
+        #endregion Regression
 
         public static LineSet PlotLines2D(LineSet lines, float? xScale = null, float? yScale = null)
         {
             float xMult = xScale ?? lines.Thickness;
             float yMult = yScale ?? ((float)lines.Length / lines[0].Length) * lines.Thickness;
             LineSet set = new LineSet(lines);
-            for(int x = 0; x < set.Length; ++x)
+            for (int x = 0; x < set.Length; ++x)
             {
-                for(int y = 0; y < set[x].Length; ++y)
+                for (int y = 0; y < set[x].Length; ++y)
                 {
                     Vector3 pos = new Vector3();
                     pos.X = x * xMult;
                     pos.Y = y * yMult;
                     pos.Z = set[x][y].Z;
                     set[x][y] = pos;
-                }           
+                }
             }
             return set;
         }
@@ -1685,13 +1692,73 @@ namespace FlowSharp
         {
             Line[] shorties = new Line[lines.Length];
 
-            for(int s = 0; s < shorties.Length; ++s)
+            for (int s = 0; s < shorties.Length; ++s)
             {
                 Vector3[] points = new Vector3[Math.Min(lines[s].Length, length)];
                 Array.Copy(lines[s].Positions, points, points.Length);
                 shorties[s] = new Line() { Positions = points };
             }
             return new LineSet(shorties);
+        }
+
+        /// <summary>
+        /// Compute FTLE values from a given set of pathlines. Assumed: Lines given as x+, x-, y+, y-
+        /// </summary>
+        /// <param name="pathlines"></param>
+        /// <returns></returns>
+        public static Graph2D[] ComputeFTLE2D(LineSet pathlines, Vector3 origin, float[] angles, float[] radii, float integrationStart, float integrationTime)
+        {
+            Debug.Assert(pathlines.Length % 4 == 0); // Redundant with next line.
+            Debug.Assert(pathlines.Length == angles.Length * radii.Length * 4);
+
+            float doubleDist = pathlines[0][0].X - pathlines[1][0].X;
+            float endTime = integrationStart + integrationTime;
+
+            Graph2D[] graph = new Graph2D[angles.Length];
+            
+            // Go over all angles, each angle being one graph.
+            for (int a = 0; a < angles.Length; ++a)
+            {
+                float[] x = new float[radii.Length];
+                Array.Copy(radii, x, x.Length);
+                float[] fx = new float[radii.Length];
+
+                for (int r = 0; r < radii.Length; ++r)
+                {
+                    SquareMatrix stress = new SquareMatrix(2);
+
+                    int idx = (a * radii.Length + r ) * 4;
+                    if (pathlines[idx].Length < 1 || pathlines[idx + 1].Length < 1 || pathlines[idx + 2].Length < 1 || pathlines[idx + 3].Length < 1 ||
+                        pathlines[idx].Last.Z < endTime || pathlines[idx + 1].Last.Z < endTime || pathlines[idx + 2].Last.Z < endTime || pathlines[idx + 3].Last.Z < endTime)
+                    {
+                        fx[r] = 0;// float.MaxValue;
+                        continue;
+                    }
+
+                    Vector3 diffX = (Vector3)pathlines[idx + 0].At(endTime) - (Vector3)pathlines[idx + 1].At(endTime);
+                    Vector3 diffY = (Vector3)pathlines[idx + 2].At(endTime) - (Vector3)pathlines[idx + 3].At(endTime);
+
+                    if (Math.Abs(diffX.Z) > EPS_ZERO || Math.Abs(diffY.Z) > EPS_ZERO)
+                    {
+                        fx[r] = 0;
+                        continue;
+                    }
+
+                    stress.m00 = diffX.X / doubleDist;
+                    stress.m10 = diffY.X / doubleDist;
+                    stress.m01 = diffX.Y / doubleDist;
+                    stress.m11 = diffY.Y / doubleDist;
+
+                    SquareMatrix cauchy = stress.Transposed() * stress;
+
+                    Vector lambdas = cauchy.EigenvaluesReal();
+                    float lMax = lambdas.Max();
+                    fx[r] = (float)(Math.Log(Math.Sqrt(lMax)) / integrationTime);// pathlines[idx].Length > 0 ? (pathlines[idx][0]- origin).Length()  : 0;
+
+                }
+                graph[a] = new Graph2D(x, fx);
+            }
+            return graph;
         }
 
         //public static float FindFirstOccurenceZ(Line line, float value)

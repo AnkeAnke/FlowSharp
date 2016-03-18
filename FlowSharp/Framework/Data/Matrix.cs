@@ -24,6 +24,10 @@ namespace FlowSharp
         public float Vx { get { return this[0][1]; } set { this[0][1] = value; } }
         public float Vy { get { return this[1][1]; } set { this[1][1] = value; } }
 
+        public float m00 { get { return this[0][0]; } set { this[0][0] = value; } }
+        public float m10 { get { return this[1][0]; } set { this[1][0] = value; } }
+        public float m01 { get { return this[0][1]; } set { this[0][1] = value; } }
+        public float m11 { get { return this[1][1]; } set { this[1][1] = value; } }
 
         public SquareMatrix(SquareMatrix m)
         {
@@ -78,6 +82,21 @@ namespace FlowSharp
                     this[x][y] = this[y][x];
                     this[y][x] = tmp;
                 }
+        }
+
+        public SquareMatrix Transposed()
+        {
+            SquareMatrix mat = new SquareMatrix(Length);
+            for (int x = 0; x < Length; ++x)
+                for (int y = 0; y < Length; ++y)
+                {
+                    mat[x][y] = this[y][x];
+                    //float tmp = this[x][y];
+                    //this[x][y] = this[y][x];
+                    //this[y][x] = tmp;
+                }
+
+            return mat;
         }
 
         public float Determinant()

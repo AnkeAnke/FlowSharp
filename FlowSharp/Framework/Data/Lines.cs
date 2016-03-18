@@ -16,6 +16,8 @@ namespace FlowSharp
         public VectorField.Integrator.Status Status;
         public float LineLength = 0;
 
+        public Vector3 Last { get { return Positions[Length - 1]; } }
+
         public float DistanceToPointInZ(Vector3 position, out Vector3 zNearest)
         {
             zNearest = Vector3.Zero;
@@ -48,6 +50,32 @@ namespace FlowSharp
         {
             Vector3 tmp;
             return DistanceToPointInZ(position, out tmp);
+        }
+
+        public Vector3? At(float z)
+        {
+            if (Length < 2)
+                return null;
+            // Slow linear search. Khalas.
+            int i = 0;
+            for (; i < Positions.Length - 1; ++i)
+            {
+                // One point above, one below.
+                if ((Positions[i].Z - z) * (Positions[i + 1].Z - z) <= 0)
+                    break;
+            }
+
+            // Did not find any?
+            if (i == Length - 1)
+                return null;
+
+            Vector3 p0 = Positions[i];
+            Vector3 p1 = Positions[i + 1];
+            float t = (z - p0.Z) / (p1.Z - p0.Z);
+            Vector3 integrated = (1 - t) * p0 + t * p1;
+            Debug.Assert(Math.Abs(z - integrated.Z) < 0.0001f);
+
+            return integrated;
         }
         //public Vector3 GetPointInZ(float z)
         //{

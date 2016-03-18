@@ -237,6 +237,9 @@ namespace FlowSharp
             DataMapper circleCoreDistance = new ConcentricTubeMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.CONCENTRIC_DISTANCE, circleCoreDistance);
 
+            DataMapper ftle = new MapperFTLE(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.FTLE_CONCENTRIC, ftle);
+
             DataMapper donut = new DonutAnalyzer(redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.DONUT_ANALYSIS, donut);
 

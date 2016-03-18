@@ -19,7 +19,7 @@ namespace FlowSharp
     class Mesh : ColormapRenderable
     {
         protected Vector3 _color;
-        protected float _thickness;
+        protected float _thickness = 0;
         protected Vector3 _planeNormal;
         public LineBall.RenderEffect Effect
         {

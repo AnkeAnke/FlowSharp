@@ -27,9 +27,9 @@ namespace FlowSharp
 
     class EndPoint : Point
     {
-        public float LengthLine;
-        public VectorField.Integrator.Status Status;
-        public Int2 Origin;
+        public float LengthLine = 0;
+        public VectorField.Integrator.Status Status = VectorField.Integrator.Status.OK;
+        //public Int2 Origin = Int2.ZERO;
     }
 
     class CriticalPoint2D : Point

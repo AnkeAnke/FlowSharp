@@ -28,11 +28,11 @@ struct VS_IN
 
 // ~~~~~~~~~~~~~~~~~~~ Height Color Coded Mesh ~~~~~~~~~~~~~~~~~~~~~~~~ //
 
-struct GS_IN_H
-{
-	float4 pos : SV_POSITION;
-	float height : HEIGHT;
-};
+//struct GS_IN_H
+//{
+//	float4 pos : SV_POSITION;
+//	float height : HEIGHT;
+//};
 
 struct PS_IN_H
 {

@@ -181,64 +181,64 @@ namespace FlowSharp
         }
     }
 
-    class VectorFieldUnsteadyAnalytical : VectorFieldUnsteady
-    {
-        //delegate Vector Evaluate(Vector inVec);
-        public delegate Vector Evaluate(Vector inVec, SquareMatrix inJ);
-
-        protected Evaluate _evaluate;
-        //protected int _numVectorDimensions = -1;
-        protected FieldGrid _outGrid;
-
-        public VectorFieldUnsteadyAnalytical(Evaluate func, VectorFieldUnsteady field, FieldGrid outGrid, bool useJacobian = false) : base(field.ScalarsAsSFU)
-        {
-            _evaluate = func;
-           // _numVectorDimensions = outDimensions;
-        }
-
-        public override int NumVectorDimensions
-        {
-            get
-            {
-                return _outGrid.Size.Length;
-            }
-        }
-
-        public override void ScaleToGrid(Vector scale)
-        {
-            base.ScaleToGrid(scale);
-        }
-
-        public override VectorField GetSlice(int slice)
-        {
-            return base.GetSlice(slice);
-        }
-
-        public override Field[] Scalars
-        {
-            get
-            {
-                return base.Scalars;
-            }
-        }
-
-    }
-
-    //class ScalarFieldUnsteadyAnalytical : ScalarFieldUnsteady
+    //class VectorFieldUnsteadyAnalytical : VectorFieldUnsteady
     //{
-    //    public ScalarFieldUnsteadyAnalytical() : base(null)
+    //    //delegate Vector Evaluate(Vector inVec);
+    //    public delegate Vector Evaluate(Vector inVec, SquareMatrix inJ);
+
+    //    protected Evaluate _evaluate;
+    //    //protected int _numVectorDimensions = -1;
+    //    protected FieldGrid _outGrid;
+
+    //    public VectorFieldUnsteadyAnalytical(Evaluate func, VectorFieldUnsteady field, FieldGrid outGrid, bool useJacobian = false) : base(field.ScalarsAsSFU)
     //    {
-    //        throw new NotImplementedException();
+    //        _evaluate = func;
+    //       // _numVectorDimensions = outDimensions;
     //    }
+
+    //    public override int NumVectorDimensions
+    //    {
+    //        get
+    //        {
+    //            return _outGrid.Size.Length;
+    //        }
+    //    }
+
+    //    public override void ScaleToGrid(Vector scale)
+    //    {
+    //        base.ScaleToGrid(scale);
+    //    }
+
+    //    public override VectorField GetSlice(int slice)
+    //    {
+    //        return base.GetSlice(slice);
+    //    }
+
+    //    public override Field[] Scalars
+    //    {
+    //        get
+    //        {
+    //            return base.Scalars;
+    //        }
+    //    }
+
     //}
 
-    //class ScalarFieldUnsteadyAnalytical : ScalarFieldUnsteady
-    //{
-    //    public ScalarFieldUnsteadyAnalytical() : base(null)
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
+    ////class ScalarFieldUnsteadyAnalytical : ScalarFieldUnsteady
+    ////{
+    ////    public ScalarFieldUnsteadyAnalytical() : base(null)
+    ////    {
+    ////        throw new NotImplementedException();
+    ////    }
+    ////}
+
+    ////class ScalarFieldUnsteadyAnalytical : ScalarFieldUnsteady
+    ////{
+    ////    public ScalarFieldUnsteadyAnalytical() : base(null)
+    ////    {
+    ////        throw new NotImplementedException();
+    ////    }
+    ////}
 
 
     class ScalarFieldUnsteady : Field
