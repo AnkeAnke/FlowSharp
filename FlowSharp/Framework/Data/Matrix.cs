@@ -138,7 +138,7 @@ namespace FlowSharp
 
             float a = this[0][0]; float b = this[1][0]; float c = this[0][1]; float d = this[1][1];
             // Computing eigenvalues.
-            float Th = (a - d) * 0.5f;
+            float Th = (a + d) * 0.5f;
             float D = a * d - b * c;
             float root = Th * Th - D;
 

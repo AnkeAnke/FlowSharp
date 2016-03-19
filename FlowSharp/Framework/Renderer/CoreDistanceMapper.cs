@@ -16,7 +16,7 @@ namespace FlowSharp
         {
             get;
         } = 300;
-        protected float _lengthRadius = 30;
+        protected float _lengthRadius = 35;
         protected float _epsOffset = 0.1f;
 
         #region PropertyChanged
@@ -2174,7 +2174,7 @@ namespace FlowSharp
             // Integrate first few steps.
             pathlineIntegrator.Field = _velocity;
             Console.WriteLine("Starting integration of {0} pathlines", circle.Length);
-            pathlines = pathlineIntegrator.Integrate(circle, false, 5)[0];
+            pathlines = pathlineIntegrator.Integrate(circle, false, 10)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
             //float timeEnd = (float)(12*15) / _everyNthTimestep + SliceTimeMain;

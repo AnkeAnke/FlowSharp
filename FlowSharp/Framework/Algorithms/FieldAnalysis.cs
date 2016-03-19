@@ -1714,6 +1714,9 @@ namespace FlowSharp
             float doubleDist = pathlines[0][0].X - pathlines[1][0].X;
             float endTime = integrationStart + integrationTime;
 
+            float min = float.MaxValue;
+            float max = float.MinValue;
+
             Graph2D[] graph = new Graph2D[angles.Length];
             
             // Go over all angles, each angle being one graph.
@@ -1754,10 +1757,12 @@ namespace FlowSharp
                     Vector lambdas = cauchy.EigenvaluesReal();
                     float lMax = lambdas.Max();
                     fx[r] = (float)(Math.Log(Math.Sqrt(lMax)) / integrationTime);// pathlines[idx].Length > 0 ? (pathlines[idx][0]- origin).Length()  : 0;
-
+                    min = Math.Min(min, fx[r]);
+                    max = Math.Max(max, fx[r]);
                 }
                 graph[a] = new Graph2D(x, fx);
             }
+            Console.WriteLine("FTLE values for time {0} to {1}: [{2}, {3}]", integrationStart, integrationTime + integrationStart, min, max);
             return graph;
         }
 
