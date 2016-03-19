@@ -249,7 +249,19 @@ namespace FlowSharp
             //FieldAnalysis.AlphaStableFFF = 0;
             //var f = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
             //Renderer.Singleton.AddRenderable(new FieldPlane(redSea, f.GetSlice(0), FieldPlane.RenderEffect.LIC));
+            Random rnd = new Random();
+            SquareMatrix x = new SquareMatrix(2);
+            x.m00 = /*(float)rnd.NextDouble();//*/0.8f;
+            x.m10 = /*(float)rnd.NextDouble();//*/-0.8f;
+            x.m01 = /*(float)rnd.NextDouble();//*/-0.3f;
+            x.m11 = /*(float)rnd.NextDouble();//*/1.6f;
 
+            //SquareMatrix xT = x.Transposed();
+            //SquareMatrix cauchy =  xT* x;
+            //SquareMatrix e, lambda;
+            //cauchy.Eigenanalysis(out lambda, out e);
+
+            //Vector lambda2 = cauchy.EigenvaluesReal();
         }
     }
 }

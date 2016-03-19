@@ -52,10 +52,10 @@ namespace FlowSharp
             return DistanceToPointInZ(position, out tmp);
         }
 
-        public Vector3? At(float z)
+        public int GetLastBelowZ(float z)
         {
             if (Length < 2)
-                return null;
+                return -1;
             // Slow linear search. Khalas.
             int i = 0;
             for (; i < Positions.Length - 1; ++i)
@@ -67,8 +67,16 @@ namespace FlowSharp
 
             // Did not find any?
             if (i == Length - 1)
-                return null;
+                return -1;
 
+            return i;
+        }
+
+        public Vector3? SampleZ(float z)
+        {
+            int i = GetLastBelowZ(z);
+            if (i < 0)
+                return null;
             Vector3 p0 = Positions[i];
             Vector3 p1 = Positions[i + 1];
             float t = (z - p0.Z) / (p1.Z - p0.Z);

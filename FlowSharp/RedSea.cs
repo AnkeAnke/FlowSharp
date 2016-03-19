@@ -103,7 +103,8 @@ namespace FlowSharp
             CORE_DISTANCE,
             PREDICTOR_CORE_ANGLE,
             CONCENTRIC_DISTANCE,
-            FTLE_CONCENTRIC
+            FTLE_CONCENTRIC,
+            PATHLINE_DISTANCE
         }
 
         public enum DisplayLines : int

@@ -943,6 +943,87 @@ namespace FlowSharp
             return result;
         }
 
+        public static Graph2D[][] GetErrorsToTime(LineSet lines, int angles, float[] radii)
+        {
+            Debug.Assert(lines.Length == angles * radii.Length);
+            int count = 0;
+            Graph2D[][] result = new Graph2D[angles][];
+
+            for (int a = 0; a < angles; ++a)
+            {
+                result[a] = new Graph2D[radii.Length - 1];
+                for (int r = 0; r < radii.Length-1; ++r)
+                {
+                    int idx = a * radii.Length + r;
+                    result[a][r] = DiffZ(lines[idx], lines[idx + 1]);
+                    result[a][r].Offset = radii[r];
+                }
+            }
+
+            return result;
+        }
+
+        public delegate float LineFunc(Vector3 a, Vector3 b);
+        public static Graph2D OperateZ(Line l0, Line l1, LineFunc func)
+        {
+            if (l0.Length == 0 || l1.Length == 0)
+            {
+                return new Graph2D(new float[0], new float[0]) { Offset = 0 };
+            }
+            float[] x = new float[l0.Length + l1.Length];
+            float[] fx = new float[x.Length];
+
+            int p0 = 0; int p1 = 0; int pCount = 0;
+            if (l0[0].Z < l1[0].Z)
+            {
+                p0 = l0.GetLastBelowZ(l0[0].Z) + 1;
+            }
+            if (l1[0].Z < l0[0].Z)
+            {
+                p1 = l1.GetLastBelowZ(l0[0].Z) + 1;
+            }
+
+            float maxX = Math.Min(l0[l0.Length - 1].Z, l1[l1.Length - 1].Z);
+            // Interleave
+            while (p0 < l0.Length && p1 < l1.Length)
+            {
+                float v0 = p0 < l0.Length ? l0[p0].Z : float.MaxValue;
+                float v1 = p1 < l1.Length ? l1[p1].Z : float.MaxValue;
+
+                if (v0 < v1)
+                {
+                    x[pCount] = v0;
+                    fx[pCount] = func((Vector3)l1.SampleZ(v0), l0[p0]);
+                    p0++;
+                }
+                if (v0 > v1)
+                {
+                    x[pCount] = v1;
+                    fx[pCount] = func(l1[p1], (Vector3)l0.SampleZ(v1));
+                    p1++;
+                }
+                if (v0 == v1)
+                {
+                    x[pCount] = v0;
+                    fx[pCount] = func(l1[p1], l0[p0]);
+                    p0++; p1++;
+                }
+
+                ++pCount;
+            }
+            if (pCount < x.Length)
+            {
+                Array.Resize(ref x, pCount);
+                Array.Resize(ref fx, pCount);
+            }
+            return new Graph2D(x, fx);
+        }
+
+        public static Graph2D DiffZ(Line l0, Line l1)
+        {
+            return OperateZ(l0, l1, (a, b) => { return (a - b).Length(); });
+        }
+
         public static float Angle2D(Vector3 vec)
         {
             float angle = (float)Math.Atan2(vec.Y, vec.X);
@@ -1738,8 +1819,8 @@ namespace FlowSharp
                         continue;
                     }
 
-                    Vector3 diffX = (Vector3)pathlines[idx + 0].At(endTime) - (Vector3)pathlines[idx + 1].At(endTime);
-                    Vector3 diffY = (Vector3)pathlines[idx + 2].At(endTime) - (Vector3)pathlines[idx + 3].At(endTime);
+                    Vector3 diffX = (Vector3)pathlines[idx + 0].SampleZ(endTime) - (Vector3)pathlines[idx + 1].SampleZ(endTime);
+                    Vector3 diffY = (Vector3)pathlines[idx + 2].SampleZ(endTime) - (Vector3)pathlines[idx + 3].SampleZ(endTime);
 
                     if (Math.Abs(diffX.Z) > EPS_ZERO || Math.Abs(diffY.Z) > EPS_ZERO)
                     {
