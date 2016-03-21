@@ -216,7 +216,7 @@ float4 PS_Height(PS_IN_H input) : SV_Target
 	float dist = length(rad);
 	if (dist > thickness)
 		discard;
-	return float4(colormap.Sample(LinSampler, float2(input.height, 0.5)).xyz, 1.0); // input.color;
+	return float4(colormap.Sample(LinSampler, float2(saturate(input.height), 0.5)).xyz, 1.0); // input.color;
 }
 
 

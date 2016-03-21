@@ -45,7 +45,7 @@ PS_IN_H VS_Height(VS_IN input)
 	PS_IN_H output = (PS_IN_H)0;
 
 	output.pos = mul(projection, mul(view, float4(input.pos, 1)));
-	output.height = 0.5;// (input.scalar - minMap) / (maxMap - minMap);
+	output.height = (input.scalar - minMap) / (maxMap - minMap);
 	//output.worldPos.z = 6;
 
 	return output;

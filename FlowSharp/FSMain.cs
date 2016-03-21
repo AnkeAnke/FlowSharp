@@ -38,7 +38,7 @@ namespace FlowSharp
 
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
-        static string locDataFolderSubstep = "E:/Anke/Dev/Data/ShaheenSubsteps/s";
+        static string locDataFolderSubstep = "B:/RedSeaSubsteps/s";
         static string locFileName = "/Posterior_Diag.nc";
         static string locFolderName = "/advance_temp";
         //        string locWFileName = ".0000000108.data";
@@ -239,6 +239,9 @@ namespace FlowSharp
 
             DataMapper ftle = new MapperFTLE(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.FTLE_CONCENTRIC, ftle);
+
+            DataMapper pathDist = new DistanceMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_DISTANCE, pathDist);
 
             DataMapper donut = new DonutAnalyzer(redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.DONUT_ANALYSIS, donut);

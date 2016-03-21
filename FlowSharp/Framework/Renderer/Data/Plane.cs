@@ -66,6 +66,15 @@ namespace FlowSharp
             PointSize = cpy.PointSize;
         }
 
+        public Plane(Plane cpy, float zScale)
+        {
+            Origin = cpy.Origin;
+            XAxis  = cpy.XAxis;
+            YAxis  = cpy.YAxis;
+            ZAxis  = cpy.ZAxis * zScale;
+            PointSize = cpy.PointSize;
+        }
+
         public Plane(Plane cpy)
         {
             Origin = cpy.Origin;

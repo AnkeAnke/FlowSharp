@@ -119,6 +119,7 @@ namespace FlowSharp
             LineLength = cpy.LineLength;
         }
         public Line() { }
+        public Line(int size) { Positions = new Vector3[size]; }
         public Vector3 this[int index] { get { return Positions[index]; } set { Positions[index] = value; } }
         public Vector3 Value(float index)
         {

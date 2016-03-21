@@ -351,6 +351,36 @@ namespace FlowSharp
             return Length - 1;
         }
 
+        public List<int> ThresholdBounds(float thresh)
+        {
+            List<int> result = new List<int>(16);
+            int p = 0;
+            for (; p < Length-1; ++p)
+            {
+                if ((Fx[p] - thresh) * (Fx[p+1] - thresh) <= 0 && !float.IsInfinity(Fx[p]) && !float.IsNaN(Fx[p]) && !float.IsInfinity(Fx[p+1]) && !float.IsNaN(Fx[p+1]))
+                {
+                    result.Add(p);
+                }
+            }
+
+            return result;
+        }
+
+        public List<int> ThresholdFronts(float thresh)
+        {
+            List<int> result = new List<int>(16);
+            int p = 0;
+            for (; p < Length - 1; ++p)
+            {
+                if ((Fx[p] < thresh) &&  (Fx[p + 1] > thresh) && !float.IsInfinity(Fx[p]) && !float.IsNaN(Fx[p]))
+                {
+                    result.Add(p);
+                }
+            }
+
+            return result;
+        }
+
         public int ThresholdRange(int min, int max, float thresh)
         {
             int p = Math.Max(0, min);

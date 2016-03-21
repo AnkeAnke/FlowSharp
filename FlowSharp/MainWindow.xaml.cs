@@ -88,8 +88,8 @@ namespace FlowSharp
 
             StepSizeSlider.Value = 0.5;
             StepSizeSlider.Minimum = 0.000001;
-            integrationTime.Value = 30;
-            AlphaSlider.Value = 12;
+            integrationTime.Value = 60;
+            AlphaSlider.Value = 3;
 
             DropDownMeasure.ItemsSource = Enum.GetValues(typeof(RedSea.Measure)).Cast<RedSea.Measure>();
             DropDownMeasure.SelectedIndex = (int)RedSea.Measure.VELOCITY;

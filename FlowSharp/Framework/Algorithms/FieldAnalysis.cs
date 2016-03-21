@@ -1076,16 +1076,192 @@ namespace FlowSharp
             return diff;
         }
 
+        public static LineSet FindBoundaryInErrors3(Graph2D[] errors, Vector3 center, /*float time,*/ float rangeForTracking = 4f)
+        {
+            float thresh = (errors[0].X[1] - errors[0].X[0]);
+            int maxDistR = (int)Math.Ceiling(rangeForTracking / thresh);
+            thresh *= 430;
+            Console.WriteLine("Threshold for boundary: {0}", thresh);
+
+            int numAngles = errors.Length;
+            //int stuckPoints = 0;
+            //bool[] stuck = new bool[errors.Length]; // Initial false.
+            int[] circleR = new int[numAngles];
+
+            bool somethingChanged = true;
+            int sign = 1;
+            // There is still points moving.
+            while (somethingChanged)
+            {
+                somethingChanged = false;
+                for (int a = 0; a < numAngles && a > -numAngles; a += sign)
+                {
+                    int angle = (a + numAngles) % numAngles;
+                    int current = circleR[angle];
+
+                    if (current < errors[angle].Length - 1 && errors[angle].Fx[current + 1] < thresh)
+                    {
+                        // We could o forward. What about our neighbors?
+                        current++;
+                        if (current - circleR[(angle - 1 + numAngles) % numAngles] < maxDistR &&
+                           current - circleR[(angle + 1) % numAngles] < maxDistR)
+                        {
+                            circleR[angle]++;
+                            somethingChanged = true;
+                        }
+                    }
+                }
+                sign = -sign;
+            }
+
+            Line bound = new Line(numAngles + 1);
+            for(int angle = 0; angle < numAngles; ++angle)
+            {
+                bound[angle] = SphericalPosition(center, (float)angle / numAngles, errors[angle].X[circleR[angle]]);
+            }
+            bound[bound.Length - 1] = bound[0];
+
+            return new LineSet(new Line[] { bound });
+        }
+        public static LineSet FindBoundaryInErrors2(Graph2D[] errors, Vector3 center, /*float time,*/ float rangeForTracking = 1f)
+        {
+            float threshold = (errors[0].X[1] - errors[0].X[0]) * 3; // The average point on the pathlines is 3 times further away than the seeds.
+   //         Line thresholded = new Line() { Positions = new Vector3[errors.Length + 1] };
+
+            // Find all switch points.
+            List<int>[] edges = new List<int>[errors.Length];
+            bool[][] edgeUsed = new bool[edges.Length][];
+            int unusedEdges = 0;
+            for (int err = 0; err < errors.Length; ++err)
+            {
+                edges[err] = errors[err].ThresholdFronts(threshold);
+                edgeUsed[err] = new bool[edges[err].Count];
+                unusedEdges += edges[err].Count;
+            }
+            List<List<Int2>> bows = new List<List<Int2>>(32);
+
+            // Connect fronts.
+            int a = 0; int e = 0;
+            while (unusedEdges > 0)
+            {
+                // Find first unused front.
+                for(; a < edges.Length; ++a)
+                {
+                    for(e = 0; e < edges[a].Count; ++e)
+                    {
+                        if(!edgeUsed[a][e])
+                        {
+                            edgeUsed[a][e] = true;
+                            unusedEdges--;
+                            goto Connect;
+                        }
+                    }
+                }
+
+                Connect:
+                var currentBow = new List<Int2>(errors.Length / 2);
+                
+                // Left and right turning.
+                for(int sign = -1; sign <= 1; sign += 2)
+                {
+                    // Okay.
+                    // a is angle (index between 0 and numSeeds),
+                    // e is index within edges (bewtween 0 and num edges on line)
+                    // x is index on error graph, radius
+                    int lastA = a; int lastE = e;
+                    while(true) // We will we will break you!
+                    {
+                        int dist = int.MaxValue;
+                        int nextX = -1;
+                        int lastX = edges[lastA][lastE];
+                        int nextA = (lastA + sign + errors.Length) % errors.Length;
+                        
+                        int nextE = 0;
+                        // Connect next edge.
+                        for (; nextE < edges[nextA].Count; ++nextE)
+                        {
+                            int thisDist = Math.Abs(edges[nextA][nextE] - edges[lastA][lastE]);
+                            if (thisDist < dist)
+                            {
+                                dist = thisDist;
+                                nextX = nextE;
+                            }
+                        }
+                        
+                        nextE = nextX;
+                        nextX = edges[nextA][nextE];
+                        // Close enought to consider?
+                        // Compute diagonal of trapeze.
+                        //float r0 = errors[a].X[edges[a][e]];
+                        //float r1 = errors[nextA].X[nearestE];
+                        //float dr = r1 - r0;
+                        //float s = (r1 - r0) * 0.5f;
+                        //float diag = (float)Math.Sqrt((r0+ s)*(r0+ s) + dr*dr - s * s);
+// THis is the real distance
+//                        float diag = (SphericalPosition(center, (float)nextA / errors.Length, errors[nextA].X[nextX]) - SphericalPosition(center, (float)lastA / errors.Length, errors[lastA].X[lastX])).Length();
+                        float diag = errors[nextA].X[nextX] - errors[lastA].X[lastX];
+                        // Connect to line?
+                        if (diag > rangeForTracking)
+                        {
+                            break;
+                        }
+
+                        currentBow.Add(new Int2(nextA, nextX));
+                        if (edgeUsed[nextA][nextE] == false)
+                        {
+                            edgeUsed[nextA][nextE] = true;
+                            unusedEdges--;
+                        }
+
+
+                        lastA = nextA;
+                        lastE = nextE;
+                    }
+
+                    // Reverse, so elements will be ordered increasing by a.
+                    if(sign == -1)
+                    {
+                        currentBow.Reverse();
+                    }
+                }
+
+                if(currentBow.Count > errors.Length / 50)
+                    bows.Add(currentBow);
+
+                Console.WriteLine("Edges not connected yet: {0}", unusedEdges);
+            }
+
+            // Now, we have the bows. Connect them in a useful manner.
+
+            // T  O  D  O
+
+            // Make circular.
+            //    thresholded[thresholded.Length - 1] = thresholded[0];
+
+            //    return new LineSet(new Line[] { thresholded });
+            Line[] lines = new Line[bows.Count];
+            for(int b = 0; b < lines.Length; ++b)
+            {
+                lines[b] = new Line() { Positions = new Vector3[bows[b].Count] };
+                for(int p = 0; p < lines[b].Length; ++p)
+                {
+                    Int2 spherePos = bows[b][p];
+                    lines[b][p] = SphericalPosition(center, (float)spherePos.X / errors.Length, errors[spherePos.X].X[spherePos.Y]);
+                }
+            }
+            return new LineSet(lines);
+        }
+
         public static LineSet FindBoundaryInErrors(Graph2D[] errors, Vector3 center, /*float time,*/ float rangeForTracking = 0.5f)
         {
-            float threshold = 1f;
+            float threshold = 100f/errors[0].Length; // 
             Line thresholded = new Line() { Positions = new Vector3[errors.Length + 1] };
             int tLast = 0;
             for(int e = 0; e < errors.Length; ++e)
             {
                 int t = errors[e].Threshold(threshold);
 
-                if (e > 0 && Math.Abs(t - tLast) > 20)
+                if (e > 0 && Math.Abs(t - tLast) > 10)
                 {
                     t = errors[e].ThresholdRange(tLast - 20, tLast + 20, threshold*0.75f);
                 }
