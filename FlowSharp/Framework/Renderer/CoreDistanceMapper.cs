@@ -1533,7 +1533,7 @@ namespace FlowSharp
         //{
         //}
 
-        protected LineSet IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, float time = 0)
+        protected LineSet IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, int time = 0)
         {
             // ~~~~~~~~~~~~~~~~~~ Initialize seed points. ~~~~~~~~~~~~~~~~~~~~ \\
             PointSet<Point> circle = new PointSet<Point>(new Point[radii.Length * angles.Length]);
@@ -1561,15 +1561,15 @@ namespace FlowSharp
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
             #region IntegratePathlines
             // Do we need to load a field first?
-            if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
-                LoadField(SliceTimeMain, MemberMain);
+            if (_velocity.TimeOrigin > time || _velocity.TimeOrigin + _velocity.Size.T < time)
+                LoadField(time, MemberMain);
 
             // Integrate first few steps.
             pathlineIntegrator.Field = _velocity;
             pathlines = pathlineIntegrator.Integrate(circle, false)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
-            float timeLength = STEPS_IN_MEMORY * 3 - 2/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + SliceTimeMain;
+            float timeLength = STEPS_IN_MEMORY * 3 - 2/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + time;
             while (_currentEndStep + 1 < timeLength)
             {
                 // Don't load more steps than we need to!
@@ -1618,97 +1618,107 @@ namespace FlowSharp
         /// </summary>
         protected override void FindBoundary()
         {
-            /*
-            if(not jet loaded)
-	            if(file does not exist)
-	            {
-	                Integrate Lines
-	                Compute ErrorFkt
-	                Find Boundary
-	            }
-	            else
-	                loadFile
+            if (LineX <= 0)
+                return;
+            int step = 0;
 
-            */
-            // Initialize the tube.
-            if (!_started && LineX > 0)
+            AllSteps:
+            for (; step < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep; ++step)
             {
-                _started = true;
-                _tube = new List<Line>(RedSea.Singleton.NumSubstepsTotal);
-
-                string ending = "Bound_" + _numSeeds + '_' + AlphaStable + '_' + _lengthRadius + '_' + StepSize + '_' + _methode + "_*.ring";
-
-                string[] files = System.IO.Directory.GetFiles(RedSea.Singleton.RingFileName, ending);
-                foreach (string path in files)
-                {
-                    int startTimeStep = path.LastIndexOf('_') + 1;
-                    string nr = "";
-                    while (char.IsDigit(path[startTimeStep]))
+                Console.WriteLine("Started looking for boundry in step {0}/{1}.", step, RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep);
+                /*
+                if(not jet loaded)
+                    if(file does not exist)
                     {
-                        nr += path[startTimeStep++];
+                        Integrate Lines
+                        Compute ErrorFkt
+                        Find Boundary
                     }
-                    int timestep = int.Parse(nr);
+                    else
+                        loadFile
 
-                    LineSet line;
-                    GeometryWriter.ReadFromFile(path, out line);
+                */
+                // Initialize the tube.
+                if (!_started && LineX > 0)
+                {
+                    _started = true;
+                    _tube = new List<Line>(RedSea.Singleton.NumSubstepsTotal);
 
-                    Debug.Assert(line.Length == 1);
-                    Debug.Assert(line[0].Length == _numSeeds + 1);
+                    string ending = "Bound_" + _numSeeds + '_' + AlphaStable + '_' + _lengthRadius + '_' + StepSize + '_' + _methode + "_*.ring";
 
-                    // We map the height differently for all _everyNthStep values, since 2 slices are always 1 apart. 
-                    if(line[0][0].Z != timestep)
+                    string[] files = System.IO.Directory.GetFiles(RedSea.Singleton.RingFileName, ending);
+                    foreach (string path in files)
                     {
-                        for (int p = 0; p < line[0].Length; ++p)
+                        int startTimeStep = path.LastIndexOf('_') + 1;
+                        string nr = "";
+                        while (char.IsDigit(path[startTimeStep]))
                         {
-                            line[0].Positions[p].Z = timestep;
+                            nr += path[startTimeStep++];
                         }
-                        // Now, write it out to save the effort next time.
-                        GeometryWriter.WriteToFile(path, line);
+                        int timestep = int.Parse(nr);
+
+                        LineSet line;
+                        GeometryWriter.ReadFromFile(path, out line);
+
+                        Debug.Assert(line.Length == 1);
+                        Debug.Assert(line[0].Length == _numSeeds + 1);
+
+                        // We map the height differently for all _everyNthStep values, since 2 slices are always 1 apart. 
+                        if (line[0][0].Z != timestep)
+                        {
+                            for (int p = 0; p < line[0].Length; ++p)
+                            {
+                                line[0].Positions[p].Z = timestep;
+                            }
+                            // Now, write it out to save the effort next time.
+                            GeometryWriter.WriteToFile(path, line);
+                        }
+
+                        _tube.Add(line[0]);
                     }
 
-                    _tube.Add(line[0]);
+                    TubeToRenderables();
                 }
 
-                TubeToRenderables();
-            }
-
-            // For currently set time step: Loaded something yet?
-            int timeStep = SliceTimeMain * _everyNthTimestep;
-            foreach (Line l in _tube)
-            {
-                if (l.Length > 0 && l[0].Z == timeStep)
+                // For currently set time step: Loaded something yet?
+                int timeStep = step * _everyNthTimestep;
+                foreach (Line l in _tube)
                 {
-                    Console.WriteLine("Already loaded this file :3");
-                    return;
+                    if (l.Length > 0 && l[0].Z == timeStep)
+                    {
+                        Console.WriteLine("Already loaded this file :3");
+                        step++;
+                        goto AllSteps;
+                    }
                 }
+
+                float angleDiff = (float)((Math.PI * 2) / _numSeeds);
+                float[] offsets = new float[LineX];
+                float[] angles = new float[_numSeeds];
+                for (int seed = 0; seed < _numSeeds; ++seed)
+                {
+                    float angle = seed * angleDiff;
+                    angles[seed] = angle;
+                }
+                for (int o = 0; o < LineX; ++o)
+                {
+                    offsets[o] = AlphaStable + o * _lengthRadius / (LineX - 1);
+
+                }
+
+                _pathlinesTime = IntegrateCircles(offsets, angles, out _distanceAngleGraph, step);
+                _rebuilt = true;
+                Console.WriteLine("Integrated!");
+                _distanceDistance = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph);
+
+
+                // Boundary adding.
+                Line boundary = Boundary(timeStep);
+                _tube.Add(boundary);
+
             }
-
-            float angleDiff = (float)((Math.PI * 2) / _numSeeds);
-            float[] offsets = new float[LineX];
-            float[] angles = new float[_numSeeds];
-            for (int seed = 0; seed < _numSeeds; ++seed)
-            {
-                float angle = seed * angleDiff;
-                angles[seed] = angle;
-            }
-            for (int o = 0; o < LineX; ++o)
-            {
-                offsets[o] = AlphaStable + o * _lengthRadius / (LineX - 1);
-
-            }
-
-            _pathlinesTime = IntegrateCircles(offsets, angles, out _distanceAngleGraph, SliceTimeMain);
-            _rebuilt = true;
-
-            _distanceDistance = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph);
-
-
-            // Boundary adding.
-            Line boundary = Boundary(timeStep);
-            _tube.Add(boundary);
 
             TubeToRenderables();
-
         }
 
         protected void TubeToRenderables()
@@ -1770,7 +1780,7 @@ namespace FlowSharp
             }
 
             // Do whatever this methode does.
-            LineSet line = FieldAnalysis.FindBoundaryInErrors3(_errorGraph, new Vector3(_selection, SliceTimeMain));
+            LineSet line = FieldAnalysis.FindBoundaryInErrors3(_errorGraph, new Vector3(_selection, timestep));
             
             string ending = "Bound_" + _numSeeds + '_' + AlphaStable + '_' + _lengthRadius + '_' + StepSize + '_' + _methode + '_' + timestep + ".ring";
 
@@ -1866,7 +1876,7 @@ namespace FlowSharp
         //{
         //}
 
-        protected LineSet IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, float time = 0)
+        protected LineSet IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, int time = 0)
         {
             // ~~~~~~~~~~~~~~~~~~ Initialize seed points. ~~~~~~~~~~~~~~~~~~~~ \\
             PointSet<Point> circle = new PointSet<Point>(new Point[radii.Length * angles.Length]);
@@ -1895,15 +1905,15 @@ namespace FlowSharp
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
             #region IntegratePathlines
             // Do we need to load a field first?
-            if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
-                LoadField(SliceTimeMain, MemberMain);
+            if (_velocity.TimeOrigin > time || _velocity.TimeOrigin + _velocity.Size.T < time)
+                LoadField(time, MemberMain);
 
             // Integrate first few steps.
             pathlineIntegrator.Field = _velocity;
             pathlines = pathlineIntegrator.Integrate(circle, false)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
-            float timeLength = STEPS_IN_MEMORY * 2 - 1/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + SliceTimeMain;
+            float timeLength = STEPS_IN_MEMORY * 2 - 1/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + time;
             while (_currentEndStep + 1 < timeLength)
             {
                 // Don't load more steps than we need to!
