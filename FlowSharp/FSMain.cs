@@ -38,7 +38,7 @@ namespace FlowSharp
 
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
-        static string locDataFolderSubstep = "B:/RedSeaSubsteps/s";
+        static string locDataFolderSubstep = "E:/Anke/Dev/Data/ShaheenSubsteps/s";
         static string locFileName = "/Posterior_Diag.nc";
         static string locFolderName = "/advance_temp";
         //        string locWFileName = ".0000000108.data";
@@ -59,8 +59,8 @@ namespace FlowSharp
             {
                 var loader = new LoaderRaw(var);
                 loader.Range.SetMember(RedSea.Dimension.TIME, step);
-                loader.Range.SetMember(RedSea.Dimension.SUBTIME, substep??0);
-                loader.Range.SetMember(RedSea.Dimension.MEMBER, member??0);
+                loader.Range.SetMember(RedSea.Dimension.SUBTIME, substep ?? 0);
+                loader.Range.SetMember(RedSea.Dimension.MEMBER, member ?? 0);
                 return loader;
             }
             else
@@ -76,22 +76,22 @@ namespace FlowSharp
             // Look for raw file.
             //if (substep != null || var == RedSea.Variable.VELOCITY_Z)
             //{
-                substep = substep ?? 0;
-                dir = locDataFolderSubstep + (step + 1);
+            substep = substep ?? 0;
+            dir = locDataFolderSubstep + (step + 1);
 
-                // Not the W case: go into the inner folder.
-                if (substep != null)
-                    dir += locFolderName + member + '/';
+            // Not the W case: go into the inner folder.
+            if (substep != null)
+                dir += locFolderName + member + '/';
 
             //string filename = RedSea.GetShortName(var) + ".0*" + (substep + 1) + ".data_scaled_end";
             Console.WriteLine("Step {0}, Substep {1}", step, substep);
-                int numZeros = 10 - (substep == 0? 1 : (int)(Math.Log10((int)substep*9) + 1));
-                string filename = RedSea.GetShortName(var) + "." + new string('0', numZeros) + (substep*9) + ".data";
+            int numZeros = 10 - (substep == 0 ? 1 : (int)(Math.Log10((int)substep * 9) + 1));
+            string filename = RedSea.GetShortName(var) + "." + new string('0', numZeros) + (substep * 9) + ".data";
             Console.WriteLine(filename);
-                string[] rawDirs = Directory.GetFiles(dir, filename, SearchOption.TopDirectoryOnly);
-                Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
+            string[] rawDirs = Directory.GetFiles(dir, filename, SearchOption.TopDirectoryOnly);
+            Debug.Assert(rawDirs.Length == 1, "Exactly one matching file expected!");
 
-                return rawDirs[0];
+            return rawDirs[0];
             //}
             //else
             //{
@@ -102,11 +102,16 @@ namespace FlowSharp
 
         public static void LoadData()
         {
+            System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
+            customCulture.NumberFormat.NumberDecimalSeparator = ".";
+
+            System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
+
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
             bool loadData = true;
 
-            int numTimeSlices =  60;
+            int numTimeSlices = 60;
             RedSea.Singleton.NumTimeSlices = numTimeSlices;
             //string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
             //string locFileName = "/Posterior_Diag.nc";
@@ -159,6 +164,10 @@ namespace FlowSharp
             rawV.SetMember(RedSea.Dimension.MEMBER, 0);
             rawV.SetMember(RedSea.Dimension.SUBTIME, 0);
 
+
+            rawU.SetMember(RedSea.Dimension.TIME, 40);
+                                                  
+            rawV.SetMember(RedSea.Dimension.TIME, 40);
             //ncFile.Close();
 
 
@@ -175,27 +184,30 @@ namespace FlowSharp
             //    //velocity = Tests.CreatePathlineSpiral(99, 100, 2);
             //    velocity.ScaleToGrid(new Vec2(RedSea.Singleton.DomainScale));
             //}
-            
+
 
             Console.WriteLine("Completed loading data.");
 
             CriticalPointSet2D[] cps = new CriticalPointSet2D[numTimeSlices];
             for (int time = 0; time < numTimeSlices; ++time)
             {
-//                cps[time] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocity.GetTimeSlice(time), 5, 0.3f);
-//                cps[time].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet();
+                //                cps[time] = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(velocity.GetTimeSlice(time), 5, 0.3f);
+                //                cps[time].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet();
 
                 Console.WriteLine("Completed processing step " + time + '.');
             }
 
-            redSea = new Plane(new Vector3(-10,-3, -5), Vector3.UnitX*0.1f, Vector3.UnitY*0.1f, -Vector3.UnitZ, 0.4f/*10f/size*/, 0.1f);
+            redSea = new Plane(new Vector3(-10, -3, -5), Vector3.UnitX * 0.1f, Vector3.UnitY * 0.1f, -Vector3.UnitZ, 0.4f/*10f/size*/, 0.1f);
             //            mapperCP = new CriticalPointTracking(cps, velocity, redSea);
             //Console.WriteLine("Found CP.");
             //mapperPathCore = new PathlineCoreTracking(velocity, redSea);
             //Console.WriteLine("Found Pathline Cores.");
             mapperComparison = new MemberComparison(/*new LoaderNCF.SliceRange[] { sliceU, sliceV },*/ redSea);
-            //mapperOW = new OkuboWeiss(velocity, redSea);
-            //Console.WriteLine("Computed Okubo-Weiss.");
+            if (velocity != null)
+            {
+                mapperOW = new OkuboWeiss(velocity, redSea);
+                Console.WriteLine("Computed Okubo-Weiss.");
+            }
 
 
             Console.WriteLine("Computed all data necessary.");
@@ -234,8 +246,11 @@ namespace FlowSharp
             DataMapper predCoreDistance = new PredictedCoreDistanceMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PREDICTOR_CORE_ANGLE, predCoreDistance);
 
-            DataMapper circleCoreDistance = new ConcentricTubeMapper(12, redSea);
+            DataMapper circleCoreDistance = new ConcentricDistanceMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.CONCENTRIC_DISTANCE, circleCoreDistance);
+
+            DataMapper circleCoreTube = new ConcentricTubeMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.CONCENTRIC_TUBE, circleCoreTube);
 
             DataMapper ftle = new MapperFTLE(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.FTLE_CONCENTRIC, ftle);
@@ -249,15 +264,17 @@ namespace FlowSharp
             if (mapperOW != null)
                 RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_WEISS, mapperOW);
 
+            RedSea.Singleton.SetMapper(RedSea.Display.PLAYGROUND, new PlaygroundMapper(redSea));
+
             //FieldAnalysis.AlphaStableFFF = 0;
             //var f = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
             //Renderer.Singleton.AddRenderable(new FieldPlane(redSea, f.GetSlice(0), FieldPlane.RenderEffect.LIC));
-            Random rnd = new Random();
-            SquareMatrix x = new SquareMatrix(2);
-            x.m00 = /*(float)rnd.NextDouble();//*/0.8f;
-            x.m10 = /*(float)rnd.NextDouble();//*/-0.8f;
-            x.m01 = /*(float)rnd.NextDouble();//*/-0.3f;
-            x.m11 = /*(float)rnd.NextDouble();//*/1.6f;
+            //Random rnd = new Random();
+            //SquareMatrix x = new SquareMatrix(2);
+            //x.m00 = /*(float)rnd.NextDouble();//*/0.8f;
+            //x.m10 = /*(float)rnd.NextDouble();//*/-0.8f;
+            //x.m01 = /*(float)rnd.NextDouble();//*/-0.3f;
+            //x.m11 = /*(float)rnd.NextDouble();//*/1.6f;
 
             //SquareMatrix xT = x.Transposed();
             //SquareMatrix cauchy =  xT* x;

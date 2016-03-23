@@ -935,7 +935,7 @@ namespace FlowSharp
                 }
                 else
                 {
-                    result[l] = new Graph2D(new float[0], new float[0]) { Offset = 2 * result[l - 1].Offset - result[l - 2].Offset };
+                    result[l] = new Graph2D(new float[0], new float[0]) { Offset = 2 * result[(l - 1 + result.Length) % result.Length].Offset - result[(l - 2 + result.Length) % result.Length].Offset };
                 }
 
             }
@@ -1061,13 +1061,13 @@ namespace FlowSharp
             return new LineSet(lines);
         }
 
-        public static Graph2D[] GraphDifferenceForward(Graph2D[] vals)
+        public static Graph2D[] GraphDifferenceForward(Graph2D[] vals, bool forward = true)
         {
             Graph2D[] diff = new Graph2D[vals.Length - 1];
             for (int v = 0; v < vals.Length - 1; ++v)
             {
                 // Make sure that the radius is still correct.
-                diff[v] = Graph2D.Distance(vals[v + 1], vals[v]);
+                diff[v] = Graph2D.Distance(vals[v + 1], vals[v], forward);
                 //if (diff[v].Length > 0 && float.IsNaN(diff[v].Fx[0]))
                 //    Console.WriteLine("NaN NaN NaN NaN NaN Batman!");
                 diff[v].Offset = vals[v].Offset;

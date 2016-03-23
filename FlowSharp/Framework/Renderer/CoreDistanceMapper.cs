@@ -371,7 +371,7 @@ namespace FlowSharp
                 }
                 if (_selectedCore != -1)
                 {
-                    _cores[_selectedCore] = new Line() { Positions = new Vector3[] { selection3D, selection3D + Vector3.UnitZ * (RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - SliceTimeMain) } };
+                    _cores[_selectedCore] = new Line() { Positions = new Vector3[] { new Vector3(_selection.X, _selection.Y, 0), selection3D + Vector3.UnitZ * (RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - SliceTimeMain) } };
                     _coreBall = new LineBall(_linePlane, new LineSet(new Line[] { _cores[_selectedCore] }) { Color = new Vector3(0.8f, 0.1f, 0.1f), Thickness = 0.3f });
                 }
                 Debug.Assert(_selectedCore >= 0 && _selectedCore < _cores.Length, "The nearest core is invalid.");
@@ -1863,6 +1863,8 @@ namespace FlowSharp
             }
         }
 
+        protected static int TIME_RANGE = -60;
+
         protected Graph2D[] _distanceAngleGraph;
         protected Graph2D[] _errorGraph;
         protected bool _rebuilt = false;
@@ -1876,7 +1878,7 @@ namespace FlowSharp
         //{
         //}
 
-        protected LineSet IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, int time = 0)
+        protected void IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, int time = 0)
         {
             // ~~~~~~~~~~~~~~~~~~ Initialize seed points. ~~~~~~~~~~~~~~~~~~~~ \\
             PointSet<Point> circle = new PointSet<Point>(new Point[radii.Length * angles.Length]);
@@ -1896,8 +1898,8 @@ namespace FlowSharp
             // ~~~~~~~~~~~~ Integrate Pathlines and Adapt ~~~~~~~~~~~~~~~~~~~~~~~~ \\
             // Setup integrator.
             Integrator pathlineIntegrator = Integrator.CreateIntegrator(null, IntegrationType, _cores[_selectedCore], _repulsion);
+            pathlineIntegrator.Direction = Sign.NEGATIVE;
             pathlineIntegrator.StepSize = StepSize;
-            LineSet pathlines;
 
             // Count out the runs for debugging.
             int run = 0;
@@ -1906,24 +1908,42 @@ namespace FlowSharp
             #region IntegratePathlines
             // Do we need to load a field first?
             if (_velocity.TimeOrigin > time || _velocity.TimeOrigin + _velocity.Size.T < time)
-                LoadField(time, MemberMain);
+                LoadField(time+1-STEPS_IN_MEMORY, MemberMain);
 
             // Integrate first few steps.
             pathlineIntegrator.Field = _velocity;
-            pathlines = pathlineIntegrator.Integrate(circle, false)[0];
+            _pathlinesTime = pathlineIntegrator.Integrate(circle, false)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
-            float timeLength = STEPS_IN_MEMORY * 2 - 1/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + time;
-            while (_currentEndStep + 1 < timeLength)
-            {
-                // Don't load more steps than we need to!
-                int numSteps = (int)Math.Min(timeLength - _currentEndStep, STEPS_IN_MEMORY);
-                pathlineIntegrator.Field = null;
-                LoadField(_currentEndStep, MemberMain, numSteps);
+            float timeLength = (int)Math.Min(Math.Max(time + TIME_RANGE, 0), RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep );
 
-                // Integrate further.
-                pathlineIntegrator.Field = _velocity;
-                pathlineIntegrator.IntegrateFurther(pathlines);
+            if (TIME_RANGE < 0)
+            {
+                while (_velocity.TimeOrigin - 1 > timeLength)
+                {
+                    // Don't load more steps than we need to!
+                    int numSteps = (int)Math.Min((int)_velocity.TimeOrigin - timeLength, STEPS_IN_MEMORY);
+                    pathlineIntegrator.Field = null;
+                    LoadField((int)_velocity.TimeOrigin - numSteps + 1, MemberMain, numSteps);
+
+                    // Integrate further.
+                    pathlineIntegrator.Field = _velocity;
+                    pathlineIntegrator.IntegrateFurther(_pathlinesTime);
+                }
+            }
+            else
+            {
+                while (_currentEndStep + 1 < timeLength)
+                {
+                    // Don't load more steps than we need to!
+                    int numSteps = (int)Math.Min(timeLength - _currentEndStep, STEPS_IN_MEMORY);
+                    pathlineIntegrator.Field = null;
+                    LoadField(_currentEndStep, MemberMain, numSteps);
+
+                    // Integrate further.
+                    pathlineIntegrator.Field = _velocity;
+                    pathlineIntegrator.IntegrateFurther(_pathlinesTime);
+                }
             }
             #endregion IntegratePathlines
 
@@ -1932,10 +1952,10 @@ namespace FlowSharp
             // The two needes functions.
             //Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, true);
             //Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, false);
-            graph = FieldAnalysis.GetDistanceToAngle(_cores[_selectedCore], _selection, pathlines);
+            graph = FieldAnalysis.GetDistanceToAngle(_cores[_selectedCore], _selection, _pathlinesTime);
             //graph[0].CutGraph((float)(Math.PI * 2));
             //Array.Resize(ref pathlines[0].Positions, graph[0].Length);
-            FieldAnalysis.WriteXToLinesetAttribute(pathlines, graph);
+            FieldAnalysis.WriteXToLinesetAttribute(_pathlinesTime, graph);
 
             #endregion GetBoundary
             //LineSet[] subsets = new LineSet[angles.Length];
@@ -1944,7 +1964,7 @@ namespace FlowSharp
             //    subsets[s] = new LineSet(pathlines, s * radii.Length, radii.Length);
             //}
             //return subsets;
-            return pathlines;
+ //           return pathlines;
 
 
 
@@ -1973,10 +1993,10 @@ namespace FlowSharp
 
             }
 
-            _pathlinesTime = IntegrateCircles(offsets, angles, out _distanceAngleGraph, SliceTimeMain);
+            IntegrateCircles(offsets, angles, out _distanceAngleGraph, SliceTimeMain);
             _rebuilt = true;
 
-            _distanceDistance = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph);
+            _distanceDistance = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph, TIME_RANGE > 0);
             BuildGraph();
         }
         protected void BuildGraph()
@@ -1999,18 +2019,16 @@ namespace FlowSharp
                     int index = seed * LineX + e;
                     if (_distanceDistance[index].Length <= 1)
                     {
-                        fx[e] = float.MaxValue;
+                        fx[e] = cutValue * 1.5f;
                         x[e] = _distanceDistance[index].Offset;
                     }
                     else
                     {
                         fx[e] = _distanceDistance[index].RelativeSumOver(IntegrationTime);// / _distanceDistance[index].Length;
                         x[e] = _distanceDistance[index].Offset;
-                        if (fx[e] > cutValue)
+                        if (fx[e] > cutValue || float.IsNaN(fx[e]) || float.IsInfinity(fx[e]))
                         {
-                            Array.Resize(ref fx, e);
-                            Array.Resize(ref x, e);
-                            break;
+                            fx[e] = -1;
                         }
                     }
                 }
@@ -2036,10 +2054,10 @@ namespace FlowSharp
 
             //if (errorBound >= 0)
             //    _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + errorBound][0]));
-            GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
-            Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
-            //   _graphPlane.ZAxis = Plane.ZAxis * WindowWidth;
-            _boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
+            //GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
+            //Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
+            ////   _graphPlane.ZAxis = Plane.ZAxis * WindowWidth;
+            //_boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
             //LineSet lineCpy = new LineSet(_pathlinesTime);
             //lineCpy.CutAllHeight(_repulsion);
             //_pathlines = new LineBall(_linePlane, lineCpy, LineBall.RenderEffect.HEIGHT, Colormap, false);
@@ -2047,10 +2065,13 @@ namespace FlowSharp
             //_pathlinesTime.Cut(errorBound);
             // ~~~~~~~~~~~~ Get Boundary for Rendering ~~~~~~~~~~~~ \\
 
-            // _pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
+            _pathlines = new LineBall(_graphPlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
 
             // _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
             _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, Flat);
+            LineSet line = FieldAnalysis.FindBoundaryInErrors3(_errorGraph, new Vector3(_selection, SliceTimeMain));
+            line.Thickness *= 0.5f;
+            _boundaryBallSpacetime = new LineBall(_linePlane, line, LineBall.RenderEffect.HEIGHT, Colormap, false);
 
             _rebuilt = false;
         }
@@ -2114,7 +2135,7 @@ namespace FlowSharp
                 angles[o] = 0;
             }
 
-            _pathlinesTime = IntegrateCircles(offsets, angles, out _distanceAngleGraph, SliceTimeMain);
+            IntegrateCircles(offsets, angles, out _distanceAngleGraph, SliceTimeMain);
 
             // ~~~~~~~~~~~~ Get Boundary for Rendering~~~~~~~~~~~~~~~~~~~~~~~~ \\
             _pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);

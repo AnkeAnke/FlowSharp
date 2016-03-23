@@ -104,7 +104,9 @@ namespace FlowSharp
             PREDICTOR_CORE_ANGLE,
             CONCENTRIC_DISTANCE,
             FTLE_CONCENTRIC,
-            PATHLINE_DISTANCE
+            PATHLINE_DISTANCE,
+            CONCENTRIC_TUBE,
+            PLAYGROUND
         }
 
         public enum DisplayLines : int

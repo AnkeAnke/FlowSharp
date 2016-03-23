@@ -264,6 +264,61 @@ namespace FlowSharp
             }
             return new Graph2D(x, fx);
         }
+
+        protected static Graph2D OperateBackwards(Graph2D g0, Graph2D g1, ValueOperator func)
+        {
+            if (g0.Length == 0 || g1.Length == 0)
+            {
+                return new Graph2D(new float[0], new float[0]) { Offset = 0 };
+            }
+            float[] x = new float[g0.Length + g1.Length];
+            float[] fx = new float[x.Length];
+
+            int p0 = 0; int p1 = 0; int pCount = 0;
+            if (g0.X[0] > g1.X[0])
+            {
+                p0 = g0.GetLastBelowX(g1.X[0]) + 1;
+            }
+            if (g1.X[0] > g0.X[0])
+            {
+                p1 = g1.GetLastBelowX(g0.X[0]) + 1;
+            }
+
+            float maxX = Math.Min(g0.X[g0.Length - 1], g1.X[g1.Length - 1]);
+            // Interleave
+            while (p0 < g0.Length && p1 < g1.Length)
+            {
+                float v0 = p0 < g0.Length ? g0.X[p0] : float.MaxValue;
+                float v1 = p1 < g1.Length ? g1.X[p1] : float.MaxValue;
+
+                if (v0 > v1)
+                {
+                    x[pCount] = v0;
+                    fx[pCount] = func(g1.Sample(v0), g0.Fx[p0]);
+                    p0++;
+                }
+                if (v0 < v1)
+                {
+                    x[pCount] = v1;
+                    fx[pCount] = func(g1.Fx[p1], g0.Sample(v1));
+                    p1++;
+                }
+                if (v0 == v1)
+                {
+                    x[pCount] = v0;
+                    fx[pCount] = func(g1.Fx[p1], g0.Fx[p0]);
+                    p0++; p1++;
+                }
+
+                ++pCount;
+            }
+            if (pCount < x.Length)
+            {
+                Array.Resize(ref x, pCount);
+                Array.Resize(ref fx, pCount);
+            }
+            return new Graph2D(x, fx);
+        }
         public static Graph2D operator -(Graph2D g0, Graph2D g1)
         {
             return Operate(g0, g1, (a, b) => (a - b));
@@ -273,9 +328,11 @@ namespace FlowSharp
             return Operate(g0, g1, (a, b) => (a + b));
         }
 
-        public static Graph2D Distance(Graph2D a, Graph2D b)
+        public static Graph2D Distance(Graph2D a, Graph2D b, bool forward = true)
         {
-            return Operate(a, b, (x, y) => ((x - y) * (x - y)));
+            if(forward)
+                return Operate(a, b, (x, y) => ((x - y) * (x - y)));
+            return OperateBackwards(a, b, (x, y) => ((x - y) * (x - y)));
         }
 
         public float Sum()
