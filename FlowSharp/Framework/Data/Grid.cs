@@ -173,7 +173,7 @@ namespace FlowSharp
 
             Vector position = new Vector(pos);
 
-            Debug.Assert(InGrid(position));
+            Debug.Assert(InGrid(position) || ((Vector)Size + Origin - pos).Min() == 0);
 
             Index gridPos = Index.Min((Index)(position - Origin), Size - new Index(1, Size.Length));
             Vector relativePos = position - Origin - (Vector)gridPos;

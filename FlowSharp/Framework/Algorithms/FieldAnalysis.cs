@@ -204,6 +204,13 @@ namespace FlowSharp
         /// <returns></returns>
         public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2D(VectorField field, int numDivisions = 5, float? pointSize = null, float epsCriticalPoint = 0.00000001f)
         {
+            Int2 x = new Int2(0, field.Size[0]);
+            Int2 y = new Int2(0, field.Size[1]);
+            return ComputeCriticalPointsRegularSubdivision2DRange(field, x, y, numDivisions, pointSize, epsCriticalPoint);
+        }
+
+        public static CriticalPointSet2D ComputeCriticalPointsRegularSubdivision2DRange(VectorField field, Int2 xRange, Int2 yRange, int numDivisions = 5, float? pointSize = null, float epsCriticalPoint = 0.00000001f)
+        {
             // Only for rectlinear grids.
             RectlinearGrid grid = field.Grid as RectlinearGrid;
             Debug.Assert(grid != null);
@@ -214,12 +221,14 @@ namespace FlowSharp
             List<Vector> cellList = new List<Vector>(6);
             Vector halfCell = new Vector(0.5f, 2);
             //Index numCells = field.Size - new Index(1, field.Size.Length);
-            for (int x = 0; x < field.Size[0] - 1; ++x)
-                for (int y = 0; y < field.Size[1] - 1; ++y) // Doing the y++ down at the end.
+            for (int x = xRange.X; x < xRange.Y - 1; ++x)
+                for (int y = yRange.X; y < yRange.Y - 1; ++y) // Doing the y++ down at the end.
                 {
                     //if (x == 362 && y == 32)
                     //    Console.WriteLine("eiwoe;");
-                    SubdivideCell(field, new Vec2(x, y), 0, numDivisions, cellList);
+                    Vec2 xy = new Vec2(x, y);
+                    if (field.Grid.InGrid(xy))
+                        SubdivideCell(field, xy, 0, numDivisions, cellList);
 
                     // Only take one CP per cell.
                     // TODO: One for each CP type.

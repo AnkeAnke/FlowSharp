@@ -106,6 +106,9 @@ namespace FlowSharp
             DropDownColormap.ItemsSource = Enum.GetValues(typeof(Colormap)).Cast<Colormap>();
             DropDownColormap.SelectedIndex = (int)Colormap.Parula;
 
+            DropDownCore.ItemsSource = Enum.GetValues(typeof(DataMapper.CoreAlgorithm)).Cast<DataMapper.CoreAlgorithm>();
+            DropDownColormap.SelectedIndex = 0;
+
             VarX.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
             VarX.SelectedIndex = 0;
             VarY.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
@@ -152,6 +155,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.DimY] = MatrixBox;
             _windowObjects[(int)DataMapper.Setting.Element.Flat] = DisplayFlat;
             _windowObjects[(int)DataMapper.Setting.Element.Graph] = ShowGraph;
+            _windowObjects[(int)DataMapper.Setting.Element.Core] = DropDownCore;
 
             Renderer.Singleton.SetCanvas(DX11Display);
         }
@@ -273,6 +277,13 @@ namespace FlowSharp
         {
             var comboBox = sender as ComboBox;
             _mapper.CurrentSetting.IntegrationType = (VectorField.Integrator.Type)(comboBox.SelectedItem as VectorField.Integrator.Type?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeCore(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            _mapper.CurrentSetting.Core = (DataMapper.CoreAlgorithm)(comboBox.SelectedItem as DataMapper.CoreAlgorithm?);
             UpdateRenderer();
         }
 

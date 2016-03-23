@@ -115,7 +115,7 @@ namespace FlowSharp
             int scalars = outputDim;
             FieldGrid gridCopy = field._scalarsUnsteady[0].TimeSlices[0].Grid.Copy();
             _scalarsUnsteady = new ScalarFieldUnsteady[outputDim];
-
+            
             // Reserve the space.
             for (int comp = 0; comp < outputDim; ++comp)
             {
