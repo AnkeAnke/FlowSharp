@@ -11,6 +11,14 @@ namespace FlowSharp
 {
     abstract class DataMapper
     {
+        public enum CoreAlgorithm
+        {
+            CLICK,
+            STREAMLINE,
+            ROUGH_STREAM_CONNECTION,
+            PATHLINE
+        };
+
         /// <summary>
         /// One function will generate a set of renderables based on the set parameters. Corresponds to the Disply/Preset setting.
         /// </summary>
@@ -149,11 +157,23 @@ namespace FlowSharp
                     break;
             }
             field = new VectorField(scalars);
+
+
+            loader.Range.SetMember(RedSea.Dimension.TIME, time+1);
+            var x = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
+            var y = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
+            ScalarFieldUnsteady xS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], x });
+            xS.DoNotScale();
+            ScalarFieldUnsteady yS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], y });
+            yS.DoNotScale();
+            VectorFieldUnsteady twoSlices = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { xS, yS });
+            Console.WriteLine("Remooove meeeeee!");
+            VectorFieldUnsteady awriuwergioaheosiohlbyuygowgfuyvbui = new VectorFieldUnsteady(twoSlices, FieldAnalysis.Acceleration, 2);
             field.TimeSlice = timeOffset ? time * RedSea.Singleton.NumSubsteps + subtime/*time + (float)subtime / RedSea.Singleton.NumSubsteps*/ : 0;
             // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
             RectlinearGrid grid = field.Grid as RectlinearGrid;
 
-            return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap), grid);
+            return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, awriuwergioaheosiohlbyuygowgfuyvbui.GetTimeSlice(0), _currentSetting.Shader, _currentSetting.Colormap), grid);
         }
 
         #region IntersectionPlane
@@ -284,6 +304,9 @@ namespace FlowSharp
             public Sign Flat = Sign.NEGATIVE;
             [FieldOffset(108)]
             public Sign Graph = Sign.NEGATIVE;
+            [FieldOffset(112)]
+            public CoreAlgorithm Core;
+
             // The real data.
             //[FieldOffset(0)]
             //private int[] _data = new int[Enum.GetValues(typeof(Element)).Length];
@@ -324,7 +347,8 @@ namespace FlowSharp
                 DimX,
                 DimY,
                 Flat,
-                Graph
+                Graph,
+                Core
             }
 
             public Setting(Setting cpy)
@@ -359,6 +383,7 @@ namespace FlowSharp
                 DimY = cpy.DimY;
                 Flat = cpy.Flat;
                 Graph = cpy.Graph;
+                Core = cpy.Core;
             }
 
             public Setting() { }
@@ -487,6 +512,7 @@ namespace FlowSharp
         public virtual bool DimYChanged { get { return _currentSetting.DimY != _lastSetting.DimY; } }
         public virtual bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
         public virtual bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
+        public virtual bool CoreChanged { get { return _currentSetting.Core != _lastSetting.Core; } }
         #endregion SettingChanged
 
         #region CurrentSetting
@@ -549,6 +575,9 @@ namespace FlowSharp
 
         protected Sign Graph
         { get { return _currentSetting.Graph; } }
+
+        protected CoreAlgorithm Core
+        { get { return _currentSetting.Core; } }
         #endregion CurrentSetting
 
     }

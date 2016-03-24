@@ -11,13 +11,16 @@ namespace FlowSharp
 {
     class CoreDistanceMapper : DataMapper
     {
+        //protected static CoreAlgorithm Core = CoreAlgorithm.ROUGH_STREAM_CONNECTION;
 
+        protected float _lengthRadius = 35;
+        protected float _epsOffset = 0.1f;
+        #region NotMap
+        
         protected virtual int _numSeeds
         {
             get;
         } = 300;
-        protected float _lengthRadius = 35;
-        protected float _epsOffset = 0.1f;
 
         #region PropertyChanged
         protected bool NumLinesChanged { get { return LineXChanged; } }
@@ -166,7 +169,7 @@ namespace FlowSharp
 
         }
 
-        protected void TraceCore(int member = 0, int startSubstep = 0)
+        protected virtual void TraceCore(int member = 0, int startSubstep = 0)
         {
             float integratorStep = 0.1f;
             string corename = RedSea.Singleton.CoreFileName + member + ".line";
@@ -365,14 +368,21 @@ namespace FlowSharp
                         minDist = dist;
                         _selectedCore = core;
                         Debug.Assert(Math.Abs(nearest.Z - selection3D.Z) < 0.00001);
-                        // TODO: DEBUG
-                        _selection = pos; //new Vector2(nearest.X, nearest.Y);
+
+                        // Take the point directly or take core?
+                        if(Core == CoreAlgorithm.CLICK)
+                            _selection = pos;
+                        else
+                            _selection = new Vector2(nearest.X, nearest.Y);
                     }
                 }
                 if (_selectedCore != -1)
                 {
-                    _cores[_selectedCore] = new Line() { Positions = new Vector3[] { new Vector3(_selection.X, _selection.Y, 0), selection3D + Vector3.UnitZ * (RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - SliceTimeMain) } };
-                    _coreBall = new LineBall(_linePlane, new LineSet(new Line[] { _cores[_selectedCore] }) { Color = new Vector3(0.8f, 0.1f, 0.1f), Thickness = 0.3f });
+                    if(Core == CoreAlgorithm.CLICK)
+                        _cores[_selectedCore] = new Line() { Positions = new Vector3[] { new Vector3(_selection.X, _selection.Y, 0), selection3D + Vector3.UnitZ * (RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - SliceTimeMain) } };
+                    _coreBall = new LineBall(_linePlane, new LineSet(new Line[] { _cores[_selectedCore] }) { Color = new Vector3(0.8f, 0.1f, 0.1f), Thickness = 0.3f }, LineBall.RenderEffect.HEIGHT, Colormap);
+                    _coreBall.UpperBound = WindowStart + WindowWidth;
+                    _coreBall.LowerBound = WindowStart;
                 }
                 Debug.Assert(_selectedCore >= 0 && _selectedCore < _cores.Length, "The nearest core is invalid.");
 
@@ -393,7 +403,7 @@ namespace FlowSharp
             else
                 _pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT);
         }
-
+#endregion NotMap
         public List<Renderable> Map()
         {
             List<Renderable> renderables = new List<Renderable>(3 + LineX);
@@ -403,14 +413,18 @@ namespace FlowSharp
             if (_lastSetting == null ||
                 MeasureChanged ||
                 SliceTimeMainChanged ||
-                MemberMainChanged)
+                MemberMainChanged || 
+                CoreChanged)
             {
 
-                if (_lastSetting == null ||
+                if (_lastSetting == null  && _cores == null||
+                    CoreChanged ||
                     MemberMainChanged)
                 {
                     // Trace / load cores.
                     TraceCore(MemberMain, SliceTimeMain);
+                    if(_selectedCore >= 0)
+                        ClickSelection(_selection);
 
                     // Reset boundaries.
                     _boundaries = new LineSet(new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
@@ -532,6 +546,12 @@ namespace FlowSharp
                     _specialObject.UpperBound = WindowStart + WindowWidth;
                     _specialObject.UsedMap = ColorMapping.GetComplementary(Colormap);
                 }
+                if (_coreBall != null)
+                {
+                    _coreBall.LowerBound = WindowStart;
+                    _coreBall.UpperBound = WindowStart + WindowWidth;
+                    _coreBall.UsedMap = Colormap;
+                }
             }
 
             // Add the lineball.
@@ -549,6 +569,8 @@ namespace FlowSharp
                 renderables.Add(_boundaryCloud);
             if (_specialObject != null)
                 renderables.Add(_specialObject);
+            if (_selectedCore >= 0 && _coreBall != null)
+                renderables.Add(_coreBall);
 
             return renderables;
         }
@@ -1863,7 +1885,7 @@ namespace FlowSharp
             }
         }
 
-        protected static int TIME_RANGE = -60;
+        protected static int TIME_RANGE = 50;
 
         protected Graph2D[] _distanceAngleGraph;
         protected Graph2D[] _errorGraph;
@@ -1874,9 +1896,21 @@ namespace FlowSharp
             Mapping = Map;
         }
 
+        public List<Renderable> ConcentricMapping()
+        {
+            var res = Map();
+
+
+            return res;
+        }
         //protected Line IntegrateCircle(float angle, float radius, out Graph2D graph, float time = 0)
         //{
         //}
+
+        public override void ClickSelection(Vector2 pos)
+        {
+            base.ClickSelection(pos);
+        }
 
         protected void IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, int time = 0)
         {
@@ -2105,6 +2139,97 @@ namespace FlowSharp
 
             //_graph = new LineBall[] { new LineBall(_graphPlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap) };
         }
+
+
+        static int NEIGHBOORHOOD_CP = 10;
+        static int ROUGH_MULTIPLIER = 10;
+        protected override void TraceCore(int member = 0, int startSubstep = 0)
+        {
+            int rad = NEIGHBOORHOOD_CP * (Core == CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 4 : 1);
+            string corename = RedSea.Singleton.CoreFileName + member + Core.ToString() + "cc.line";
+            if (System.IO.File.Exists(corename))
+            {
+                GeometryWriter.ReadFromFile(corename, out _cores);
+                LoadField(0, MemberMain, 1);
+            }
+            else
+            {
+                if(Core == CoreAlgorithm.CLICK)
+                {
+                    Vector3[] line = new Vector3[] { Vector3.Zero, Vector3.UnitZ * (float)(RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep) };
+                    _cores = new LineSet(new Line[] { new Line() { Positions = line } });
+                    LoadField(0, MemberMain, 1);
+                    return;
+                }
+
+                Vec3[] bases = new Vec3[] {
+                    new Vec3(463.1f, 53.6f, 0),
+                    new Vec3(366.4f, 34.4f, 0),
+                    new Vec3(230.1f, 218.6f, 0)};
+
+                int numSlices = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep;
+                int stepSize = Core != CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 1 : ROUGH_MULTIPLIER; // RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1;
+                _cores = new LineSet(new Line[bases.Length]);
+                for (int b = 0; b < _cores.Length; ++b)
+                {
+                    _cores[b] = new Line((int)Math.Ceiling((float)(numSlices -1)/ stepSize)+1);
+                    //_cores[b][0] = (Vector3)bases[b];
+                }
+
+                int idx = 0;
+                // Connect to other slices.
+                for(int slice = 0; slice < numSlices; slice += stepSize)
+                {
+                    LoadField(Math.Min(slice, numSlices - 2), member, 2);
+
+                    VectorField field = _velocity;
+                    if (Core == CoreAlgorithm.PATHLINE)
+                    {
+                        var acc= new VectorFieldUnsteady(_velocity, FieldAnalysis.Acceleration, 2);
+                        field = acc.GetTimeSlice(slice);
+                    }
+                    else
+                    {
+                        field = _velocity.GetTimeSlice(slice);
+                    }
+
+                    for (int b = 0; b < _cores.Length; ++b)
+                    {
+                        Vector3 lastCP = idx > 0? _cores[b][idx-1] : (Vector3)bases[b];
+                        Int2 x = new Int2((int)lastCP.X - rad, (int)Math.Ceiling(lastCP.X) + rad);
+                        Int2 y = new Int2((int)lastCP.Y - rad, (int)Math.Ceiling(lastCP.Y) + rad);
+                        CriticalPointSet2D points = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2DRange(field, x, y);
+
+                        float minDist = float.MaxValue;
+                        CriticalPoint2D nearest = null;
+
+                        foreach(CriticalPoint2D point in points.Points)
+                        {
+                            float dist = (lastCP - point.Position).LengthSquared();
+                            if(dist< minDist)
+                            {
+                                minDist = dist;
+                                nearest = point;
+                            }
+                        }
+
+                        _cores[b][idx] = nearest?.Position ?? lastCP;
+                        _cores[b].Positions[idx].Z = slice;
+                    }
+                    idx++;
+
+                    // Reverse-engineered: Always include the last possible slice.
+                    if (slice + stepSize >= numSlices && slice + 1 < numSlices)
+                        slice = numSlices - 1 - stepSize;
+                }
+                GeometryWriter.WriteToFile(corename, _cores);
+            }
+        }
+
+        //private VectorField LoadAcceleration(int slice, int member, int numSlices)
+        //{
+        //    VectorField field = LoadField()
+        //}
 
         public override string GetName(Setting.Element element)
         {
