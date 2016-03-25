@@ -161,6 +161,12 @@ namespace FlowSharp
             }
         }
 
+        public void DoNotScale()
+        {
+            foreach (ScalarFieldUnsteady field in _scalarsUnsteady)
+                field.DoNotScale();
+        }
+
         public override VectorField GetSlicePlanarVelocity(int timeSlice)
         {
             ScalarField[] slices = new ScalarField[Size.Length - 1];

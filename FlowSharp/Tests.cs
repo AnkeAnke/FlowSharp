@@ -64,12 +64,30 @@ namespace FlowSharp
             return -(vec[1] + 0.00001f) / r * (float)Math.Exp(-Math.Abs(r - RADIUS)) * 20;//-vec[1] / r * (1 - (1- r)*(1 - r)) * 20;
         }
 
+
         public static float CircleY(Vector vec)
         {
             float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
             //if (r == 0 || Math.Abs(2- r) < 0)
             //    return 0;
             return (vec[0] + 0.00001f) / r * (float)Math.Exp(-Math.Abs(r - RADIUS)) * 20; //vec[0] / r * (1 - (1- r)*(1 - r)) * 20;
+        }
+
+
+        public static float BowlX(Vector vec)
+        {
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
+            //if (r == 0 || Math.Abs(2- r)<0)
+            //    return 0;
+            return -(vec[1] + 0.00001f)/r * 20f;
+        }
+
+        public static float BowlY(Vector vec)
+        {
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
+            //if (r == 0 || Math.Abs(2- r)<0)
+            //    return 0;
+            return (vec[0] + 0.00001f) / r * 20f;
         }
 
         public static VectorFieldUnsteady CreateCircle(Vec2 center, int numCells, Vec2 dir, int numSlices, float domainR = 2)
@@ -89,7 +107,65 @@ namespace FlowSharp
             
             VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] {new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY)});
             field.InvalidValue = float.MaxValue;
+            field.DoNotScale();
+            return field;
+        }
 
+        public static VectorFieldUnsteady CreateBowl(Vec2 center, int numCells, Vec2 dir, int numSlices, float domainR = 2)
+        {
+            Vector origin = center - new Vec2(domainR);
+            Vector cell = new Vec2(2 * domainR / numCells);
+            Index size = new Index(numCells + 1, 2);
+
+            ScalarField[] vX = new ScalarField[numSlices];
+            ScalarField[] vY = new ScalarField[numSlices];
+
+            for (int slice = 0; slice < numSlices; ++slice)
+            {
+                vX[slice] = ScalarField.FromAnalyticalField(BowlX, size, origin + dir * slice, cell);
+                vY[slice] = ScalarField.FromAnalyticalField(BowlY, size, origin + dir * slice, cell);
+            }
+
+            VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY) });
+            field.InvalidValue = float.MaxValue;
+            field.DoNotScale();
+            return field;
+        }
+
+        public static float PerfX(Vector vec)
+        {
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
+            //if (r == 0 || Math.Abs(2- r)<0)
+            //    return 0;
+            return -(vec[1] + 0.00001f);
+        }
+
+        public static float PerfY(Vector vec)
+        {
+            float r = (float)Math.Sqrt(vec[0] * vec[0] + vec[1] * vec[1]) + 0.00001f;
+            //if (r == 0 || Math.Abs(2- r)<0)
+            //    return 0;
+            return (vec[0] + 0.00001f);
+        }
+
+        public static VectorFieldUnsteady CreatePerfect(Vec2 center, int numCells, Vec2 dir, int numSlices, float domainR = 2)
+        {
+            Vector origin = center - new Vec2(domainR);
+            Vector cell = new Vec2(2 * domainR / numCells);
+            Index size = new Index(numCells + 1, 2);
+
+            ScalarField[] vX = new ScalarField[numSlices];
+            ScalarField[] vY = new ScalarField[numSlices];
+
+            for (int slice = 0; slice < numSlices; ++slice)
+            {
+                vX[slice] = ScalarField.FromAnalyticalField(PerfX, size, origin + dir * slice, cell);
+                vY[slice] = ScalarField.FromAnalyticalField(PerfY, size, origin + dir * slice, cell);
+            }
+
+            VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY) });
+            field.InvalidValue = float.MaxValue;
+            field.DoNotScale();
             return field;
         }
 

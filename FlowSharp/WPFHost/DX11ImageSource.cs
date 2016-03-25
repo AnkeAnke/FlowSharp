@@ -1,4 +1,6 @@
-﻿// Modified version.
+﻿// (Yet again) modified version by Andreas Reich.
+// Beer license as far as compatible with the bellow.
+
 // Copyright (c) 2010-2013 SharpDX - Alexandre Mutel
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -59,6 +61,7 @@ namespace WPFHost
         private static Direct3DEx D3DContext;
         private static DeviceEx D3DDevice;
         private Texture RenderTarget;
+        private Surface RenderTargetSurface;
 
         public DX11ImageSource()
         {
@@ -80,6 +83,8 @@ namespace WPFHost
             if (this.RenderTarget != null)
             {
                 base.Lock();
+                // Re-setting the backbuffer makes sure that it is not lost e.g. due to screen locking.
+                base.SetBackBuffer(D3DResourceType.IDirect3DSurface9, RenderTargetSurface.ComPointer);
                 base.AddDirtyRect(new Int32Rect(0, 0, base.PixelWidth, base.PixelHeight));
                 base.Unlock();
             }
@@ -111,12 +116,11 @@ namespace WPFHost
                 throw new ArgumentNullException("Handle");
 
             this.RenderTarget = new Texture(DX11ImageSource.D3DDevice, renderTarget.Description.Width, renderTarget.Description.Height, 1, Usage.RenderTarget, format, Pool.Default, ref handle);
-            using (Surface surface = this.RenderTarget.GetSurfaceLevel(0))
-            {
-                base.Lock();
-                base.SetBackBuffer(D3DResourceType.IDirect3DSurface9, surface.ComPointer); // Changed NativePtr to ComPtr
-                base.Unlock();
-            }
+            this.RenderTargetSurface = this.RenderTarget.GetSurfaceLevel(0);
+            
+            base.Lock();
+            base.SetBackBuffer(D3DResourceType.IDirect3DSurface9, RenderTargetSurface.ComPointer); // Changed NativePtr to ComPtr
+            base.Unlock();
         }
 
         private void StartD3D()
@@ -140,6 +144,7 @@ namespace WPFHost
             if (DX11ImageSource.ActiveClients != 0)
                 return;
 
+            Disposer.RemoveAndDispose(ref this.RenderTargetSurface);
             Disposer.RemoveAndDispose(ref this.RenderTarget);
             Disposer.RemoveAndDispose(ref DX11ImageSource.D3DDevice);
             Disposer.RemoveAndDispose(ref DX11ImageSource.D3DContext);
