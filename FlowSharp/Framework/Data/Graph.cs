@@ -335,6 +335,44 @@ namespace FlowSharp
             return OperateBackwards(a, b, (x, y) => ((x - y) * (x - y)));
         }
 
+        public static Graph2D DistanceCutSmooth(Graph2D a, Graph2D b, bool forward = true)
+        {
+            Graph2D diff;
+            if (forward)
+                diff =  Operate(a, b, (x, y) => ((x - y) * (x - y)));
+            else
+                diff = OperateBackwards(a, b, (x, y) => ((x - y) * (x - y)));
+            float minXjump = -1;
+            for(int ax = 0; ax < a.Length - 1; ++ax)
+            {
+                if((forward && a.X[ax] > a.X[ax+1]) ||
+                  (!forward && a.X[ax] < a.X[ax+1]))
+                {
+                    minXjump = a.X[ax];
+                    break;
+                }
+            }
+
+            for (int bx = 0; bx < b.Length - 1 && b.X[bx] < minXjump; ++bx)
+            {
+                if ((forward && b.X[bx] > b.X[bx + 1]) ||
+                   (!forward && b.X[bx] < b.X[bx + 1]))
+                {
+                    minXjump = b.X[bx];
+                    break;
+                }
+            }
+
+            if(minXjump > 0)
+            {
+                //int jumpPos = diff.GetLastBelowX(minXjump);
+                diff.CutGraph(minXjump);
+                diff = new Graph2D(new float[0], new float[0]);
+            }
+
+            return diff;
+        }
+
         public float Sum()
         {
             float sum = 0;

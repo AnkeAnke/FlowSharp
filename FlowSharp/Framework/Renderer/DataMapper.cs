@@ -159,21 +159,21 @@ namespace FlowSharp
             field = new VectorField(scalars);
 
 
-            loader.Range.SetMember(RedSea.Dimension.TIME, time+1);
-            var x = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
-            var y = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
-            ScalarFieldUnsteady xS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], x });
-            xS.DoNotScale();
-            ScalarFieldUnsteady yS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], y });
-            yS.DoNotScale();
-            VectorFieldUnsteady twoSlices = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { xS, yS });
-            Console.WriteLine("Remooove meeeeee!");
-            VectorFieldUnsteady awriuwergioaheosiohlbyuygowgfuyvbui = new VectorFieldUnsteady(twoSlices, FieldAnalysis.Acceleration, 2);
+            //loader.Range.SetMember(RedSea.Dimension.TIME, time+1);
+            //var x = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
+            //var y = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
+            //ScalarFieldUnsteady xS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], x });
+            //xS.DoNotScale();
+            //ScalarFieldUnsteady yS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], y });
+            //yS.DoNotScale();
+            //VectorFieldUnsteady twoSlices = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { xS, yS });
+            //Console.WriteLine("Remooove meeeeee!");
+            //VectorFieldUnsteady awriuwergioaheosiohlbyuygowgfuyvbui = new VectorFieldUnsteady(twoSlices, FieldAnalysis.Acceleration, 2);
             field.TimeSlice = timeOffset ? time * RedSea.Singleton.NumSubsteps + subtime/*time + (float)subtime / RedSea.Singleton.NumSubsteps*/ : 0;
             // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
             RectlinearGrid grid = field.Grid as RectlinearGrid;
 
-            return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, awriuwergioaheosiohlbyuygowgfuyvbui.GetTimeSlice(0), _currentSetting.Shader, _currentSetting.Colormap), grid);
+            return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap), grid);
         }
 
         #region IntersectionPlane

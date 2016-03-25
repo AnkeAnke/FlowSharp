@@ -122,7 +122,7 @@ namespace FlowSharp
             RedSea.Singleton.GetFilename = RedSeaFilenames;
             RedSea.Singleton.DonutFileName = "E:/Anke/Dev/Data/Donuts/Donut";
             RedSea.Singleton.CoreFileName = "E:/Anke/Dev/Data/Donuts/Core";
-            RedSea.Singleton.RingFileName = "E:/Anke/Dev/Data/Rings/Ring";
+            RedSea.Singleton.RingFileName = "E:/Anke/Dev/Data/Rings";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);

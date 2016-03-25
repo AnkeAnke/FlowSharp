@@ -892,13 +892,17 @@ namespace FlowSharp
         private static float Pi3H = (float)(Math.PI * 1.5);
         private delegate float AngleFunc(Vector3 vec);
 
-        public static Graph2D[] GetDistanceToAngle(Line core, Vector2 center, LineSet lines)
+        public static Graph2D[] GetDistanceToAngle(Line core, Vector2 center, LineSet lines, bool invert = false)
         {
             int count = 0;
             float[][] angles = new float[lines.Length][];
             float[][] distances = new float[lines.Length][];
             Graph2D[] result = new Graph2D[lines.Length];
-            AngleFunc angleFunc = Angle2D;
+            AngleFunc angleFunc = Angle2DCCW;
+            if (invert)
+                angleFunc = Angle2DCW;
+
+            Console.WriteLine("\tRotating " + (invert ? "" : "counter ") + "clockwise.");
 
             for (int l = 0; l < lines.Lines.Length; ++l)
             {
@@ -1033,9 +1037,16 @@ namespace FlowSharp
             return OperateZ(l0, l1, (a, b) => { return (a - b).Length(); });
         }
 
-        public static float Angle2D(Vector3 vec)
+        public static float Angle2DCCW(Vector3 vec)
         {
             float angle = (float)Math.Atan2(vec.Y, vec.X);
+            if (angle < 0)
+                angle += Pi2;
+            return angle;
+        }
+        public static float Angle2DCW(Vector3 vec)
+        {
+            float angle = (float)Math.Atan2(-vec.Y, vec.X);
             if (angle < 0)
                 angle += Pi2;
             return angle;
@@ -1083,6 +1094,110 @@ namespace FlowSharp
             }
 
             return diff;
+        }
+
+        public static Graph2D[] GraphDifferenceForwardBreaknonSmoothAngle(Graph2D[] vals, bool forward = true)
+        {
+            Graph2D[] diff = new Graph2D[vals.Length - 1];
+            for (int v = 0; v < vals.Length - 1; ++v)
+            {
+                // Make sure that the radius is still correct.
+                diff[v] = Graph2D.DistanceCutSmooth(vals[v + 1], vals[v], forward);
+                //if (diff[v].Length > 0 && float.IsNaN(diff[v].Fx[0]))
+                //    Console.WriteLine("NaN NaN NaN NaN NaN Batman!");
+                diff[v].Offset = vals[v].Offset;
+            }
+
+            return diff;
+        }
+
+        public static void RemoveBubbles(Graph2D[] errors, float thresh)
+        {
+            Console.WriteLine("Removing Bubbles");
+            List<Int2> growth = new List<Int2>(errors.Length * errors[0].Length / 10);
+
+            int pointsRemoved = 0;
+
+            for (int err = 0; err < errors.Length; ++err)
+            {
+                if (errors[err].Length > 1 && errors[err].Fx[1] > thresh)
+                {
+                    errors[err].Fx[0] = -1;
+                    growth.Add(new Int2(err, 0));
+                    pointsRemoved++;
+                }
+            }
+
+            while (growth.Count > 0)
+            {
+                Int2 pos = growth.Last();
+                growth.RemoveAt(growth.Count - 1);
+                for (int x = -1; x <= 1; x += 2)
+                {
+                    for (int y = -1; y <= 1; y += 2)
+                    {
+                        Int2 idx = new Int2((pos.X + x + errors.Length) % errors.Length, pos.Y + y);
+                        if (idx.Y >= 0 && idx.Y < errors[idx.X].Length && thresh < errors[idx.X].Fx[idx.Y])
+                        {
+                            growth.Add(idx);
+                            errors[idx.X].Fx[idx.Y] = -1;
+                            pointsRemoved++;
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine("Removed {0} points.", pointsRemoved);
+        }
+
+        public static LineSet FindBoundaryInErrors4(Graph2D[] errors, Vector3 center, /*float time,*/ float rangeForTracking = 4f)
+        {
+            float thresh = (errors[0].X[1] - errors[0].X[0]);
+            int maxDistR = (int)Math.Ceiling(rangeForTracking / thresh);
+            thresh *= 0.7f;
+            Console.WriteLine("Threshold for boundary: {0}", thresh);
+
+            RemoveBubbles(errors, thresh);
+
+            int numAngles = errors.Length;
+            //int stuckPoints = 0;
+            //bool[] stuck = new bool[errors.Length]; // Initial false.
+            int[] circleR = new int[numAngles];
+
+            bool somethingChanged = true;
+            int sign = 1;
+            // There is still points moving.
+            while (somethingChanged)
+            {
+                somethingChanged = false;
+                for (int a = 0; a < numAngles && a > -numAngles; a += sign)
+                {
+                    int angle = (a + numAngles) % numAngles;
+                    int current = circleR[angle];
+
+                    if (current < errors[angle].Length - 1 && errors[angle].Fx[current + 1] < thresh)
+                    {
+                        // We could o forward. What about our neighbors?
+                        current++;
+                        if (current - circleR[(angle - 1 + numAngles) % numAngles] < maxDistR &&
+                           current - circleR[(angle + 1) % numAngles] < maxDistR)
+                        {
+                            circleR[angle]++;
+                            somethingChanged = true;
+                        }
+                    }
+                }
+                sign = -sign;
+            }
+
+            Line bound = new Line(numAngles + 1);
+            for (int angle = 0; angle < numAngles; ++angle)
+            {
+                bound[angle] = SphericalPosition(center, (float)angle / numAngles, errors[angle].X[circleR[angle]]);
+            }
+            bound[bound.Length - 1] = bound[0];
+
+            return new LineSet(new Line[] { bound });
         }
 
         public static LineSet FindBoundaryInErrors3(Graph2D[] errors, Vector3 center, /*float time,*/ float rangeForTracking = 4f)
