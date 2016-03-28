@@ -180,6 +180,19 @@ namespace FlowSharp
             UpdateRenderer();
         }
 
+        public void Screenshot(string name)
+        {
+            RenderTargetBitmap renderTargetBitmap =
+            new RenderTargetBitmap((int)DX11Display.Width, (int)DX11Display.Height, 96, 96, PixelFormats.Pbgra32);
+            renderTargetBitmap.Render(DX11Display);
+            PngBitmapEncoder pngImage = new PngBitmapEncoder();
+            pngImage.Frames.Add(BitmapFrame.Create(renderTargetBitmap));
+            using (Stream fileStream = File.Create(name))
+            {
+                pngImage.Save(fileStream);
+            }
+        }
+
         //private void OnChangeValue(object sender, RoutedEventArgs e)
         //{
         //    _mapper.CurrentSetting.Measure = (RedSea.Measure)(DropDownMeasure.SelectedItem as RedSea.Measure?);

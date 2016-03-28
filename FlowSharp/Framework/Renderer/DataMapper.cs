@@ -16,7 +16,8 @@ namespace FlowSharp
             CLICK,
             STREAMLINE,
             ROUGH_STREAM_CONNECTION,
-            PATHLINE
+            PATHLINE,
+            SLA
         };
 
         /// <summary>
@@ -307,6 +308,28 @@ namespace FlowSharp
             [FieldOffset(112)]
             public CoreAlgorithm Core;
 
+
+            public string GetFilename()
+            {
+                return "" +
+                SliceTimeMain + '_' +
+                SliceTimeReference + '_' +
+                AlphaStable + '_' +
+                StepSize + '_' +
+                IntegrationType + '_' +
+                LineX + '_' +
+                MemberMain + '_' +
+                MemberReference + '_' +
+                Colormap + '_' +
+                Shader + '_' +
+                WindowWidth + '_' +
+                WindowStart + '_' +
+                Measure + '_' +
+                IntegrationTime + '_' +
+                (bool)Flat + '_' +
+                (bool)Graph + '_' +
+                Core;
+            }
             // The real data.
             //[FieldOffset(0)]
             //private int[] _data = new int[Enum.GetValues(typeof(Element)).Length];
@@ -876,22 +899,22 @@ namespace FlowSharp
             var list = _fields.ToList<Renderable>();
             if (_lastSetting == null)
             {
-                tests = new List<Renderable>(5);
-                Line[] lines = new Line[2];
-                lines[0] = new Line() { Positions = new Vector3[] { Vector3.Zero, Vector3.UnitX * 100, new Vector3(200, 10, 5) } };
-                lines[1] = new Line() { Positions = new Vector3[] { Vector3.UnitZ * 10, new Vector3(90, -10, 10), new Vector3(190, 0, 12) } };
-                LineSet linesTest = new LineSet(lines);
+                //tests = new List<Renderable>(5);
+                //Line[] lines = new Line[2];
+                //lines[0] = new Line() { Positions = new Vector3[] { Vector3.Zero, Vector3.UnitX * 100, new Vector3(200, 10, 5) } };
+                //lines[1] = new Line() { Positions = new Vector3[] { Vector3.UnitZ * 10, new Vector3(90, -10, 10), new Vector3(190, 0, 12) } };
+                //LineSet linesTest = new LineSet(lines);
 
-                Vector3[,] test = new Vector3[,] { { Vector3.Zero, Vector3.UnitX * 100, new Vector3(200, 10, 5) }, { Vector3.UnitZ * 10, new Vector3(90, -10, 10), new Vector3(190, 0, 12) } };
-                Mesh mesh1 = new Mesh(Plane, new TileSurface() { Positions = test }, Mesh.RenderEffect.DEFAULT, Colormap);
-                Mesh mesh2 = new Mesh(new Plane(Plane, Vector3.UnitZ * 10), new TileSurface(linesTest));
-                tests.Add(mesh1);
-                tests.Add(mesh2);
-                tests.Add(new LineBall(Plane, linesTest));
+                //Vector3[,] test = new Vector3[,] { { Vector3.Zero, Vector3.UnitX * 100, new Vector3(200, 10, 5) }, { Vector3.UnitZ * 10, new Vector3(90, -10, 10), new Vector3(190, 0, 12) } };
+                //Mesh mesh1 = new Mesh(Plane, new TileSurface() { Positions = test }, Mesh.RenderEffect.DEFAULT, Colormap);
+                //Mesh mesh2 = new Mesh(new Plane(Plane, Vector3.UnitZ * 10), new TileSurface(linesTest));
+                //tests.Add(mesh1);
+                //tests.Add(mesh2);
+                //tests.Add(new LineBall(Plane, linesTest));
 
 
             }
-            return list.Concat(tests).ToList();
+            return list;//.Concat(tests).ToList();
         }
         List<Renderable> tests;
 

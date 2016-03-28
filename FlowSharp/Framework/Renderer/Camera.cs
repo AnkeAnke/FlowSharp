@@ -103,7 +103,7 @@ namespace FlowSharp
 
         public void SetOrthographic()
         {
-            Projection = Matrix.OrthoLH(10 * _aspect, 10, 0.0001f, 100000);
+            Projection = Matrix.OrthoLH(20 * _aspect, 20, 0.0001f, 100000);//4
         }
         public void SetPerspective()
         { 
@@ -141,6 +141,13 @@ namespace FlowSharp
             KeyboardState state = keyboard.GetCurrentState();
             if (state.IsPressed(Key.R))
                 ResetCamera();
+
+            if (state.IsPressed(Key.C))
+            {
+
+                RedSea.Singleton.WPFWindow.Screenshot(RedSea.Singleton.SnapFileName + "Snape_" + RedSea.Singleton.Filename + ".png");
+            }
+
             // Map mouse movement to angles.
             UpdateThetaPhiFromMouse(passedTimeSinceLastFrame, canvas);
 
@@ -238,7 +245,7 @@ namespace FlowSharp
             lastMouseY = 0;
 
             viewDirection = new Vector3(0, 0, 1);
-            position = new Vector3(0, 7, -18);
+            position = new Vector3(0, 6.8f, -19);
         }
 
         public Vector2[] IntersectPlane(Plane plane)

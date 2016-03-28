@@ -38,7 +38,7 @@ namespace FlowSharp
 
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
         static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
-        static string locDataFolderSubstep = "E:/Anke/Dev/Data/ShaheenSubsteps/s";
+        static string locDataFolderSubstep = "B:/RedSeaSubsteps/s";
         static string locFileName = "/Posterior_Diag.nc";
         static string locFolderName = "/advance_temp";
         //        string locWFileName = ".0000000108.data";
@@ -59,8 +59,8 @@ namespace FlowSharp
             {
                 var loader = new LoaderRaw(var);
                 loader.Range.SetMember(RedSea.Dimension.TIME, step);
-                loader.Range.SetMember(RedSea.Dimension.SUBTIME, substep ?? 0);
-                loader.Range.SetMember(RedSea.Dimension.MEMBER, member ?? 0);
+                loader.Range.SetMember(RedSea.Dimension.SUBTIME, substep??0);
+                loader.Range.SetMember(RedSea.Dimension.MEMBER, member??0);
                 return loader;
             }
             else
@@ -120,9 +120,10 @@ namespace FlowSharp
 
             RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
             RedSea.Singleton.GetFilename = RedSeaFilenames;
-            RedSea.Singleton.DonutFileName = "E:/Anke/Dev/Data/Donuts/Donut";
-            RedSea.Singleton.CoreFileName = "E:/Anke/Dev/Data/Donuts/Core";
-            RedSea.Singleton.RingFileName = "E:/Anke/Dev/Data/Rings";
+            RedSea.Singleton.DonutFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Donut";
+            RedSea.Singleton.CoreFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Core";
+            RedSea.Singleton.SnapFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Screenshots/";
+            RedSea.Singleton.RingFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Rings/";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
@@ -164,10 +165,9 @@ namespace FlowSharp
             rawV.SetMember(RedSea.Dimension.MEMBER, 0);
             rawV.SetMember(RedSea.Dimension.SUBTIME, 0);
 
+            //rawU.SetMember(RedSea.Dimension.TIME, 40);
 
-            rawU.SetMember(RedSea.Dimension.TIME, 40);
-                                                  
-            rawV.SetMember(RedSea.Dimension.TIME, 40);
+            //rawV.SetMember(RedSea.Dimension.TIME, 40);
             //ncFile.Close();
 
 
@@ -175,6 +175,7 @@ namespace FlowSharp
             //{
             //    //velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { sliceU, sliceV }, 0, numTimeSlices);
             //    velocity = LoaderRaw.LoadTimeSeries(new Loader.SliceRange[] { rawU, rawV });
+                
             //    // Scale the field from m/s to (0.1 degree per 3 days).
             //    velocity.ScaleToGrid(new Vec2(RedSea.Singleton.TimeScale));
             //}

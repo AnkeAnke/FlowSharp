@@ -22,6 +22,7 @@ namespace FlowSharp
         public string DonutFileName;
         public string CoreFileName;
         public string RingFileName;
+        public string SnapFileName;
 
         public int NumSteps = 130;
         public int NumSubsteps = 12;
@@ -112,7 +113,9 @@ namespace FlowSharp
         public enum DisplayLines : int
         {
             LINE,
-            POINTS_2D_LENGTH
+            POINTS_2D_LENGTH,
+            INVALIDATE_LINE,
+            STOP_LINE
         }
 
         public enum DisplayTracking : int
@@ -169,8 +172,19 @@ namespace FlowSharp
             set { _numTImeSlices = value; WPFWindow?.UpdateNumTimeSlices(); }
         }
 
+
         private DataMapper[] _mappers;
         private Display _currentMapper = Display.NONE;
+        public Display Mapper { get { return _currentMapper; } }
+
+        public string Filename { get
+            {
+                if (_mappers[(int)_currentMapper] == null)
+                    return "Default";
+                string name = _currentMapper.ToString();
+                name += '_' + _mappers[(int)_currentMapper].CurrentSetting.GetFilename();
+                return name;
+                    } }
 
         private RedSea()
         {
