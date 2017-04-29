@@ -59,7 +59,7 @@ namespace FlowSharp
             Vector3 zAxis = plane.ZAxis;
             foreach(Point point in points.Points)
             {
-                var test = new Vector4(plane.Origin + (plane.XAxis * point.Position[0] + plane.YAxis * point.Position[1] + zAxis * point.Position[2]), 1.0f);
+                // var test = new Vector4(plane.Origin + (plane.XAxis * point.Position[0] + plane.YAxis * point.Position[1] + zAxis * point.Position[2]), 1.0f);
                 stream.Write(new Vector4(plane.Origin + (plane.XAxis * point.Position[0] + plane.YAxis * point.Position[1] + zAxis * point.Position[2]), 1.0f));
                 stream.Write(point.Color);
                 stream.Write(point.Radius * plane.PointSize);

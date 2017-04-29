@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
+#if false
     class LineStatisticsMapper : SelectionMapper
     {
         protected PointSet<Point> _linePoints;
@@ -209,4 +210,5 @@ namespace FlowSharp
 
         }
     }
+#endif
 }

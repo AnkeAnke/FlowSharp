@@ -14,6 +14,10 @@ using WPFHost;
 
 namespace FlowSharp
 {
+#if true
+    using Context = Aneurysm;
+#endif
+
     class Camera
     {
         protected Buffer _globalConstants;
@@ -52,7 +56,7 @@ namespace FlowSharp
             _globals = new Constants();
             _aspect = aspectRatio;
             _fov = 1.3f;
-            View = Matrix.LookAtLH(new Vector3(0, 0, -20f), Vector3.Zero, Vector3.UnitY);
+            View = Matrix.LookAtLH(new Vector3(0, 0, -10f), Vector3.Zero, Vector3.UnitY);
             SetPerspective();
 
 
@@ -142,10 +146,10 @@ namespace FlowSharp
             if (state.IsPressed(Key.R))
                 ResetCamera();
 
-            if (state.IsPressed(Key.C))
+            if (state.IsPressed(Key.P))
             {
 
-                RedSea.Singleton.WPFWindow.Screenshot(RedSea.Singleton.SnapFileName + "Snape_" + RedSea.Singleton.Filename + ".png");
+                Context.Singleton.WPFWindow.Screenshot(Context.Singleton.SnapFileName + "Snape_" + Context.Singleton.Filename + ".png");
             }
 
             // Map mouse movement to angles.
@@ -202,12 +206,12 @@ namespace FlowSharp
                     _setMouseRelative = _releaseMouseRelative;
                 }
 
-                RedSea.Singleton.UpdateSelection();
+                Context.Singleton.UpdateSelection();
             }
             // Mouse wheel pressed. Move camera.
             else if (_setMouseRelative != null)
             {
-                RedSea.Singleton.EndSelection();
+                Context.Singleton.EndSelection();
                 _setMouseRelative = null;
             }
 

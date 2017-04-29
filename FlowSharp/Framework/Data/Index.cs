@@ -292,6 +292,12 @@ namespace FlowSharp
         }
     }
 
+    //class Index4 : Index
+    //{
+    //    public Index4(int x, int y, int z, int w) : base(new int[] { x, y, z, w }) { }
+    //    public Index4(int val) : base(val, 4) { }
+    //}
+
     class GridIndex : IEnumerator<Index>, IEnumerable<Index>, IEnumerable<GridIndex>, IEnumerator<GridIndex>
     {
         private Index _current;

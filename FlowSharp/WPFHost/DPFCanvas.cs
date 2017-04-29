@@ -43,7 +43,7 @@ namespace WPFHost
         private IScene RenderScene;
         private bool SceneAttached;
 
-        public Color4 ClearColor = new Color4(0, 0, 0, 1);//154.0f / 255, 181.0f / 255, 228.0f / 255);//new Color4(0.7f, 0.7f, 0.9f);
+        public Color4 ClearColor = new Color4(154.0f / 255, 181.0f / 255, 228.0f / 255);//new Color4(0.7f, 0.7f, 0.9f);
 
         public DPFCanvas()
         {

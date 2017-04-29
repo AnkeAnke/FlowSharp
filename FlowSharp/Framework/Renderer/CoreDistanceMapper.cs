@@ -9,6 +9,7 @@ using Integrator = FlowSharp.VectorField.Integrator;
 
 namespace FlowSharp
 {
+#if false
     class CoreDistanceMapper : DataMapper
     {
         //protected static CoreAlgorithm Core = CoreAlgorithm.ROUGH_STREAM_CONNECTION;
@@ -18,18 +19,18 @@ namespace FlowSharp
         protected static int STEPS_IN_MEMORY = 18;
         protected static int TIME_RANGE = 40;
 
-        #region NotMap
+#region NotMap
 
         protected virtual int _numSeeds
         {
             get;
         } = 300;
 
-        #region PropertyChanged
+#region PropertyChanged
         protected bool NumLinesChanged { get { return LineXChanged; } }
         protected bool OffsetRadiusChanged { get { return AlphaStableChanged; } }
         protected bool RepulsionChanged { get { return IntegrationTimeChanged; } }
-        #endregion PropertyChanged
+#endregion PropertyChanged
 
         protected static float SLA_THRESHOLD = 0.0f;
         protected static float SLA_RELAXED_THRESHOLD = 0.00f;
@@ -40,7 +41,7 @@ namespace FlowSharp
         protected float _repulsion { get { return (float)(_everyNthTimestep) * IntegrationTime/*/ 40.0f*/; } }
 
         protected VectorField.IntegratorPredictorCorrector _coreIntegrator;
-        #region Properties
+#region Properties
         protected Plane _linePlane, _graphPlane;
         protected VectorFieldUnsteady _velocity;
         protected Vector2 _selection;
@@ -73,7 +74,7 @@ namespace FlowSharp
         protected float _lastActiveGraphScale = -1;
 
         protected bool _selectionChanged = false;
-        #endregion Properties
+#endregion Properties
         public CoreDistanceMapper(int everyNthField, Plane plane)
         {
             _everyNthTimestep = everyNthField;
@@ -88,7 +89,7 @@ namespace FlowSharp
 
             //TraceCore(MemberMain, SliceTimeMain);
 
-            _boundaries = new LineSet(new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
+            _boundaries = new LineSet(new Line[(Context.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
             _boundariesSpacetime = new LineSet(new Line[_boundaries.Length]);
             for (int l = 0; l < _boundaries.Length; ++l)
             {
@@ -110,17 +111,17 @@ namespace FlowSharp
             ScalarField[] U = new ScalarField[numSteps];
             ScalarField[] V = new ScalarField[numSteps];
 
-            LoaderRaw file = (RedSea.Singleton.GetLoader(0, 0, 0, RedSea.Variable.VELOCITY_X) as LoaderRaw);
-            file.Range.SetMember(RedSea.Dimension.GRID_Z, 0);
+            LoaderRaw file = (Context.Singleton.GetLoader(0, 0, 0, Context.Variable.VELOCITY_X) as LoaderRaw);
+            file.Range.SetMember(Context.Dimension.GRID_Z, 0);
             _currentEndStep = startStep + numSteps - 1;
 
             for (int field = 0; field < numSteps; ++field)
             {
                 int step = (field + startStep) * _everyNthTimestep;
-                int stepN = step / RedSea.Singleton.NumSubsteps;
-                int substepN = step % RedSea.Singleton.NumSubsteps;
+                int stepN = step / Context.Singleton.NumSubsteps;
+                int substepN = step % Context.Singleton.NumSubsteps;
 
-                if (stepN >= RedSea.Singleton.NumSteps)
+                if (stepN >= Context.Singleton.NumSteps)
                 {
                     // Less scalar fields. Crop arrays.
                     Array.Resize(ref U, field);
@@ -130,12 +131,12 @@ namespace FlowSharp
                 }
 
                 // Load field.
-                file.Range.SetMember(RedSea.Dimension.TIME, stepN);
-                file.Range.SetMember(RedSea.Dimension.SUBTIME, substepN);
-                file.Range.SetVariable(RedSea.Variable.VELOCITY_X);
+                file.Range.SetMember(Context.Dimension.TIME, stepN);
+                file.Range.SetMember(Context.Dimension.SUBTIME, substepN);
+                file.Range.SetVariable(Context.Variable.VELOCITY_X);
 
                 U[field] = file.LoadFieldSlice();
-                file.Range.SetVariable(RedSea.Variable.VELOCITY_Y);
+                file.Range.SetVariable(Context.Variable.VELOCITY_Y);
                 V[field] = file.LoadFieldSlice();
             }
 
@@ -143,21 +144,21 @@ namespace FlowSharp
               { new ScalarFieldUnsteady(U, startStep, 1.0f),
                 new ScalarFieldUnsteady(V, startStep, 1.0f) });
             _velocity.TimeOrigin = startStep;
-            _velocity.ScaleToGrid(new Vec2((RedSea.Singleton.TimeScale * _everyNthTimestep) / RedSea.Singleton.NumSubsteps));
+            _velocity.ScaleToGrid(new Vec2((Context.Singleton.TimeScale * _everyNthTimestep) / Context.Singleton.NumSubsteps));
         }
 
         protected void ComputeCoreOrigins(int member, int startSubstep = 0)
         {
             // Load 2 slices only for computing core origins.
             LoadField(startSubstep, member, 2);
-            //LoaderRaw file = (RedSea.Singleton.GetLoader(SliceTimeMain, 0, member, RedSea.Variable.SURFACE_HEIGHT) as LoaderRaw);
+            //LoaderRaw file = (Context.Singleton.GetLoader(SliceTimeMain, 0, member, Context.Variable.SURFACE_HEIGHT) as LoaderRaw);
 
             //ScalarField height = file.LoadFieldSlice();
 
             // Find core lines in first time step.
             VectorFieldUnsteady pathlineCores = new VectorFieldUnsteady(_velocity, FieldAnalysis.PathlineCore, 3);
             //_debugCore = pathlineCores.GetTimeSlice(0);
-            //LoadPlane(member, (startSubstep * RedSea.Singleton.NumSubsteps) / _everyNthTimestep,  )
+            //LoadPlane(member, (startSubstep * Context.Singleton.NumSubsteps) / _everyNthTimestep,  )
             _coreOrigins = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(pathlineCores.GetTimeSlice(0), 4, 0.3f, 0.001f);
 
             // Take only points which are changed SLA and "unique".
@@ -174,7 +175,7 @@ namespace FlowSharp
         protected virtual void TraceCore(int member = 0, int startSubstep = 0)
         {
             float integratorStep = 0.1f;
-            string corename = RedSea.Singleton.CoreFileName + member + ".line";
+            string corename = Context.Singleton.CoreFileName + member + ".line";
             if (System.IO.File.Exists(corename))
             {
                 GeometryWriter.ReadFromFile(corename, out _cores);
@@ -189,7 +190,7 @@ namespace FlowSharp
                 ComputeCoreOrigins(MemberMain, 0);
                 _coreOrigins = new CriticalPointSet2D( FilterCores(_coreOrigins.Points, SLA_RELAXED_THRESHOLD).ToArray() );
                 // How often do we have to load a VF stack? 
-                int numBlocks = (int)Math.Ceiling((float)(RedSea.Singleton.NumSubstepsTotal - startSubstep) / (_everyNthTimestep * STEPS_IN_MEMORY));
+                int numBlocks = (int)Math.Ceiling((float)(Context.Singleton.NumSubstepsTotal - startSubstep) / (_everyNthTimestep * STEPS_IN_MEMORY));
 
                 //List<List<Vector3>> coreLines = new List<List<Vector3>>(_coreOrigins.Length * 5);
 
@@ -204,7 +205,7 @@ namespace FlowSharp
                 for (int block = 0; block < numBlocks; ++block)
                 {
                     int startStep = block * STEPS_IN_MEMORY;
-                    int numSteps = Math.Min(RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - startStep, STEPS_IN_MEMORY + 1);
+                    int numSteps = Math.Min(Context.Singleton.NumSubstepsTotal / _everyNthTimestep - startStep, STEPS_IN_MEMORY + 1);
 
                     // Load the VFU.
                     LoadField(startStep, member, numSteps);
@@ -306,14 +307,14 @@ namespace FlowSharp
 
             float threshold = abs ?? SLA_THRESHOLD;
             int substep = (int)(cores[0].Position.Z + 0.5f) * _everyNthTimestep;
-            int stepN = substep / RedSea.Singleton.NumSubsteps;
-            int substepN = substep % RedSea.Singleton.NumSubsteps;
+            int stepN = substep / Context.Singleton.NumSubsteps;
+            int substepN = substep % Context.Singleton.NumSubsteps;
 
             LoaderRaw loader = new LoaderRaw();
-            loader.Range.SetMember(RedSea.Dimension.TIME, stepN);
-            loader.Range.SetMember(RedSea.Dimension.SUBTIME, substepN);
-            loader.Range.SetMember(RedSea.Dimension.GRID_Z, 0);
-            ScalarField SLA = loader.LoadFieldSlice(RedSea.Variable.SURFACE_HEIGHT);
+            loader.Range.SetMember(Context.Dimension.TIME, stepN);
+            loader.Range.SetMember(Context.Dimension.SUBTIME, substepN);
+            loader.Range.SetMember(Context.Dimension.GRID_Z, 0);
+            ScalarField SLA = loader.LoadFieldSlice(Context.Variable.SURFACE_HEIGHT);
 
 
 
@@ -381,7 +382,7 @@ namespace FlowSharp
                 if (_selectedCore != -1)
                 {
                     if(Core == CoreAlgorithm.CLICK)
-                        _cores[_selectedCore] = new Line() { Positions = new Vector3[] { new Vector3(_selection.X, _selection.Y, 0), selection3D + Vector3.UnitZ * (RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - SliceTimeMain) } };
+                        _cores[_selectedCore] = new Line() { Positions = new Vector3[] { new Vector3(_selection.X, _selection.Y, 0), selection3D + Vector3.UnitZ * (Context.Singleton.NumSubstepsTotal / _everyNthTimestep - SliceTimeMain) } };
                     _coreBall = new LineBall(_linePlane, new LineSet(new Line[] { _cores[_selectedCore] }) { Color = new Vector3(0.8f, 0.1f, 0.1f), Thickness = 0.3f }, LineBall.RenderEffect.HEIGHT, Colormap);
                     _coreBall.UpperBound = WindowStart + WindowWidth;
                     _coreBall.LowerBound = WindowStart;
@@ -411,7 +412,7 @@ namespace FlowSharp
             List<Renderable> renderables = new List<Renderable>(3 + LineX);
             int numLines = LineX;
 
-            #region BackgroundPlanes
+#region BackgroundPlanes
             if (_lastSetting == null ||
                 MeasureChanged ||
                 SliceTimeMainChanged ||
@@ -429,15 +430,15 @@ namespace FlowSharp
                         ClickSelection(_selection);
 
                     // Reset boundaries.
-                    _boundaries = new LineSet(new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
+                    _boundaries = new LineSet(new Line[(Context.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
                     for (int l = 0; l < _boundaries.Length; ++l)
                         _boundaries[l] = new Line() { Positions = new Vector3[0] };
                 }
 
                 // Computing which field to load as background.
-                int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, SliceTimeMain);
-                int time = (totalTime * _everyNthTimestep) / RedSea.Singleton.NumSubsteps;
-                int subtime = (totalTime * _everyNthTimestep) % RedSea.Singleton.NumSubsteps;
+                int totalTime = Math.Min(Context.Singleton.NumSubstepsTotal, SliceTimeMain);
+                int time = (totalTime * _everyNthTimestep) / Context.Singleton.NumSubsteps;
+                int subtime = (totalTime * _everyNthTimestep) % Context.Singleton.NumSubsteps;
 
                 //LoadField(SliceTimeMain, MemberMain, 2);
 
@@ -450,9 +451,9 @@ namespace FlowSharp
             if (_lastSetting == null || SliceTimeReferenceChanged)
             {
                 // Reference slice.
-                int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, SliceTimeReference);
-                int time = (totalTime * _everyNthTimestep) / RedSea.Singleton.NumSubsteps;
-                int subtime = (totalTime * _everyNthTimestep) % RedSea.Singleton.NumSubsteps;
+                int totalTime = Math.Min(Context.Singleton.NumSubstepsTotal, SliceTimeReference);
+                int time = (totalTime * _everyNthTimestep) / Context.Singleton.NumSubsteps;
+                int subtime = (totalTime * _everyNthTimestep) % Context.Singleton.NumSubsteps;
                 _compareSlice = LoadPlane(MemberMain, time, subtime, true);
             }
 
@@ -479,7 +480,7 @@ namespace FlowSharp
             //    renderables.Add(_coreCloud);
             //if (_coreBall != null)
             //    renderables.Add(_coreBall);
-            #endregion BackgroundPlanes
+#endregion BackgroundPlanes
 
             // Add Point to indicate clicked position.
             renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.4f } })));
@@ -516,7 +517,7 @@ namespace FlowSharp
             //else if (SliceTimeReferenceChanged)
             //    ComputeGraph(_cores?.Lines[_selectedCore], SliceTimeMain);
 
-            if (LineSetting == RedSea.DisplayLines.LINE && (
+            if (LineSetting == Context.DisplayLines.LINE && (
                 _lastSetting == null || rebuilt ||
                 WindowWidthChanged ||
                 WindowStartChanged ||
@@ -688,7 +689,7 @@ namespace FlowSharp
                     Console.WriteLine("Starting run {0}, {1} seeds left.", run++, seeds.Length);
 
                     // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-                    #region IntegratePathlines
+#region IntegratePathlines
                     // Do we need to load a field first?
                     if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
                         LoadField(SliceTimeMain, MemberMain);
@@ -703,7 +704,7 @@ namespace FlowSharp
                     //LineSet pathlines = pathlineIntegrator.Integrate(seeds, false)[0];
 
                     // Append integrated lines of next loaded vectorfield time slices.
-                    float timeLength = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep; //preferredBoundaryTime * 2;
+                    float timeLength = Context.Singleton.NumSubstepsTotal / _everyNthTimestep; //preferredBoundaryTime * 2;
                     while (_currentEndStep + 1 < timeLength)
                     {
                         // Don't load more steps than we need to!
@@ -715,17 +716,17 @@ namespace FlowSharp
                         pathlineIntegrator.Field = _velocity;
                         pathlineIntegrator.IntegrateFurther(pathlines);
                     }
-                    #endregion IntegratePathlines
+#endregion IntegratePathlines
 
                     // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-                    #region GetBoundary
+#region GetBoundary
                     // The two needes functions.
                     Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, true);
                     Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, false);
 
                     // Find the boundary based on angle and distance.
                     FieldAnalysis.FindBoundaryFromDistanceAngleDonut(distances, angles, out boundaryIndices);
-                    #endregion GetBoundary
+#endregion GetBoundary
 
                     // ~~~~~~~~~~~~ Chose or Offset Pathlines ~~~~~~~~~~~~ \\
                     int numNewSeeds = 0;
@@ -745,7 +746,7 @@ namespace FlowSharp
                         if (boundaryIndices[numPathlines] >= 0)
                         {
                             pos = pathlines[numPathlines][boundaryIndices[numPathlines]];
-                            _allBoundaryPoints.Add(new Point(pos) { Color = new Vector3(0.1f, pos.Z * _everyNthTimestep / RedSea.Singleton.NumSubstepsTotal, 0.1f) });
+                            _allBoundaryPoints.Add(new Point(pos) { Color = new Vector3(0.1f, pos.Z * _everyNthTimestep / Context.Singleton.NumSubstepsTotal, 0.1f) });
                         }
                         // Finally found it?
                         // TODOD: DEBUG!!!!!!!!!!!!!!!!111!!!!!!!!!!!!!!!!!!elf!!!!!!!!!!!!!!!!
@@ -838,12 +839,12 @@ namespace FlowSharp
             _boundaryCloud = new PointCloud(_linePlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
 
             LineSet set = new LineSet(_coreAngleGraph);
-            GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+            GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
             set = new LineSet(_coreDistanceGraph);
-            GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+            GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
         }
 
         protected virtual void UpdateBoundary()
@@ -899,7 +900,7 @@ namespace FlowSharp
         //    integrator.Field = _velocity;
         //    lineSets = integrator.Integrate<Point>(new PointSet<Point>(circle));
 
-        //    while (_currentEndStep < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
+        //    while (_currentEndStep < Context.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
         //    {
         //        LoadField(_currentEndStep, MemberMain);
         //        integrator.Field = _velocity;
@@ -908,14 +909,14 @@ namespace FlowSharp
         //    integrator.Field = _velocity;
         //    integrator.IntegrateFurther(lineSets[0]);
 
-        //    if ((SliceTimeMain * _everyNthTimestep) / RedSea.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
+        //    if ((SliceTimeMain * _everyNthTimestep) / Context.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
         //        LoadField(SliceTimeMain, MemberMain, 2);
 
         //    //Console.WriteLine(lineSets[0].Lines[0].Positions.Last());
         //    _pathlinesTime = new LineSet[] { lineSets[0] };
         //}
 
-        #region IntegrationAndGraph
+#region IntegrationAndGraph
 
         protected void IntegrateLines(Line core, int time = 0, bool[] doOffset = null, float offsetBy = 0)
         {
@@ -956,7 +957,7 @@ namespace FlowSharp
             integrator.Field = _velocity;
             lineSet = integrator.Integrate<Point>(new PointSet<Point>(circle))[0];
 
-            while (_currentEndStep < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
+            while (_currentEndStep < Context.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
             {
                 LoadField(_currentEndStep, MemberMain);
                 integrator.Field = _velocity;
@@ -965,7 +966,7 @@ namespace FlowSharp
             integrator.Field = _velocity;
             integrator.IntegrateFurther(lineSet);
 
-            if ((SliceTimeMain * _everyNthTimestep) / RedSea.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
+            if ((SliceTimeMain * _everyNthTimestep) / Context.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
                 LoadField(SliceTimeMain, MemberMain, 2);
 
             //Console.WriteLine(lineSets[0].Lines[0].Positions.Last());
@@ -994,12 +995,12 @@ namespace FlowSharp
             _coreDistanceGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, _pathlinesTime, StepSize, _everyNthTimestep, true);
             _coreAngleGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, _pathlinesTime, StepSize, _everyNthTimestep, false);
             //    LineSet set = new LineSet(_coreAngleGraph);
-            //    GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //    GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+            //    GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+            //    GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
             //    set = new LineSet(_coreDistancesGraph);
-            //    GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //    GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+            //    GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+            //    GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
 
             //    remap = true;
             //}
@@ -1192,7 +1193,7 @@ namespace FlowSharp
 
             MapLines();
         }
-        #endregion IntegrationAndGraph
+#endregion IntegrationAndGraph
     }
 
     class PredictedCoreDistanceMapper : CoreDistanceMapper
@@ -1220,7 +1221,7 @@ namespace FlowSharp
                     break;
                 case FieldPlane.RenderEffect.COLORMAP:
                     VectorField ok = new VectorField(new Field[] { _okubo });
-                    ok.TimeSlice = timeOffset ? time * RedSea.Singleton.NumSubsteps + subtime : 0;
+                    ok.TimeSlice = timeOffset ? time * Context.Singleton.NumSubsteps + subtime : 0;
                     p = new FieldPlane(Plane, ok, FieldPlane.RenderEffect.COLORMAP, Colormap);
                     Console.WriteLine("Only Okubo!");
                     break;
@@ -1288,7 +1289,7 @@ namespace FlowSharp
 
             // Find out: Where do we want the boundary to be?
             // "One day": Take Okubo etc as predictor.
-            int preferredBoundaryTime = SliceTimeMain + (24 * RedSea.Singleton.NumSubsteps) / _everyNthTimestep;
+            int preferredBoundaryTime = SliceTimeMain + (24 * Context.Singleton.NumSubsteps) / _everyNthTimestep;
             float maxTimeDistance = 1.0f;
             float maxRadius = 12;
             float minRadius = 1;
@@ -1347,7 +1348,7 @@ namespace FlowSharp
                 Console.WriteLine("Starting run {0}, {1} seeds left.", run++, seeds.Length);
 
                 // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-                #region IntegratePathlines
+#region IntegratePathlines
                 // Do we need to load a field first?
                 if (_velocity.TimeOrigin > preferredBoundaryTime - 1 || _velocity.TimeOrigin + _velocity.Size.T < preferredBoundaryTime + 1)
                     LoadField(Math.Max(preferredBoundaryTime - STEPS_IN_MEMORY / 2, 0), MemberMain, STEPS_IN_MEMORY);
@@ -1359,7 +1360,7 @@ namespace FlowSharp
                 LineSet[] pathlines = pathlineIntegrator.Integrate(seeds, true);
 
                 // Append integrated lines of next loaded vectorfield time slices.
-                float timeLength = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep; //preferredBoundaryTime * 2;
+                float timeLength = Context.Singleton.NumSubstepsTotal / _everyNthTimestep; //preferredBoundaryTime * 2;
                 while (_currentEndStep + 1 < timeLength)
                 {
                     // Don't load more steps than we need to!
@@ -1391,7 +1392,7 @@ namespace FlowSharp
                 pathlines[1].Append(pathlines[0]);
 
                 chosenPathlines = pathlines[1];
-                #endregion IntegratePathlines
+#endregion IntegratePathlines
 
                 //        // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
                 //        #region GetBoundary
@@ -1421,7 +1422,7 @@ namespace FlowSharp
                 //            if (boundaryIndices[numPathlines] >= 0)
                 //            {
                 //                pos = pathlines[numPathlines][boundaryIndices[numPathlines]];
-                //                _allBoundaryPoints.Add(new Point(pos) { Color = new Vector3(0.1f, pos.Z * _everyNthTimestep / RedSea.Singleton.NumSubstepsTotal, 0.1f) });
+                //                _allBoundaryPoints.Add(new Point(pos) { Color = new Vector3(0.1f, pos.Z * _everyNthTimestep / Context.Singleton.NumSubstepsTotal, 0.1f) });
                 //            }
                 //            // Finally found it?
                 //            // TODOD: DEBUG!!!!!!!!!!!!!!!!111!!!!!!!!!!!!!!!!!!elf!!!!!!!!!!!!!!!!
@@ -1493,7 +1494,7 @@ namespace FlowSharp
             for (int l = 0; l < LineX; ++l)
             {
                 Vector3 pos = chosenPathlines[l][boundaryIndices[l]];
-                _allBoundaryPoints.Add(new Point(pos) { Color = Vector3.UnitY * pos.Z / RedSea.Singleton.NumSubstepsTotal * _everyNthTimestep });
+                _allBoundaryPoints.Add(new Point(pos) { Color = Vector3.UnitY * pos.Z / Context.Singleton.NumSubstepsTotal * _everyNthTimestep });
                 _allBoundaryPoints.Add(boundaryOW.Points[l]);
                 _boundariesSpacetime[time][l] = pos;
             }
@@ -1518,12 +1519,12 @@ namespace FlowSharp
             _boundaryCloud = new PointCloud(_linePlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
 
             LineSet set = new LineSet(_coreAngleGraph);
-            GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+            GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
             set = new LineSet(_coreDistanceGraph);
-            GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+            GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
         }
     }
 
@@ -1583,7 +1584,7 @@ namespace FlowSharp
             int run = 0;
 
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region IntegratePathlines
+#region IntegratePathlines
             // Do we need to load a field first?
             if (_velocity.TimeOrigin > time || _velocity.TimeOrigin + _velocity.Size.T < time)
                 LoadField(time, MemberMain);
@@ -1593,7 +1594,7 @@ namespace FlowSharp
             pathlines = pathlineIntegrator.Integrate(circle, false)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
-            float timeLength = STEPS_IN_MEMORY * 3 - 2/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + time;
+            float timeLength = STEPS_IN_MEMORY * 3 - 2/*Context.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + time;
             while (_currentEndStep + 1 < timeLength)
             {
                 // Don't load more steps than we need to!
@@ -1605,10 +1606,10 @@ namespace FlowSharp
                 pathlineIntegrator.Field = _velocity;
                 pathlineIntegrator.IntegrateFurther(pathlines);
             }
-            #endregion IntegratePathlines
+#endregion IntegratePathlines
 
             // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region GetBoundary
+#region GetBoundary
             // The two needes functions.
             //Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, true);
             //Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, false);
@@ -1617,7 +1618,7 @@ namespace FlowSharp
             //Array.Resize(ref pathlines[0].Positions, graph[0].Length);
             FieldAnalysis.WriteXToLinesetAttribute(pathlines, graph);
 
-            #endregion GetBoundary
+#endregion GetBoundary
             //LineSet[] subsets = new LineSet[angles.Length];
             //for(int s = 0; s < subsets.Length; ++ s)
             //{
@@ -1629,12 +1630,12 @@ namespace FlowSharp
 
 
 //            LineSet set = new LineSet(_coreAngleGraph);
-//GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-//            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+//GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+//            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
 //            set = new LineSet(_coreDistanceGraph);
-//GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-//            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+//GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+//            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
         }
 
         /// <summary>
@@ -1647,9 +1648,9 @@ namespace FlowSharp
             int step = 0;
 
             AllSteps:
-            for (; step < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep; ++step)
+            for (; step < Context.Singleton.NumSubstepsTotal / _everyNthTimestep; ++step)
             {
-                Console.WriteLine("Started looking for boundry in step {0}/{1}.", step, RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep);
+                Console.WriteLine("Started looking for boundry in step {0}/{1}.", step, Context.Singleton.NumSubstepsTotal / _everyNthTimestep);
                 /*
                 if(not jet loaded)
                     if(file does not exist)
@@ -1666,11 +1667,11 @@ namespace FlowSharp
                 if (!_started && LineX > 0)
                 {
                     _started = true;
-                    _tube = new List<Line>(RedSea.Singleton.NumSubstepsTotal);
+                    _tube = new List<Line>(Context.Singleton.NumSubstepsTotal);
 
                     string ending = "Bound_" + _numSeeds + '_' + AlphaStable + '_' + _lengthRadius + '_' + StepSize + '_' + _methode + "_*.ring";
 
-                    string[] files = System.IO.Directory.GetFiles(RedSea.Singleton.RingFileName, ending);
+                    string[] files = System.IO.Directory.GetFiles(Context.Singleton.RingFileName, ending);
                     foreach (string path in files)
                     {
                         int startTimeStep = path.LastIndexOf('_') + 1;
@@ -1817,7 +1818,7 @@ namespace FlowSharp
                     line[0].Positions[p].Z = timestep;
                 }
             }
-            GeometryWriter.WriteToFile(RedSea.Singleton.RingFileName + ending, line);
+            GeometryWriter.WriteToFile(Context.Singleton.RingFileName + ending, line);
             foreach(Line l in line.Lines)
             _tube.Add(l);
             // ~~~~~~~~~~~~ Get Boundary for Rendering ~~~~~~~~~~~~ \\
@@ -1940,7 +1941,7 @@ namespace FlowSharp
             int run = 0;
 
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region IntegratePathlines
+#region IntegratePathlines
             // Do we need to load a field first?
             if (_velocity.TimeOrigin > time || _velocity.TimeOrigin + _velocity.Size.T < time || _velocity.Size.T < 2)
             {
@@ -1959,7 +1960,7 @@ namespace FlowSharp
             _pathlinesTime = pathlineIntegrator.Integrate(circle, false)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
-            float timeLength = (int)Math.Min(Math.Max(time + TIME_RANGE, 0), RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep );
+            float timeLength = (int)Math.Min(Math.Max(time + TIME_RANGE, 0), Context.Singleton.NumSubstepsTotal / _everyNthTimestep );
 
             if (TIME_RANGE < 0)
             {
@@ -1989,10 +1990,10 @@ namespace FlowSharp
                     pathlineIntegrator.IntegrateFurther(_pathlinesTime);
                 }
             }
-            #endregion IntegratePathlines
+#endregion IntegratePathlines
 
             // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region GetBoundary
+#region GetBoundary
             // The two needes functions.
             //Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, true);
             //Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, false);
@@ -2004,7 +2005,7 @@ namespace FlowSharp
             //Array.Resize(ref pathlines[0].Positions, graph[0].Length);
             FieldAnalysis.WriteXToLinesetAttribute(_pathlinesTime, graph);
 
-            #endregion GetBoundary
+#endregion GetBoundary
             //LineSet[] subsets = new LineSet[angles.Length];
             //for(int s = 0; s < subsets.Length; ++ s)
             //{
@@ -2016,12 +2017,12 @@ namespace FlowSharp
 
 
             //            LineSet set = new LineSet(_coreAngleGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+            //GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+            //            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
             //            set = new LineSet(_coreDistanceGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+            //GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+            //            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
         }
 
         protected override void FindBoundary()
@@ -2102,7 +2103,7 @@ namespace FlowSharp
 
             //if (errorBound >= 0)
             //    _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + errorBound][0]));
-            //GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
+            //GeometryWriter.WriteGraphCSV(Context.Singleton.DonutFileName + "Error.csv", _errorGraph);
             //Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
             ////   _graphPlane.ZAxis = Plane.ZAxis * WindowWidth;
             //_boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
@@ -2160,7 +2161,7 @@ namespace FlowSharp
         protected override void TraceCore(int member = 0, int startSubstep = 0)
         {
             int rad = NEIGHBOORHOOD_CP * (Core == CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 4 : 1);
-            string corename = RedSea.Singleton.CoreFileName + member + Core.ToString() + "cc.line";
+            string corename = Context.Singleton.CoreFileName + member + Core.ToString() + "cc.line";
             if (System.IO.File.Exists(corename))
             {
                 GeometryWriter.ReadFromFile(corename, out _cores);
@@ -2177,7 +2178,7 @@ namespace FlowSharp
                 {
                     Line[] lines = new Line[bases.Length];
                     for(int b = 0; b < bases.Length; ++b)
-                        lines[b] = new Line() { Positions = new Vector3[] { (Vector3)bases[b], (Vector3)bases[b] + Vector3.UnitZ * (float)(RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep) } };
+                        lines[b] = new Line() { Positions = new Vector3[] { (Vector3)bases[b], (Vector3)bases[b] + Vector3.UnitZ * (float)(Context.Singleton.NumSubstepsTotal / _everyNthTimestep) } };
 
                     _cores = new LineSet(lines);
                     LoadField(0, MemberMain, 1);
@@ -2186,8 +2187,8 @@ namespace FlowSharp
 
 
 
-                int numSlices = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep;
-                int stepSize = Core != CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 1 : ROUGH_MULTIPLIER; // RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1;
+                int numSlices = Context.Singleton.NumSubstepsTotal / _everyNthTimestep;
+                int stepSize = Core != CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 1 : ROUGH_MULTIPLIER; // Context.Singleton.NumSubstepsTotal / _everyNthTimestep - 1;
                 _cores = new LineSet(new Line[bases.Length]);
                 for (int b = 0; b < _cores.Length; ++b)
                 {
@@ -2356,8 +2357,8 @@ namespace FlowSharp
                 SliceTimeMainChanged)
             {
 
-                GeometryWriter.ReadFromFile(RedSea.Singleton.DonutFileName + ".angle", out _loadedAngle);
-                GeometryWriter.ReadFromFile(RedSea.Singleton.DonutFileName + ".distance", out _loadedDistance);
+                GeometryWriter.ReadFromFile(Context.Singleton.DonutFileName + ".angle", out _loadedAngle);
+                GeometryWriter.ReadFromFile(Context.Singleton.DonutFileName + ".distance", out _loadedDistance);
                 _loadedBall = new LineBall(Plane, _loadedAngle, LineBall.RenderEffect.HEIGHT);
 
                 int[] indices;
@@ -2462,7 +2463,7 @@ namespace FlowSharp
             // Count out the runs for debugging.
 
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region IntegratePathlines
+#region IntegratePathlines
             // Do we need to load a field first?
             if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
                 LoadField(SliceTimeMain, MemberMain);
@@ -2485,7 +2486,7 @@ namespace FlowSharp
             //    pathlineIntegrator.Field = _velocity;
             //    pathlineIntegrator.IntegrateFurther(pathlines);
             //}
-            #endregion IntegratePathlines
+#endregion IntegratePathlines
             Console.WriteLine("Integrated all {0} pathlines", pathlines.Length);
             graph = FieldAnalysis.ComputeFTLE2D(pathlines, new Vector3(_selection, time), angles, radii, time, IntegrationTime);
 
@@ -2494,12 +2495,12 @@ namespace FlowSharp
 
 
             //            LineSet set = new LineSet(_coreAngleGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+            //GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+            //            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
             //            set = new LineSet(_coreDistanceGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+            //GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+            //            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
         }
 
         protected override void FindBoundary()
@@ -2555,7 +2556,7 @@ namespace FlowSharp
             //    if (errorBound >= 0)
             //        _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + errorBound][0]));
             //}
-            ////   GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
+            ////   GeometryWriter.WriteGraphCSV(Context.Singleton.DonutFileName + "Error.csv", _errorGraph);
             //Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
 
             //_boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
@@ -2654,7 +2655,7 @@ namespace FlowSharp
             int run = 0;
 
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region IntegratePathlines
+#region IntegratePathlines
             // Do we need to load a field first?
             if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
                 LoadField(SliceTimeMain, MemberMain);
@@ -2664,7 +2665,7 @@ namespace FlowSharp
             pathlines = pathlineIntegrator.Integrate(circle, false)[0];
 
             // Append integrated lines of next loaded vectorfield time slices.
-            float timeLength = STEPS_IN_MEMORY * 2 - 1/*RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + SliceTimeMain;
+            float timeLength = STEPS_IN_MEMORY * 2 - 1/*Context.Singleton.NumSubstepsTotal / _everyNthTimestep / 4*/ + SliceTimeMain;
             while (_currentEndStep + 1 < timeLength)
             {
                 // Don't load more steps than we need to!
@@ -2676,10 +2677,10 @@ namespace FlowSharp
                 pathlineIntegrator.Field = _velocity;
                 pathlineIntegrator.IntegrateFurther(pathlines);
             }
-            #endregion IntegratePathlines
+#endregion IntegratePathlines
 
             // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
-            #region GetBoundary
+#region GetBoundary
             // The two needes functions.
             //Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, true);
             //Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, false);
@@ -2689,7 +2690,7 @@ namespace FlowSharp
             //Array.Resize(ref pathlines[0].Positions, graph[0].Length);
         //    FieldAnalysis.WriteXToLinesetAttribute(pathlines, graph);
 
-            #endregion GetBoundary
+#endregion GetBoundary
             //LineSet[] subsets = new LineSet[angles.Length];
             //for(int s = 0; s < subsets.Length; ++ s)
             //{
@@ -2701,12 +2702,12 @@ namespace FlowSharp
 
 
             //            LineSet set = new LineSet(_coreAngleGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
+            //GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Angle.csv", set);
+            //            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".angle", set);
 
             //            set = new LineSet(_coreDistanceGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
+            //GeometryWriter.WriteHeightCSV(Context.Singleton.DonutFileName + "Distance.csv", set);
+            //            GeometryWriter.WriteToFile(Context.Singleton.DonutFileName + ".distance", set);
         }
 
         protected override void FindBoundary()
@@ -2783,7 +2784,7 @@ namespace FlowSharp
             //_boundaryBallSpacetime = new LineBall(_linePlane, _boundariesSpacetime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap));
             //if (errorBound >= 0)
             //    _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + errorBound][0]));
-       //     GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
+       //     GeometryWriter.WriteGraphCSV(Context.Singleton.DonutFileName + "Error.csv", _errorGraph);
             Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
             //   _graphPlane.ZAxis = Plane.ZAxis * WindowWidth;
         //    _boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
@@ -2843,4 +2844,5 @@ namespace FlowSharp
             }
         }
     }
+#endif
 }

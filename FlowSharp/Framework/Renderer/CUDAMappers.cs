@@ -11,6 +11,7 @@ using ManagedCuda;
 
 namespace FlowSharp
 {
+#if false
     class FlowMapMapper : SelectionMapper
     {
         private FieldPlane _currentState;
@@ -655,4 +656,5 @@ namespace FlowSharp
             //RefreshPlane();
         }
     }*/
+#endif
 }

@@ -30,40 +30,6 @@ namespace FlowSharp
 
         public SliceRange Range { get; set; }
 
-        /// <summary>
-        /// Create a Loader object and open a NetCDF file.
-        /// </summary>
-        /// <param name="file">Path of the file.</param>
-        //public LoaderRaw(string file)
-        //{
-        //    Debug.Assert(_numOpenFiles == 0, "Another file is still open!");
-        //    _fileName = file;
-        //    // nDims = [3];
-        //    // dimList = [
-        //    //   500, 1, 500,
-        //    //   500, 1, 500,
-        //    //    50, 1, 50
-        //    // ];
-        //    // dataprec = ['float32'];
-        //    // nrecords = [1];
-        //    // timeStepNumber = [108];
-        //    //string metadata = System.IO.File.ReadAllText(@file+".meta");
-        //    //int index = metadata.IndexOf("nDims = [   ") + ("nDims = [   ").Length;
-
-        //    //if (index != -1)
-        //    //{
-        //    //    int index2 = this.Message.IndexOf(",", index);
-        //    //    if (index2 == -1)
-        //    //    {
-        //    //        index2 = this.Message.Length;
-        //    //    }
-        //    //}
-        //    _dimIDs = new int[] { (int)RedSea.Variable.GRID_X, (int)RedSea.Variable.GRID_Y, (int)RedSea.Variable.GRID_Z };
-        //    _dimLengths = new int[] { 500, 500, 50 };
-        //}
-        //protected int _step;
-        //protected int _substep;
-
         public LoaderRaw(RedSea.Variable var = RedSea.Variable.VELOCITY_X)
         {
             Debug.Assert(_numOpenFiles == 0, "Another file is still open!");

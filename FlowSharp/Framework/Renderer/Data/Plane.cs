@@ -83,6 +83,60 @@ namespace FlowSharp
             ZAxis = cpy.ZAxis;
             PointSize = cpy.PointSize;
         }
+
+        public static Plane FitToPoints<P>(Vector3 origin, float maximalExtent, PointSet<P> points) where P : Point
+        {
+            Vector3 minPos = points.Points[0].Position;
+            Vector3 maxPos = points.Points[0].Position;
+
+            // Find min and max in each dimension.
+                        foreach (P p in points.Points)
+            {
+                for (int v = 0; v < 3; ++v)
+                {
+                    minPos[v] = Math.Min(minPos[v], p.Position[v]);
+                    maxPos[v] = Math.Max(maxPos[v], p.Position[v]);
+                }
+            }
+
+           // Extent.
+           Vector3 extent = maxPos - minPos;
+            float maxEx = Math.Max(Math.Max(extent[0], extent[1]), extent[2]);
+
+            //foreach (P p in points.Points)
+            //{
+            //    p.Position = (p.Position - minPos) / maxEx;
+            //}
+            float scale = maximalExtent / maxEx;
+            Vector3 scaledOrigin = origin - minPos * scale;
+
+            return new Plane(scaledOrigin, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, scale, scale * 0.01f);
+
+//            return new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 1);
+        }
+
+        public List<Renderable> GenerateAxisGlyph()
+        {
+            List<Renderable> result = new List<Renderable>(4);
+
+            Point[] ends = new Point[3];
+            for (int a = 0; a < 3; ++a)
+            {
+                Vector3 vec = Vector3.Zero;
+                vec[a] = 1;
+
+                Line line = new Line(2);
+                result.Add(new LineBall(this, new LineSet(new Line[] { new Line() { Positions = new Vector3[] { Vector3.Zero, vec } } }) { Color = vec, Thickness = 0.01f }));
+
+                ends[a] = new Point(vec) { Color = vec, Radius = 0.02f };
+            }
+            result.Add(new PointCloud(this, new PointSet<Point>(ends)));
+
+            return result;
+        }
+
+        
+
     }
     class FieldPlane : ColormapRenderable
     {

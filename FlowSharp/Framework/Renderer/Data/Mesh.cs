@@ -40,9 +40,8 @@ namespace FlowSharp
             _color = surf.Color;
             this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
             this._topology = PrimitiveTopology.TriangleList;
-            this.
-            // Setting up the vertex buffer. 
-            
+
+            // Setting up the vertex buffer.             
             UsedMap = colormap;
             _planeNormal = plane.ZAxis;
             _planeNormal.Normalize();

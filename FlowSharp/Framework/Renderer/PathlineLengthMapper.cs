@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
+#if false
     class PathlineLengthMapper : SelectionMapper
     {
         protected PointSet<EndPoint>[] _intersectTimeSlices;
@@ -232,4 +233,5 @@ namespace FlowSharp
             }
         }
     }
+#endif
 }

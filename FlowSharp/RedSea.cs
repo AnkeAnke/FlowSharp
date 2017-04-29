@@ -9,7 +9,7 @@ using PointSet = FlowSharp.PointSet<FlowSharp.Point>;
 
 namespace FlowSharp
 {
-    class RedSea
+    class RedSea : DataContextVariant
     {
         public delegate Loader LoaderBuilder(int step, int? substep = null, int? member = null, RedSea.Variable var = Variable.VELOCITY_X);
         public delegate LoaderNCF LoaderBuilderNCF(int index);
@@ -30,6 +30,7 @@ namespace FlowSharp
 
         public float DomainScale = 1.0f/4.63f; //2.593f / 15;
         public float TimeScale { get { return 1.0f/DomainScale; } }
+
         /// <summary>
         /// Relevant variables of Read Sea file.
         /// </summary>

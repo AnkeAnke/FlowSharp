@@ -88,6 +88,16 @@ namespace FlowSharp
                 _data[d] = v;
         }
 
+        public Vector(Vector3 vec)
+        {
+            _data = new float[] { vec.X, vec.Y, vec.Z };
+        }
+
+        public Vector(Vector4 vec)
+        {
+            _data = new float[] { vec.X, vec.Y, vec.Z, vec.W };
+        }
+
         public static Vector operator *(Vector a, float b)
         {
             Vector prod = new Vector(a);
@@ -202,6 +212,14 @@ namespace FlowSharp
         public static explicit operator SlimDX.Vector3(Vector vec)  // explicit byte to digit conversion operator
         {
             return new SlimDX.Vector3(vec[0], vec.Length > 1? vec[1] : 0, vec.Length > 2 ? vec[2] : 0);
+        }
+
+        /// <summary>
+        /// Convert first four elements to SlimDX.Vector4. If less, fill with (0 0 0 1).
+        /// </summary>
+        public static explicit operator SlimDX.Vector4(Vector vec)  // explicit byte to digit conversion operator
+        {
+            return new SlimDX.Vector4(vec[0], vec.Length > 1 ? vec[1] : 0, vec.Length > 2 ? vec[2] : 0, vec.Length > 3 ? vec[3] : 1);
         }
 
         /// <summary>

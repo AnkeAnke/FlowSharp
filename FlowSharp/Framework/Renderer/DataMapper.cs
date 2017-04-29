@@ -9,6 +9,10 @@ using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
+#if true
+    using Context = Aneurysm;
+#endif
+    
     abstract class DataMapper
     {
         public enum CoreAlgorithm
@@ -33,10 +37,12 @@ namespace FlowSharp
             }
         }
 
+#if false
         protected virtual FieldPlane LoadPlane(int member, int time, int subtime = 0, bool timeOffset = false)
         {
             return LoadPlaneAndGrid(member, time, subtime, timeOffset).Item1;
         }
+
 
         protected FieldPlane LoadPlane(int member, int time, out RectlinearGrid grid, int subtime = 0)
         {
@@ -50,49 +56,49 @@ namespace FlowSharp
             LoaderRaw loader = new LoaderRaw();
             ScalarField[] scalars;// = new ScalarField[2];
             // Read in the data.
-            //_ranges[0].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
-            //_ranges[1].SetMember(RedSea.Dimension.MEMBER, _currentSetting.MemberMain);
+            //_ranges[0].SetMember(Context.Dimension.MEMBER, _currentSetting.MemberMain);
+            //_ranges[1].SetMember(Context.Dimension.MEMBER, _currentSetting.MemberMain);
 
-            //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(time);
-            loader.Range.SetMember(RedSea.Dimension.MEMBER, member);
-            loader.Range.SetMember(RedSea.Dimension.TIME, time);
-            loader.Range.SetMember(RedSea.Dimension.SUBTIME, subtime);
+            //LoaderNCF ncFile = Context.Singleton.GetLoaderNCF(time);
+            loader.Range.SetMember(Context.Dimension.MEMBER, member);
+            loader.Range.SetMember(Context.Dimension.TIME, time);
+            loader.Range.SetMember(Context.Dimension.SUBTIME, subtime);
             switch (_currentSetting.Measure)
             {
-                case RedSea.Measure.VELOCITY:
-                case RedSea.Measure.DIVERGENCE:
-                case RedSea.Measure.VORTICITY:
-                case RedSea.Measure.SHEAR:
-                case RedSea.Measure.DIVERGENCE_2D:
+                case Context.Measure.VELOCITY:
+                case Context.Measure.DIVERGENCE:
+                case Context.Measure.VORTICITY:
+                case Context.Measure.SHEAR:
+                case Context.Measure.DIVERGENCE_2D:
                     scalars = new ScalarField[2];
 
                     LoadVelocity:
 
-                    loader.Range.SetMember(RedSea.Dimension.GRID_Z, _currentSetting.SliceHeight);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.MEMBER, member);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.MEMBER, member);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_X].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
-                    //_variableRanges[(int)RedSea.Variable.VELOCITY_Y].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+                    loader.Range.SetMember(Context.Dimension.GRID_Z, _currentSetting.SliceHeight);
+                    //_variableRanges[(int)Context.Variable.VELOCITY_X].SetMember(Context.Dimension.MEMBER, member);
+                    //_variableRanges[(int)Context.Variable.VELOCITY_Y].SetMember(Context.Dimension.MEMBER, member);
+                    //_variableRanges[(int)Context.Variable.VELOCITY_X].SetMember(Context.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+                    //_variableRanges[(int)Context.Variable.VELOCITY_Y].SetMember(Context.Dimension.CENTER_Z, _currentSetting.SliceHeight);
 
-                    scalars[0] = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
-                    scalars[1] = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
-                    //scalars[0] = ncFile.LoadFieldSlice( _variableRanges[(int)RedSea.Variable.VELOCITY_X]);
-                    //scalars[1] = ncFile.LoadFieldSlice(_variableRanges[(int)RedSea.Variable.VELOCITY_Y]);
+                    scalars[0] = loader.LoadFieldSlice(Context.Variable.VELOCITY_X);
+                    scalars[1] = loader.LoadFieldSlice(Context.Variable.VELOCITY_Y);
+                    //scalars[0] = ncFile.LoadFieldSlice( _variableRanges[(int)Context.Variable.VELOCITY_X]);
+                    //scalars[1] = ncFile.LoadFieldSlice(_variableRanges[(int)Context.Variable.VELOCITY_Y]);
                     break;
 
                 default:
-                    RedSea.Measure var = _currentSetting.Measure;
+                    Context.Measure var = _currentSetting.Measure;
 
-                    //_variableRanges[(int)var].SetMember(RedSea.Dimension.MEMBER, member);
-                    int sliceHeight = (var == RedSea.Measure.SURFACE_HEIGHT) ? 0 : _currentSetting.SliceHeight;
-                    loader.Range.SetMember(RedSea.Dimension.GRID_Z, sliceHeight);
-                    //_variableRanges[(int)var].SetMember(RedSea.Dimension.CENTER_Z, _currentSetting.SliceHeight);
+                    //_variableRanges[(int)var].SetMember(Context.Dimension.MEMBER, member);
+                    int sliceHeight = (var == Context.Measure.SURFACE_HEIGHT) ? 0 : _currentSetting.SliceHeight;
+                    loader.Range.SetMember(Context.Dimension.GRID_Z, sliceHeight);
+                    //_variableRanges[(int)var].SetMember(Context.Dimension.CENTER_Z, _currentSetting.SliceHeight);
 
 
                     // Maybe load vector field too.
                     bool addVelocity = (_currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH);
                     scalars = new ScalarField[addVelocity ? 3 : 1];
-                    scalars[scalars.Length - 1] = loader.LoadFieldSlice((RedSea.Variable)var); //ncFile.LoadFieldSlice(_variableRanges[(int)var]);
+                    scalars[scalars.Length - 1] = loader.LoadFieldSlice((Context.Variable)var); //ncFile.LoadFieldSlice(_variableRanges[(int)var]);
                     if (addVelocity)
                         goto LoadVelocity;
 
@@ -103,7 +109,7 @@ namespace FlowSharp
             VectorField field;
             switch (_currentSetting.Measure)
             {
-                case RedSea.Measure.DIVERGENCE:
+                case Context.Measure.DIVERGENCE:
                     {
                         VectorField vel = new VectorField(scalars);
 
@@ -118,13 +124,13 @@ namespace FlowSharp
                         }
                         break;
                     }
-                case RedSea.Measure.DIVERGENCE_2D:
+                case Context.Measure.DIVERGENCE_2D:
                     {
                         VectorField vel = new VectorField(scalars);
                         scalars = new VectorField(vel, FieldAnalysis.Div2D, 2, true).Scalars as ScalarField[];
                         break;
                     }
-                case RedSea.Measure.VORTICITY:
+                case Context.Measure.VORTICITY:
                     {
                         VectorField vel = new VectorField(scalars);
 
@@ -139,7 +145,7 @@ namespace FlowSharp
                         }
                         break;
                     }
-                case RedSea.Measure.SHEAR:
+                case Context.Measure.SHEAR:
                     {
                         VectorField vel = new VectorField(scalars);
 
@@ -160,9 +166,9 @@ namespace FlowSharp
             field = new VectorField(scalars);
 
 
-            //loader.Range.SetMember(RedSea.Dimension.TIME, time+1);
-            //var x = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_X);
-            //var y = loader.LoadFieldSlice(RedSea.Variable.VELOCITY_Y);
+            //loader.Range.SetMember(Context.Dimension.TIME, time+1);
+            //var x = loader.LoadFieldSlice(Context.Variable.VELOCITY_X);
+            //var y = loader.LoadFieldSlice(Context.Variable.VELOCITY_Y);
             //ScalarFieldUnsteady xS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], x });
             //xS.DoNotScale();
             //ScalarFieldUnsteady yS = new ScalarFieldUnsteady(new ScalarField[] { scalars[0], y });
@@ -170,12 +176,13 @@ namespace FlowSharp
             //VectorFieldUnsteady twoSlices = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { xS, yS });
             //Console.WriteLine("Remooove meeeeee!");
             //VectorFieldUnsteady awriuwergioaheosiohlbyuygowgfuyvbui = new VectorFieldUnsteady(twoSlices, FieldAnalysis.Acceleration, 2);
-            field.TimeSlice = timeOffset ? time * RedSea.Singleton.NumSubsteps + subtime/*time + (float)subtime / RedSea.Singleton.NumSubsteps*/ : 0;
+            field.TimeSlice = timeOffset ? time * Context.Singleton.NumSubsteps + subtime/*time + (float)subtime / Context.Singleton.NumSubsteps*/ : 0;
             // field = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
             RectlinearGrid grid = field.Grid as RectlinearGrid;
 
             return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap), grid);
         }
+#endif
 
         #region IntersectionPlane
         private float _planeOffsetZ_intern = 0;
@@ -188,9 +195,9 @@ namespace FlowSharp
         private Plane _plane;
 
         private LineBall _selectionRect;
-        #endregion
+#endregion
 
-        #region Settings
+#region Settings
         public Setting CurrentSetting { get { return _currentSetting; } set { _currentSetting = value; } }
         protected Setting _currentSetting;
         protected Setting _lastSetting;
@@ -210,9 +217,9 @@ namespace FlowSharp
         public class Setting
         {
             [FieldOffset(0)]
-            public RedSea.DisplayLines LineSetting;
+            public Context.DisplayLines LineSetting;
             //{
-            //    get { return (RedSea.DisplayLines)this[Element.LineSetting]; }
+            //    get { return (Context.DisplayLines)this[Element.LineSetting]; }
             //    set { this[Element.LineSetting] = (int)value; }
             //}
             [FieldOffset(4)]
@@ -236,7 +243,7 @@ namespace FlowSharp
             [FieldOffset(32)]
             public int MemberReference;
             [FieldOffset(36)]
-            public RedSea.DisplayTracking Tracking;
+            public Context.DisplayTracking Tracking;
 
             [FieldOffset(40)]
             public Colormap Colormap;
@@ -255,9 +262,9 @@ namespace FlowSharp
             [FieldOffset(52)]
             public float WindowStart;
             [FieldOffset(56)]
-            public RedSea.Measure Measure;
+            public Context.Measure Measure;
             //{
-            //    get { return (RedSea.Measure)this[Element.Measure]; }
+            //    get { return (Context.Measure)this[Element.Measure]; }
             //    set { this[Element.Measure] = (int)value; }
             //}
             [FieldOffset(60)]
@@ -265,9 +272,9 @@ namespace FlowSharp
             [FieldOffset(64)]
             public float IntegrationTime;
             [FieldOffset(68)]
-            public RedSea.DiffusionMeasure DiffusionMeasure;
+            public Context.DiffusionMeasure DiffusionMeasure;
             //{
-            //    get { return (RedSea.DiffusionMeasure)this[Element.DiffusionMeasure]; }
+            //    get { return (Context.DiffusionMeasure)this[Element.DiffusionMeasure]; }
             //    set { this[Element.DiffusionMeasure] = (int)value; }
             //}
             [FieldOffset(72)]
@@ -411,7 +418,7 @@ namespace FlowSharp
 
             public Setting() { }
         }
-        #endregion Settings
+#endregion Settings
 
         public ViewFunction Mapping;
 
@@ -437,8 +444,8 @@ namespace FlowSharp
             corners[3] = new Vector3(points[1].X, points[0].Y, 0);
             corners[4] = corners[0];
 
-            _selectionRect = new LineBall(_intersectionPlane, new LineSet(new Line[] { new Line() { Positions = corners } }) { Thickness = 0.2f, Color = Vector3.UnitX });
-            Renderer.Singleton.AddRenderable(_selectionRect);
+//            _selectionRect = new LineBall(_intersectionPlane, new LineSet(new Line[] { new Line() { Positions = corners } }) { Thickness = 0.2f, Color = Vector3.UnitX });
+//            Renderer.Singleton.AddRenderable(_selectionRect);
         }
 
         public virtual void OnRelease()
@@ -498,7 +505,7 @@ namespace FlowSharp
             {
                 case Setting.Element.MemberMain:
                 case Setting.Element.MemberReference:
-                    return RedSea.Singleton.NumSteps;
+                    return Context.Singleton.NumSteps;
                 case Setting.Element.LineX:
                     return 500;
                 default:
@@ -506,7 +513,7 @@ namespace FlowSharp
             }
         }
 
-        #region SettingChanged
+#region SettingChanged
         public virtual bool LineSettingChanged { get { return _currentSetting.LineSetting != _lastSetting.LineSetting; } }
         public virtual bool SliceTimeMainChanged { get { return _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain; } }
         public virtual bool SliceTimeReferenceChanged { get { return _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference; } }
@@ -536,10 +543,10 @@ namespace FlowSharp
         public virtual bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
         public virtual bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
         public virtual bool CoreChanged { get { return _currentSetting.Core != _lastSetting.Core; } }
-        #endregion SettingChanged
+#endregion SettingChanged
 
-        #region CurrentSetting
-        protected RedSea.DisplayLines LineSetting
+#region CurrentSetting
+        protected Context.DisplayLines LineSetting
         { get { return _currentSetting.LineSetting; } }
 
         protected int SliceTimeMain
@@ -566,7 +573,7 @@ namespace FlowSharp
         protected int MemberReference
         { get { return _currentSetting.MemberReference; } }
 
-        protected RedSea.DisplayTracking Tracking
+        protected Context.DisplayTracking Tracking
         { get { return _currentSetting.Tracking; } }
 
         protected Colormap Colormap
@@ -581,7 +588,7 @@ namespace FlowSharp
         protected float WindowStart
         { get { return _currentSetting.WindowStart; } }
 
-        protected RedSea.Measure Measure
+        protected Context.Measure Measure
         { get { return _currentSetting.Measure; } }
 
         protected int SliceHeight
@@ -590,7 +597,7 @@ namespace FlowSharp
         protected float IntegrationTime
         { get { return _currentSetting.IntegrationTime; } }
 
-        protected RedSea.DiffusionMeasure DiffusionMeasure
+        protected Context.DiffusionMeasure DiffusionMeasure
         { get { return _currentSetting.DiffusionMeasure; } }
 
         protected Sign Flat
@@ -601,7 +608,7 @@ namespace FlowSharp
 
         protected CoreAlgorithm Core
         { get { return _currentSetting.Core; } }
-        #endregion CurrentSetting
+#endregion CurrentSetting
 
     }
 
@@ -714,17 +721,17 @@ namespace FlowSharp
                 switch (_currentSetting.LineSetting)
                 {
                     // Map the vertices to colored points.
-                    case RedSea.DisplayLines.POINTS_2D_LENGTH:
+                    case Context.DisplayLines.POINTS_2D_LENGTH:
                         foreach (LineSet line in _rawLines)
                         {
-                            PointSet<Point> linePoints = Velocity.ColorCodeArbitrary(line, RedSea.DisplayLineFunctions[(int)_currentSetting.LineSetting]);
+                            PointSet<Point> linePoints = Velocity.ColorCodeArbitrary(line, Context.DisplayLineFunctions[(int)_currentSetting.LineSetting]);
                             _lines.Add(new PointCloud(Plane, linePoints));
                         }
                         break;
 
                     // Render as line.
                     default:
-                    case RedSea.DisplayLines.LINE:
+                    case Context.DisplayLines.LINE:
                         foreach (LineSet line in _rawLines)
                         {
                             _lines.Add(new LineBall(Plane, line));
@@ -781,7 +788,7 @@ namespace FlowSharp
             Plane = plane;
         }
     }
-
+#if false
     class MemberComparison : DataMapper
     {
         //private Loader.SliceRange[] _ranges;
@@ -799,32 +806,32 @@ namespace FlowSharp
             Plane = plane;
             Mapping = LoadMembers;
 
-            //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
+            //LoaderNCF ncFile = Context.Singleton.GetLoaderNCF(0);
 
             //int sizeVar = ncFile.GetNumVariables();
             //_variableRanges = new LoaderNCF.SliceRange[sizeVar];
 
-            ////LoaderNCF.SliceRange ensembleU = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_X);
-            ////ensembleU.SetMember(RedSea.Dimension.TIME, 0);
-            ////LoaderNCF.SliceRange ensembleV = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.VELOCITY_Y);
-            ////ensembleV.SetMember(RedSea.Dimension.TIME, 0);
-            ////LoaderNCF.SliceRange ensembleSal = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.SALINITY);
-            ////ensembleSal.SetMember(RedSea.Dimension.TIME, 0);
-            ////LoaderNCF.SliceRange ensembleTemp = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.TEMPERATURE);
-            ////ensembleTemp.SetMember(RedSea.Dimension.TIME, 0);
-            ////LoaderNCF.SliceRange ensembleHeight = new LoaderNCF.SliceRange(ncFile, RedSea.Variable.SURFACE_HEIGHT);
-            ////ensembleHeight.SetMember(RedSea.Dimension.TIME, 0);
+            ////LoaderNCF.SliceRange ensembleU = new LoaderNCF.SliceRange(ncFile, Context.Variable.VELOCITY_X);
+            ////ensembleU.SetMember(Context.Dimension.TIME, 0);
+            ////LoaderNCF.SliceRange ensembleV = new LoaderNCF.SliceRange(ncFile, Context.Variable.VELOCITY_Y);
+            ////ensembleV.SetMember(Context.Dimension.TIME, 0);
+            ////LoaderNCF.SliceRange ensembleSal = new LoaderNCF.SliceRange(ncFile, Context.Variable.SALINITY);
+            ////ensembleSal.SetMember(Context.Dimension.TIME, 0);
+            ////LoaderNCF.SliceRange ensembleTemp = new LoaderNCF.SliceRange(ncFile, Context.Variable.TEMPERATURE);
+            ////ensembleTemp.SetMember(Context.Dimension.TIME, 0);
+            ////LoaderNCF.SliceRange ensembleHeight = new LoaderNCF.SliceRange(ncFile, Context.Variable.SURFACE_HEIGHT);
+            ////ensembleHeight.SetMember(Context.Dimension.TIME, 0);
 
-            ////_variableRanges[(int)RedSea.Variable.VELOCITY_X] = ensembleU;
-            ////_variableRanges[(int)RedSea.Variable.VELOCITY_Y] = ensembleV;
-            ////_variableRanges[(int)RedSea.Variable.SALINITY] = ensembleSal;
-            ////_variableRanges[(int)RedSea.Variable.TEMPERATURE] = ensembleTemp;
-            ////_variableRanges[(int)RedSea.Variable.SURFACE_HEIGHT] = ensembleHeight;
+            ////_variableRanges[(int)Context.Variable.VELOCITY_X] = ensembleU;
+            ////_variableRanges[(int)Context.Variable.VELOCITY_Y] = ensembleV;
+            ////_variableRanges[(int)Context.Variable.SALINITY] = ensembleSal;
+            ////_variableRanges[(int)Context.Variable.TEMPERATURE] = ensembleTemp;
+            ////_variableRanges[(int)Context.Variable.SURFACE_HEIGHT] = ensembleHeight;
             //_variableRange = new LoaderRaw.SliceRangeRaw();
-            //_variableRange.SetMember(RedSea.Dimension.TIME, 0);
+            //_variableRange.SetMember(Context.Dimension.TIME, 0);
 
             _loader = new LoaderRaw();
-            _loader.Range.SetMember(RedSea.Dimension.SUBTIME, 0);
+            _loader.Range.SetMember(Context.Dimension.SUBTIME, 0);
 
             //ncFile.Close();
         }
@@ -937,7 +944,7 @@ namespace FlowSharp
             }
         }
     }
-
+#endif
     class OkuboWeiss : DataMapper
     {
         private VectorFieldUnsteady _fieldOW;
@@ -1016,6 +1023,7 @@ namespace FlowSharp
         }
     }
 
+#if false
     class SubstepViewer : DataMapper
     {
         //private Loader.SliceRange[] _ranges;
@@ -1035,16 +1043,16 @@ namespace FlowSharp
 
             ScalarField[] scalars;// = new ScalarField[2];
 
-            //RedSea.Variable measureAsVar;
+            //Context.Variable measureAsVar;
             //switch (_currentSetting.Measure)
             //{
-            //    case RedSea.Measure.SALINITY:
-            //    case RedSea.Measure.SURFACE_HEIGHT:
-            //    case RedSea.Measure.TEMPERATURE:
-            //        measureAsVar = (RedSea.Variable)(int)_currentSetting.Measure;
+            //    case Context.Measure.SALINITY:
+            //    case Context.Measure.SURFACE_HEIGHT:
+            //    case Context.Measure.TEMPERATURE:
+            //        measureAsVar = (Context.Variable)(int)_currentSetting.Measure;
             //        break;
             //    default:
-            //        measureAsVar = RedSea.Variable.VELOCITY_Z;
+            //        measureAsVar = Context.Variable.VELOCITY_Z;
             //        break;
             //}
 
@@ -1053,34 +1061,34 @@ namespace FlowSharp
            // substepTime *= 9;
 
 
-            LoaderRaw file = RedSea.Singleton.GetLoader(stepTime, substepTime, member, RedSea.Variable.VELOCITY_X) as LoaderRaw;
-            int height = _currentSetting.Measure == RedSea.Measure.SURFACE_HEIGHT ? 0 : _currentSetting.SliceHeight;
-            file.Range.SetMember(RedSea.Dimension.GRID_Z, height);
+            LoaderRaw file = Context.Singleton.GetLoader(stepTime, substepTime, member, Context.Variable.VELOCITY_X) as LoaderRaw;
+            int height = _currentSetting.Measure == Context.Measure.SURFACE_HEIGHT ? 0 : _currentSetting.SliceHeight;
+            file.Range.SetMember(Context.Dimension.GRID_Z, height);
             file.Range.CorrectEndian = false;
 
             switch (_currentSetting.Measure)
             {
-                case RedSea.Measure.VELOCITY:
-                case RedSea.Measure.DIVERGENCE:
-                case RedSea.Measure.VORTICITY:
-                case RedSea.Measure.SHEAR:
-                case RedSea.Measure.DIVERGENCE_2D:
+                case Context.Measure.VELOCITY:
+                case Context.Measure.DIVERGENCE:
+                case Context.Measure.VORTICITY:
+                case Context.Measure.SHEAR:
+                case Context.Measure.DIVERGENCE_2D:
                     scalars = new ScalarField[2];
 
                     LoadVelocity:
 
                     scalars[0] = file.LoadFieldSlice();
-                    file.Range.SetVariable(RedSea.Variable.VELOCITY_Y);
+                    file.Range.SetVariable(Context.Variable.VELOCITY_Y);
                     scalars[1] = file.LoadFieldSlice();
                     break;
 
                 default:
-                    RedSea.Measure var = _currentSetting.Measure;
+                    Context.Measure var = _currentSetting.Measure;
 
                     // Maybe load vector field too.
                     bool addVelocity = (_currentSetting.Shader == FieldPlane.RenderEffect.LIC || _currentSetting.Shader == FieldPlane.RenderEffect.LIC_LENGTH);
                     scalars = new ScalarField[addVelocity ? 3 : 1];
-                    file.Range.SetVariable((RedSea.Variable)var);
+                    file.Range.SetVariable((Context.Variable)var);
                     scalars[scalars.Length - 1] = file.LoadFieldSlice();
                     if (addVelocity)
                         goto LoadVelocity;
@@ -1091,7 +1099,7 @@ namespace FlowSharp
             VectorField field;
             switch (_currentSetting.Measure)
             {
-                case RedSea.Measure.DIVERGENCE:
+                case Context.Measure.DIVERGENCE:
                     {
                         VectorField vel = new VectorField(scalars);
 
@@ -1106,13 +1114,13 @@ namespace FlowSharp
                         }
                         break;
                     }
-                case RedSea.Measure.DIVERGENCE_2D:
+                case Context.Measure.DIVERGENCE_2D:
                     {
                         VectorField vel = new VectorField(scalars);
                         scalars = new VectorField(vel, FieldAnalysis.Div2D, 2, true).Scalars as ScalarField[];
                         break;
                     }
-                case RedSea.Measure.VORTICITY:
+                case Context.Measure.VORTICITY:
                     {
                         VectorField vel = new VectorField(scalars);
 
@@ -1127,7 +1135,7 @@ namespace FlowSharp
                         }
                         break;
                     }
-                case RedSea.Measure.SHEAR:
+                case Context.Measure.SHEAR:
                     {
                         VectorField vel = new VectorField(scalars);
 
@@ -1343,7 +1351,7 @@ namespace FlowSharp
             }
 
             if (_graph != null &&
-                _currentSetting.LineSetting == RedSea.DisplayLines.LINE && (
+                _currentSetting.LineSetting == Context.DisplayLines.LINE && (
                 _lastSetting == null || rebuilt ||
                 WindowWidthChanged ||
                 WindowStartChanged ||
@@ -1396,6 +1404,8 @@ namespace FlowSharp
             }
         }
     }
+#endif
+
     abstract class SelectionMapper : DataMapper
     {
         protected AlgorithmCuda _algorithm;
