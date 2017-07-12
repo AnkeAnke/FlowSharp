@@ -115,6 +115,37 @@ namespace FlowSharp
 //            return new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 1);
         }
 
+        public static Plane FitToPoints(Vector3 origin, float maximalExtent, Vector[] verts)
+        {
+            Vector3 minPos = (Vector3)verts[0];
+            Vector3 maxPos = (Vector3)verts[0];
+
+            // Find min and max in each dimension.
+            foreach (Vector p in verts)
+            {
+                for (int v = 0; v < 3; ++v)
+                {
+                    minPos[v] = Math.Min(minPos[v], p[v]);
+                    maxPos[v] = Math.Max(maxPos[v], p[v]);
+                }
+            }
+
+            // Extent.
+            Vector3 extent = maxPos - minPos;
+            float maxEx = Math.Max(Math.Max(extent[0], extent[1]), extent[2]);
+
+            //foreach (P p in points.Points)
+            //{
+            //    p.Position = (p.Position - minPos) / maxEx;
+            //}
+            float scale = maximalExtent / maxEx;
+            Vector3 scaledOrigin = origin - minPos * scale;
+
+            return new Plane(scaledOrigin, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, scale, scale * 0.01f);
+
+            //            return new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 1);
+        }
+
         public List<Renderable> GenerateAxisGlyph()
         {
             List<Renderable> result = new List<Renderable>(4);

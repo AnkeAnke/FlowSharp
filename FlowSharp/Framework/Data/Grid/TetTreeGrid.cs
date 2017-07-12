@@ -8,65 +8,92 @@ using SlimDX;
 
 namespace FlowSharp
 {
-    class TetGrid : FieldGrid
+    class TetTreeGrid : FieldGrid, GeneralUnstructurdGrid
     {
-        public Vector[] Vertices;
-        //public Index[] Indices;
+        public Vector[] Vertices { get; set; }
+
         public Tet[] Cells;
         private const int NumCorners = 4;
+        public int NumCells { get { return Cells.Length; } }
+        /// <summary>
+        /// Assemble all inidices to a buffer. Do this here for general Tet grids.
+        /// </summary>
+        /// <returns></returns>
+        public Index[] AssembleIndexList()
+        {
+            //Index[] cells = new Index[Cells.Length];
+            //for (int c = 0; c < Cells.Length; ++c)
+            //        cells[c] = Cells[c].VertexIndices;
+            //return cells;
+            Index[] tris = new Index[Cells.Length * 4];
+            for (int c = 0; c < Cells.Length; c++)
+            {
+                for (int s = 0; s < 4; ++s)
+                {
+                    tris[c * 4 + s] = new Index(3);
+                    int count = 0;
+                    for (int i = 0; i < 4; ++i)
+                        if (i != s)
+                            tris[c * 4 + s][count++] = Cells[c].VertexIndices[i];
+                }
+            }
+
+            return tris;
+        }
 
         /// <summary>
         /// Create a new tetraeder grid descriptor.
         /// </summary>
-        public TetGrid(Vector[] vertices, Index[] indices, Vector origin = null, float? timeOrigin = null)
+        public TetTreeGrid(Vector[] vertices, Tet[] indices, Vector origin = null, float? timeOrigin = null)
         {
             // For Dimensionality.
             Size = new Index(4);
-            Cells = new Tet[indices.Length * 4];
+            Cells = indices;
+            //            Cells = new Tet[indices.Length * 5];
             Vertices = vertices;
 
             Debug.Assert(vertices.Length > 0 && indices.Length > 0, "No data given.");
             int dim = vertices[0].Length;
-#if false//DEBUG
+#if DEBUG
             foreach (Vector v in vertices)
             {
                 Debug.Assert(v.Length == dim, "Varying vertex dimensions.");
             }
-            foreach(Index i in indices)
+            foreach (Tet i in indices)
             {
-                Debug.Assert(i.Length == NumCorners, "Cells should have " + NumCorners + " corners each.");
-                foreach (int idx in i.Data)
+                Debug.Assert(i.VertexIndices.Length == NumCorners, "Cells should have " + NumCorners + " corners each.");
+                foreach (int idx in i.VertexIndices.Data)
                     Debug.Assert(idx >= 0 && idx < vertices.Length, "Invalid index, out of vertex list bounds.");
             }
 #endif
 
-            Origin = origin ?? new Vector(0, dim);
+            Origin = origin ?? new Vector(0, 4);
             TimeDependant = timeOrigin != null;
             Origin.T = timeOrigin ?? Origin.T;
-
-            BuildGrid(indices);
         }
 
-        private void BuildGrid(Index[] indices)
+        public Index[] GetAllSides()
         {
-            List<int>[] tetsPerVertex = new List<int>[Cells.Length];
+            List<Index> sides = new List<Index>(Cells.Length);
 
             for (int c = 0; c < Cells.Length; ++c)
             {
-
+                // Dirty quickfix: Duplicate the first cells multiple times, so we don't need to deal with uninitialized tets.
+                Index verts = Cells[c].VertexIndices;
+                if (verts == null)
+                    continue;
+                sides.Add( new Index( new int[] { verts[0], verts[1], verts[2] } ) );
+                sides.Add( new Index( new int[] { verts[0], verts[2], verts[3] } ) );
+                sides.Add( new Index( new int[] { verts[0], verts[1], verts[3] } ) );
+                sides.Add( new Index( new int[] { verts[1], verts[2], verts[3] } ) );
             }
-            //TODO
+
+            return sides.ToArray();
         }
 
         public override FieldGrid Copy()
         {
             throw new NotImplementedException("Grid is so big I don't want to copy it.");
-            return this;
-            //var cpy = tetraGrid.DeepCopyData();
-            //Vertices = cpy.Item1;
-            //Indices = cpy.Item2;
-            //Origin = tetraGrid.Origin;
-            //TimeOrigin = tetraGrid.TimeOrigin;
         }
 
         public override int NumAdjacentPoints()
@@ -108,21 +135,6 @@ namespace FlowSharp
             Debug.Assert(position.Length == Size.Length, "Trying to access " + Size.Length + "D field with " + position.Length + "D index.");
             return false;
         }
-
-        //private Tuple<Vector[],Tet[]> DeepCopyData()
-        //{
-        //    // Deep copy of index list.
-        //    Index[] iCpy = new Index[Cells.Length];
-        //    for (int i = 0; i < Cells.Length; ++i)
-        //        iCpy[i] = new Tet(Cells[i]);
-
-        //    // Deep copy of vertex list.
-        //    Vector[] vCpy = new Vector[Indices.Length];
-        //    for (int v = 0; v < Vertices.Length; ++v)
-        //        vCpy[v] = new Vector(Vertices[v]);
-
-        //    return new Tuple<Vector[], Index[]>(vCpy, iCpy);
-        //}
 
         #region DebugRendering
 
@@ -176,25 +188,17 @@ namespace FlowSharp
         /// Indices referencing the vertices in the containing grid.
         /// </summary>
         public Index VertexIndices;
-        /// <summary>
-        /// Indices referencing the neighboring tetraeders in the containing grid. Side across from the respective corner. -1 if outside.
-        /// </summary>
-        public Index NeighborIndices;
 
         /// <summary>
-        /// Create a Tetraeder with given neighborhood.
+        /// Create a Tetraeder.
         /// </summary>
         /// <param name="verts">Vertex indices [4]</param>
-        /// <param name="neighs">Neighbor indives [4] or null. If null, supply this information later.</param>
-        public Tet(Index verts, Index neighs = null)
+        public Tet(Index verts)
         {
             Debug.Assert(verts.Length == 4, "Tetraeders have exactly 4 corners.");
-            Debug.Assert(neighs == null || neighs.Length == 4, "Tetraeders have exactly 4 neighbors. -1 if invalid.");
             VertexIndices = verts;
-            NeighborIndices = neighs ?? new Index(-1,4);
         }
-
-        public Vector ToBaryCoord(TetGrid grid, Vector worldPos)
+        public Vector ToBaryCoord(TetTreeGrid grid, Vector worldPos)
         {
             Matrix tet = new Matrix();
             for (int c = 0; c < 4; ++c)

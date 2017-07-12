@@ -894,7 +894,6 @@ namespace FlowSharp
 
         public static Graph2D[] GetDistanceToAngle(Line core, Vector2 center, LineSet lines, bool invert = false)
         {
-            int count = 0;
             float[][] angles = new float[lines.Length][];
             float[][] distances = new float[lines.Length][];
             Graph2D[] result = new Graph2D[lines.Length];

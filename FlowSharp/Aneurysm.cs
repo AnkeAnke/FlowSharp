@@ -14,10 +14,13 @@ namespace FlowSharp
         //public delegate string FilenameBuilder(int step, Aneurysm.Variable var = Variable.VELOCITY);
 
         //public FilenameBuilder GetFilename;
-        public string FolderFilename;
-        public string GeoFilename;
-        public string Filename;
+        public string EnsightFolderFilename;
+        public string EnsightGeoFilename;
+        public string EnsightFilename;
         public string SnapFileName;
+
+        public string VtuFolderFilename;
+        public string VtuDataFilename;
 
         public int NumSteps = 200;
 
@@ -66,7 +69,8 @@ namespace FlowSharp
         public enum Display : int
         {
             NONE,
-            VIEW_GEOMETRY
+            VIEW_TERAHEDRONS,
+            VIEW_HEXAHEDRONS
             //MEMBER_COMPARISON,
             ////SUBSTEP_VIEWER,
             //CP_TRACKING,
@@ -127,6 +131,16 @@ namespace FlowSharp
             //FTLE
         }
 
+
+        public enum GeometryPart : int
+        {
+            Solid = 0,
+            Wall = 1,
+            Inlet = 2,
+            Outlet1 = 3,
+            Outlet2 = 4,
+            Outlet3 = 5
+        }
         public MainWindow WPFWindow { get; set; }
 
         public static VectorField.PositionToColor[] DisplayLineFunctions = new VectorField.PositionToColor[]
@@ -158,13 +172,18 @@ namespace FlowSharp
 
         public string GridFilename { get
             {
-                return FolderFilename + GeoFilename;
+                return EnsightFolderFilename + EnsightGeoFilename;
                 //if (_mappers[(int)_currentMapper] == null)
                 //    return "Default";
                 //string name = _currentMapper.ToString();
                 //name += '_' + _mappers[(int)_currentMapper].CurrentSetting.GetFilename();
                 //return name;
                     } }
+
+        public string VtuCompleteFilename(int timestep, GeometryPart geom)
+        {
+            return VtuFolderFilename + timestep + '/' + VtuDataFilename + timestep + '_' + (int)geom + "_0.vtu";
+        }
 
         private Aneurysm()
         {

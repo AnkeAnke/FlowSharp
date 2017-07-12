@@ -66,9 +66,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Libs\ManagedCuda.dll</HintPath>
     </Reference>
-    <Reference Include="SlimDX, Version=4.0.13.43, Culture=neutral, PublicKeyToken=b1b0c32fd1ffe4f9, processorArchitecture=x86">
-      <HintPath>..\packages\SlimDX.4.0.13.44\lib\NET40\SlimDX.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="SlimDX, Version=4.0.13.43, Culture=neutral, PublicKeyToken=b1b0c32fd1ffe4f9, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Dev\SlimDX\Bin\net40\x64\SlimDX.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -101,9 +101,14 @@
     <Compile Include="Framework\Algorithms\FlowMapUncertain.cs" />
     <Compile Include="Framework\Algorithms\PlaygroundMapper.cs" />
     <Compile Include="Framework\Data\Graph.cs" />
+    <Compile Include="Framework\Data\Grid\GridConverter.cs" />
+    <Compile Include="Framework\Data\Grid\HexGrid.cs" />
     <Compile Include="Framework\Data\Grid\RectlinearGrid.cs" />
-    <Compile Include="Framework\Data\Grid\TetraGrid.cs" />
+    <Compile Include="Framework\Data\Grid\TetTreeGrid.cs" />
+    <Compile Include="Framework\Data\Grid\TetNeighborGrid.cs" />
+    <Compile Include="Framework\Data\Grid\UnstructuredTree.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
+    <Compile Include="Framework\Data\VectorArray.cs" />
     <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
     <Compile Include="Framework\Renderer\CUDAMappers.cs" />
     <Compile Include="Framework\Renderer\DataMapper.cs" />
@@ -120,13 +125,17 @@
     <Compile Include="Framework\Renderer\Data\PointCloud.cs" />
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
     <Compile Include="Framework\Renderer\Data\Renderable.cs" />
-    <Compile Include="Framework\Renderer\LineStatisticsMapper.cs" />
     <Compile Include="Framework\Renderer\TetGridMapper.cs" />
+    <Compile Include="Framework\Renderer\LineStatisticsMapper.cs" />
+    <Compile Include="Framework\Renderer\HexGridMapper.cs" />
+    <Compile Include="Framework\Renderer\HexTetGridMapper.cs" />
     <Compile Include="Framework\Renderer\PathlineLengthMapper.cs" />
+    <Compile Include="Loader\BinaryFile.cs" />
     <Compile Include="Loader\GeometryWriter.cs" />
     <Compile Include="Loader\LoaderEnsight.cs" />
     <Compile Include="Loader\LoaderRaw.cs" />
     <Compile Include="Aneurysm.cs" />
+    <Compile Include="Loader\LoaderVTU.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="WPFHost\Disposer.cs" />
     <Compile Include="WPFHost\DPFCanvas.cs" />

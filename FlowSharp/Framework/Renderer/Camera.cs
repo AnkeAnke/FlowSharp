@@ -149,7 +149,7 @@ namespace FlowSharp
             if (state.IsPressed(Key.P))
             {
 
-                Context.Singleton.WPFWindow.Screenshot(Context.Singleton.SnapFileName + "Snape_" + Context.Singleton.Filename + ".png");
+                Context.Singleton.WPFWindow.Screenshot(Context.Singleton.SnapFileName + "Snape_" + Context.Singleton.EnsightFilename + ".png");
             }
 
             // Map mouse movement to angles.

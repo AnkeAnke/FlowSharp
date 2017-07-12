@@ -20,7 +20,7 @@ namespace FlowSharp
             return new ScalarFieldUnsteady(null);
         }
 
-        public TetGrid LoadGrid()
+        public HexGrid LoadGrid()
         {
             string filename = Aneurysm.Singleton.GridFilename;
 
@@ -119,13 +119,12 @@ namespace FlowSharp
                         {
                             Debug.Assert(reader.BaseStream.Position < reader.BaseStream.Length, "Reached End of file.");
                             indices[i][v] = reader.ReadInt32() - 1;
-                            Console.WriteLine("" + v + ": " + vertices[indices[i][v]]);
                         }
                     }
                 }
             }
             Console.WriteLine("Finished loading grid.");
-            return new TetGrid(vertices, indices);
+            return new HexGrid(vertices, indices);
         }
 
         private string ReadBlock(BinaryReader reader)

@@ -104,8 +104,8 @@ namespace FlowSharp
             }
             catch (Exception e)
             {
-                Debug.Assert(false);
                 Console.WriteLine(e);
+                Debug.Assert(false);
             }
         }
 

@@ -13,7 +13,7 @@ namespace FlowSharp
 
         static Plane redSea;
 
-        static DataMapper mapperTetWireframe;
+        static DataMapper mapperTetWireframe, mapperHexCubes, tetTreeMapper;
 
         public static void LoadData()
         {
@@ -25,21 +25,24 @@ namespace FlowSharp
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
 
-            Aneurysm.Singleton.FolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/";
-            Aneurysm.Singleton.GeoFilename = "case01_fine_mesh_unsteady2cc.geo";
+            Aneurysm.Singleton.EnsightFolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/";
+            Aneurysm.Singleton.EnsightGeoFilename = "case01_fine_mesh_unsteady2cc.geo";
             Aneurysm.Singleton.SnapFileName = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Screenshots/";
-            Aneurysm.Singleton.Filename = "Rupture_01";
-
-
+            Aneurysm.Singleton.EnsightFilename = "Rupture_01";
+            Aneurysm.Singleton.VtuFolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/vtu/tets_";
+            Aneurysm.Singleton.VtuDataFilename = "tets_";
             redSea = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
-            mapperTetWireframe = new HexGridMapper(redSea);
+            //mapperTetWireframe = new HexTetGridMapper(redSea);
+            tetTreeMapper = new TetGridMapper(redSea);
+            //mapperHexCubes = new HexGridMapper(redSea);
             Console.WriteLine("Computed all data necessary.");
         }
 
         public static void CreateRenderables()
         {
-            Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_GEOMETRY, mapperTetWireframe);
+            Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_TERAHEDRONS, tetTreeMapper);
+            //Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_HEXAHEDRONS, mapperHexCubes);
         }
     }
 }

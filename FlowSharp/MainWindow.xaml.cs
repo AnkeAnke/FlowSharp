@@ -47,8 +47,8 @@ namespace FlowSharp
             }
             catch (Exception e)
             {
-                Debug.Assert(false);
                 Console.WriteLine(e.ToString());
+                Debug.Assert(false);
             }
 
             _mapper = new EmptyMapper();
@@ -60,8 +60,8 @@ namespace FlowSharp
             }
             catch (Exception e)
             {
-                Debug.Assert(false);
                 Console.WriteLine(e.ToString());
+                Debug.Assert(false);
             }
         }
 

@@ -6,8 +6,8 @@
         xmlns:local="clr-namespace:FlowSharp"
         xmlns:WPFHost="clr-namespace:WPFHost"
         mc:Ignorable="d"
-        Title="WPF Window" Height="1200" Width="1920">
-    <Grid Margin="0,0,0,30">
+        Title="WPF Window" Height="1000" Width="1920">
+    <Grid Margin="0,0,0,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
@@ -15,62 +15,62 @@
         <ComboBox x:Name="DropDownDisplay" HorizontalAlignment="Right" Margin="0,39,18,0" VerticalAlignment="Top" Width="259"  SelectionChanged="OnChangeDisplay"/>
         <ComboBox x:Name="DropDownMeasure" HorizontalAlignment="Right" Margin="0,77,18,0" VerticalAlignment="Top" Width="120"  SelectionChanged="OnChangeMeasure"/>
         <ComboBox x:Name="DropDownDisplayLines" HorizontalAlignment="Right" Margin="0,77,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeDisplayLines"/>
-        <ComboBox x:Name="DropDownSlice0" HorizontalAlignment="Right" Margin="0,164,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeSlice0"/>
-        <ComboBox x:Name="DropDownSlice1" HorizontalAlignment="Right" Margin="0,203,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeSlice1"/>
-        <ComboBox x:Name="DropDownIntegrator" HorizontalAlignment="Right" Margin="0,288,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeIntegrator"/>
+        <ComboBox x:Name="DropDownSlice0" HorizontalAlignment="Right" Margin="0,152,156.6,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeSlice0"/>
+        <ComboBox x:Name="DropDownSlice1" HorizontalAlignment="Right" Margin="0,180,156.6,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeSlice1"/>
+        <ComboBox x:Name="DropDownIntegrator" HorizontalAlignment="Right" Margin="0,227,155.6,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeIntegrator"/>
 
         <!--<StackPanel HorizontalAlignment="Left" Height="61" Margin="1419,500,0,0" VerticalAlignment="Top" Width="163">
             <Slider Minimum ="0.001" Maximum="2" TickPlacement="BottomRight" Height="45" TickFrequency="0.01" SmallChange="0.001" LargeChange="0.01" AutoToolTipPlacement="BottomRight" Loaded="LoadStepSize" AutoToolTipPrecision="3"/>
         </StackPanel>-->
-        <StackPanel x:Name="StepSizeBlock" HorizontalAlignment="Right" Height="85" Margin="0,460,18,0" VerticalAlignment="Top" Width="259">
+        <StackPanel x:Name="StepSizeBlock" HorizontalAlignment="Right" Height="65" Margin="0,352,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="StepSizeText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Step Size for Integration" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="StepSizeSlider" Maximum="3.0" Minimum ="0.001" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.01" AutoToolTipPlacement="BottomRight" AutoToolTipPrecision="3" PreviewMouseUp="OnChangeStepSize"/>
+            <Slider x:Name="StepSizeSlider" Maximum="3.0" Minimum ="0.001" TickPlacement="BottomRight" TickFrequency="0.1" Height="32" SmallChange="0.001" LargeChange="0.01" AutoToolTipPlacement="BottomRight" AutoToolTipPrecision="3" PreviewMouseUp="OnChangeStepSize" Margin="0,0,0.2,0"/>
             <TextBox Text="{Binding ElementName=StepSizeSlider, Path=Value, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
-        <StackPanel x:Name="AlphaBlock" HorizontalAlignment="Right" Height="86" Margin="0,374,18,0" VerticalAlignment="Top" Width="259">
+        <StackPanel x:Name="AlphaBlock" HorizontalAlignment="Right" Height="68" Margin="0,284,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="AlphaFFF" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Alpha for stable FFF / Gauss Variance" VerticalAlignment="Top" Width="198" FontSize="10"/>
-            <Slider x:Name="AlphaSlider" Maximum="50" Minimum ="-50" TickPlacement="BottomRight" TickFrequency="5" Height="45" SmallChange="0.1" LargeChange="1" AutoToolTipPlacement="BottomRight" PreviewMouseUp="OnChangeAlphaFFF"/>
-            <TextBox Text="{Binding Value, ElementName=AlphaSlider, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" Margin="96,0" />
+            <Slider x:Name="AlphaSlider" Maximum="50" Minimum ="-50" TickPlacement="BottomRight" TickFrequency="5" Height="32" SmallChange="0.1" LargeChange="1" AutoToolTipPlacement="BottomRight" PreviewMouseUp="OnChangeAlphaFFF" Margin="0,0,0.2,0"/>
+            <TextBox Text="{Binding Value, ElementName=AlphaSlider, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" Margin="96,0,96.2,0" />
         </StackPanel>
-        <StackPanel x:Name="LineXBlock" HorizontalAlignment="Right" Height="86" Margin="0,550,18,0" VerticalAlignment="Top" Width="259">
+        <StackPanel x:Name="LineXBlock" HorizontalAlignment="Right" Height="66" Margin="0,420,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="LineXText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Comparison Line Position X / Neighbor ID" VerticalAlignment="Top" Width="200" FontSize="10"/>
-            <Slider x:Name="LineSlider" Maximum="5000" Minimum ="0" TickPlacement="BottomRight" TickFrequency="15" Height="45" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine"/>
+            <Slider x:Name="LineSlider" Maximum="5000" Minimum ="0" TickPlacement="BottomRight" TickFrequency="15" Height="32" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine" Margin="0,0,0.2,0"/>
             <TextBox Text="{Binding Value, ElementName=LineSlider, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
-        <StackPanel x:Name="Member0Block" Height="43" Margin="0,143,10,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="128">
+        <StackPanel x:Name="Member0Block" Height="43" Margin="0,131,9.6,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="128">
             <TextBlock x:Name="Member0Text" HorizontalAlignment="Left"  TextWrapping="Wrap" Text="Ensemble Member" VerticalAlignment="Top" Width="120"/>
             <ComboBox x:Name="DropDownMember0" VerticalAlignment="Bottom" Margin="0,5,0,0"  SelectionChanged="OnChangeMember0" HorizontalAlignment="Left" Width="120"/>
         </StackPanel>
-        <ComboBox x:Name="DropDownMember1" HorizontalAlignment="Right" Margin="0,203,18,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeMember1"/>
-        <TextBlock x:Name="textBlock" HorizontalAlignment="Right" Margin="0,143,157,0" TextWrapping="Wrap" Text="Time Slice" VerticalAlignment="Top" Width="120"/>
+        <ComboBox x:Name="DropDownMember1" HorizontalAlignment="Right" Margin="0,180,17.6,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeMember1"/>
+        <TextBlock x:Name="textBlock" HorizontalAlignment="Right" Margin="0,131,156.6,0" TextWrapping="Wrap" Text="Time Slice" VerticalAlignment="Top" Width="120"/>
 
-        <ComboBox x:Name="DropDownShader" HorizontalAlignment="Right" Margin="0,740,157,0" VerticalAlignment="Top" Width="120"  SelectionChanged="OnChangeShader"/>
-        <ComboBox x:Name="DropDownColormap" HorizontalAlignment="Right" Margin="0,740,18,0" VerticalAlignment="Top" Width="120"  SelectionChanged="OnChangeColormap"/>
+        <ComboBox x:Name="DropDownShader" HorizontalAlignment="Right" Margin="0,562,156.6,0" VerticalAlignment="Top" Width="120"  SelectionChanged="OnChangeShader"/>
+        <ComboBox x:Name="DropDownColormap" HorizontalAlignment="Right" Margin="0,562,17.6,0" VerticalAlignment="Top" Width="120"  SelectionChanged="OnChangeColormap"/>
 
-        <Image Name="ColormapView" HorizontalAlignment="Right" Margin="0,767,18,0" VerticalAlignment="Top" Width="259" Height="24" Stretch="Fill">
+        <Image Name="ColormapView" HorizontalAlignment="Right" Margin="0,673,17.6,0" VerticalAlignment="Top" Width="259" Height="24" Stretch="Fill">
         </Image>
-        <StackPanel x:Name="WindowWidthBlock" HorizontalAlignment="Right" Height="86" Margin="0,813,18,0" VerticalAlignment="Top" Width="259">
+        <StackPanel x:Name="WindowWidthBlock" HorizontalAlignment="Right" Height="67" Margin="0,593,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="WindowWidthText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Width" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="WindowWidth" Maximum="200" Minimum ="0" TickPlacement="BottomRight" TickFrequency="10" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth"/>
+            <Slider x:Name="WindowWidth" Maximum="200" Minimum ="0" TickPlacement="BottomRight" TickFrequency="10" Height="32" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowWidth" Margin="0,0,0.2,0"/>
             <TextBox Text="{Binding Value, ElementName=WindowWidth, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
-        <ComboBox x:Name="DropDownTracking" HorizontalAlignment="Right" Margin="0,288,18,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeTracking"/>
-        <StackPanel x:Name="WindowStartBlock" HorizontalAlignment="Right" Height="86" Margin="0,904,18,0" VerticalAlignment="Top" Width="259">
+        <ComboBox x:Name="DropDownTracking" HorizontalAlignment="Right" Margin="0,254,19.6,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeTracking"/>
+        <StackPanel x:Name="WindowStartBlock" HorizontalAlignment="Right" Height="66" Margin="0,660,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="WindowStartText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Window Start" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="WindowStart" Maximum="100" Minimum ="-20" TickPlacement="BottomRight" TickFrequency="0.1" Height="45" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowStart"/>
+            <Slider x:Name="WindowStart" Maximum="100" Minimum ="-20" TickPlacement="BottomRight" TickFrequency="0.1" Height="32" SmallChange="0.001" LargeChange="0.005" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeWindowStart" Margin="0,0,0.2,0"/>
             <TextBox Text="{Binding Value, ElementName=WindowStart, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
-        <StackPanel x:Name="MemberHeightBlock" Height="43" Margin="1436,230,86,0" VerticalAlignment="Top" HorizontalAlignment="Right">
+        <StackPanel x:Name="MemberHeightBlock" Height="43" Margin="0,206,19.6,0" VerticalAlignment="Top" HorizontalAlignment="Right">
             <TextBlock x:Name="MemberHeightText" HorizontalAlignment="Left"  TextWrapping="Wrap" Text="Slice Height" VerticalAlignment="Top" Width="120"/>
             <ComboBox x:Name="DropDownHeight" VerticalAlignment="Bottom" Margin="0,5,0,0"  SelectionChanged="OnChangeHeight" HorizontalAlignment="Left" Width="120"/>
         </StackPanel>
-        <StackPanel x:Name="IntegrationTimeBlock" HorizontalAlignment="Right" Height="86" Margin="0,636,18,0" VerticalAlignment="Top" Width="259">
+        <StackPanel x:Name="IntegrationTimeBlock" HorizontalAlignment="Right" Height="66" Margin="0,490,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="IntegrationTimeText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Integration Time" VerticalAlignment="Top" Width="163" FontSize="10"/>
-            <Slider x:Name="integrationTime" Maximum="500" Minimum ="0" TickPlacement="BottomRight" TickFrequency="1" Height="45" SmallChange="0.05" LargeChange="0.2" AutoToolTipPlacement="BottomRight" PreviewMouseUp="OnChangeIntegrationTime"/>
+            <Slider x:Name="integrationTime" Maximum="500" Minimum ="0" TickPlacement="BottomRight" TickFrequency="1" Height="32" SmallChange="0.05" LargeChange="0.2" AutoToolTipPlacement="BottomRight" PreviewMouseUp="OnChangeIntegrationTime" Margin="0,0,0.2,0"/>
             <TextBox Text="{Binding Value, ElementName=integrationTime, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
         <ComboBox x:Name="DropDownDiffusionMeasure" HorizontalAlignment="Right" Margin="0,104,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeDiffusionMeasure"/>
-        <WrapPanel x:Name="MatrixBox" Margin="0,1005,-1,41" HorizontalAlignment="Right" Width="300">
+        <WrapPanel x:Name="MatrixBox" Margin="0,839,-1.4,206.4" HorizontalAlignment="Right" Width="300">
             <ComboBox x:Name="VarX" HorizontalAlignment="Right" VerticalAlignment="Top" Width="120" Text="{Binding Path=startX, Mode=TwoWay,  UpdateSourceTrigger=PropertyChanged,StringFormat=N2}" />
             <TextBox x:Name="StartX" HorizontalAlignment="Left" Height="22" TextWrapping="Wrap" VerticalAlignment="Top" Width="42"  Text="{Binding Path=startX, Mode=TwoWay,  UpdateSourceTrigger=PropertyChanged,StringFormat=N2}" />
             <TextBox x:Name="EndX" HorizontalAlignment="Left" Height="22" TextWrapping="Wrap" VerticalAlignment="Top" Width="42" TextChanged="OnChangeMatrix"/>
@@ -83,7 +83,7 @@
         <CheckBox x:Name="DisplayFlat" Content="Flatten" HorizontalAlignment="Right" Margin="0,110,85,0" VerticalAlignment="Top" Checked="OnCheckFlat" Unchecked="OnCheckFlat"/>
         <CheckBox x:Name="ShowGraph" Content="Statistics" HorizontalAlignment="Right" Margin="0,110,18,0" VerticalAlignment="Top" Checked="OnCheckGraph" Unchecked="OnCheckGraph"/>
         <CheckBox x:Name="orthographic" Content="Ortographic Projection" HorizontalAlignment="Right" Margin="0,10,139,0" VerticalAlignment="Top" Checked="ChangeProjection" Unchecked="ChangeProjection"/>
-        <ComboBox x:Name="DropDownCore" HorizontalAlignment="Right" Margin="0,315,157,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeCore"/>
+        <ComboBox x:Name="DropDownCore" HorizontalAlignment="Right" Margin="0,254,155.6,0" VerticalAlignment="Top" Width="120" SelectionChanged="OnChangeCore"/>
 
     </Grid>
 </Window>

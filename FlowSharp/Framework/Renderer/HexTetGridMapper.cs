@@ -10,43 +10,31 @@ using System.Runtime.InteropServices;
 
 namespace FlowSharp
 {
-    class TetGridMapper : DataMapper
+    class HexTetGridMapper : DataMapper
     {
         //LineSet _wireframe;
         //PointSet<Point> _vertices;
         Mesh _cubes;
-        //TetTreeGrid _grid;'
-        GeneralUnstructurdGrid _geometry;
+        TetNeighborGrid _grid;
         //Index[] _indices;
         bool update = true;
         PointCloud _vertices;
 
-        PointSet<Point> tmp;
-
-        public TetGridMapper(Plane plane) : base()
+        public HexTetGridMapper(Plane plane) : base()
         {
             Mapping = ShowSide;
             Plane = plane;
 
-            LoaderVTU loader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
-            var hexGrid = loader.LoadGeometry();
+            LoaderEnsight loader = new LoaderEnsight(Aneurysm.Variable.velocity);
+            var hexGrid = loader.LoadGrid();
 
-            _geometry = loader.Grid;
+            _grid = TetNeighborGrid.BuildFromHexGrid(hexGrid.Vertices, hexGrid.Indices);
+            hexGrid.Indices = null;
             hexGrid = null;
 
-            // TMP
-            tmp = new PointSet<Point>(new Point[]
-    {
-                                new Point(new Vector3(-3, 0, -3)),
-                                new Point(new Vector3(-6, -3, -6)),
-                                new Point(new Vector3(-6, -3, 0))
-    });
-            // \TMP
 
-            this.Plane = Plane.FitToPoints(Vector3.Zero, 10, tmp);
-//            this.Plane = new Plane(Plane.Origin, Plane.XAxis, Plane.YAxis, Plane.ZAxis, 100);
-            Plane.PointSize = 10.0f;
-
+            this.Plane = Plane.FitToPoints(Vector3.Zero, 10, _grid.Vertices);
+            Plane.PointSize = 1.0f;
 
             //int[] selection = new int[_grid.Indices.Length / 100];
             //for (int s = 0; s < selection.Length; ++s)
@@ -72,7 +60,7 @@ namespace FlowSharp
             if (update)
             {
                 update = false;
-                _cubes = new Mesh(Plane, _geometry);
+                _cubes = new Mesh(Plane, _grid);
             }
             if (_lastSetting == null ||
                 WindowWidthChanged ||
@@ -85,8 +73,7 @@ namespace FlowSharp
             }
             wire.Add(_cubes);
             if (_vertices == null)
-                _vertices = new PointCloud(Plane, tmp);
-            //_vertices = new PointCloud(Plane, _geometry.GetVertices());
+                _vertices = new PointCloud(Plane, _grid.GetVertices());
             wire.Add(_vertices);
 
             var axes = Plane.GenerateAxisGlyph();

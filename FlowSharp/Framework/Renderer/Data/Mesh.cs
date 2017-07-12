@@ -25,8 +25,10 @@ namespace FlowSharp
         {
             get; protected set;
         }
-        
+
         //private Buffer _indices;
+
+#region TiledSurface
         /// <summary>
         /// Set of lines in 3D space.
         /// </summary>
@@ -100,6 +102,215 @@ namespace FlowSharp
                 Usage = ResourceUsage.Default
             });
         }
+        #endregion TiledSurface
+#region VertexIndexList
+        /// <summary>
+        /// Set of lines in 3D space.
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="xAxis"></param>
+        /// <param name="yAxis"></param>
+        /// <param name="scale">Scaling the field extent.</param>
+        /// <param name="field"></param>
+        public Mesh(Plane plane, Vector[] verts, Index[] sides, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
+        {
+            _color = Vector3.UnitZ;
+            this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
+            this._topology = PrimitiveTopology.TriangleList;
+
+            // Setting up the vertex buffer.             
+            UsedMap = colormap;
+            _planeNormal = plane.ZAxis;
+            _planeNormal.Normalize();
+            _effect = _meshEffect;
+            SetRenderEffect(effect);
+
+            GenerateGeometry(plane, verts, sides);
+
+            this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
+                new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
+                new InputElement("SCALAR", 0, Format.R32_Float, 12, 0)
+            });
+        }
+
+        /// <summary>
+        /// Setting up the vertex buffer. Vertex size and number has to be known.
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="xAxis"></param>
+        /// <param name="yAxis"></param>
+        /// <param name="scale"></param>
+        protected void GenerateGeometry(Plane plane, Vector[] verts, Index[] sides)
+        {
+            // COnvert from Vector to SlimDX.Vector4.
+            Vector4[] vertices = new Vector4[verts.Length];
+            for (int v = 0; v < vertices.Length; ++v)
+            {
+                int vertexDim = verts[v].Length;
+                Debug.Assert(vertexDim >= 3, "Need at least 3D objects.");
+                vertices[v] = new Vector4(plane.Origin + verts[v][0] * plane.XAxis + verts[v][1] * plane.YAxis + verts[v][2] * plane.ZAxis, vertexDim > 3? verts[v][3] : verts[v][2]);
+            }
+
+            // Assume all indices are all triangles.
+            int numIndicesPerSide = 3 * (sides[0].Length - 2);
+            uint[] idxs = new uint[sides.Length * numIndicesPerSide];
+            for (int i = 0; i < sides.Length; ++i)
+            {
+                Debug.Assert(sides[i].Length == sides[0].Length, "Assuming same size everywhere.");
+                for (int t = 0; t < 3; ++t)
+                    idxs[numIndicesPerSide * i + t] = (uint)sides[i][t];
+
+                // For each vertex above the first three, add a triangle (strip-style).
+                for (int tri = 3; tri < sides[0].Length; ++tri)
+                {
+                    idxs[numIndicesPerSide * i + (tri - 2) * 3] = (uint)sides[i][tri];
+                    idxs[numIndicesPerSide * i + (tri - 2) * 3 + 2] = (uint)sides[i][0];
+                    idxs[numIndicesPerSide * i + (tri - 2) * 3 + 1] = idxs[numIndicesPerSide * i + (tri - 2) * 3 - 1];
+                }
+
+            }
+
+            _numVertices = verts.Length;
+            _numindices = idxs.Length;
+
+            // Write poition and UV-map data.
+            var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
+            stream.WriteRange(vertices);
+            stream.Position = 0;
+
+            // Create and fill buffer.
+            _vertices = new Buffer(_device, stream, new BufferDescription()
+            {
+                BindFlags = BindFlags.VertexBuffer,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = _numVertices * _vertexSizeBytes,
+                Usage = ResourceUsage.Default
+            });
+            stream.Dispose();
+
+            stream = new DataStream(idxs.Length * sizeof(uint), true, true);
+            stream.WriteRange(idxs);
+            stream.Position = 0;
+
+            _indices = new Buffer(_device, stream, new BufferDescription()
+            {
+                BindFlags = BindFlags.IndexBuffer,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = idxs.Length * sizeof(int),
+                Usage = ResourceUsage.Default
+            });
+        }
+        #endregion VertexIndexList
+#region TetGrid
+        /// <summary>
+        /// Set of lines in 3D space.
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="xAxis"></param>
+        /// <param name="yAxis"></param>
+        /// <param name="scale">Scaling the field extent.</param>
+        /// <param name="field"></param>
+        public Mesh(Plane plane, GeneralUnstructurdGrid grid, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
+        {
+            _color = Vector3.UnitZ;
+            this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
+            this._topology = PrimitiveTopology.TriangleList;
+
+            // Setting up the vertex buffer.             
+            UsedMap = colormap;
+            _planeNormal = plane.ZAxis;
+            _planeNormal.Normalize();
+            _effect = _meshEffect;
+            SetRenderEffect(effect);
+
+            GenerateGeometry(plane, grid);
+
+            this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
+                new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
+                new InputElement("SCALAR", 0, Format.R32_Float, 12, 0)
+            });
+        }
+
+        /// <summary>
+        /// Setting up the vertex buffer. Vertex size and number has to be known.
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="xAxis"></param>
+        /// <param name="yAxis"></param>
+        /// <param name="scale"></param>
+        protected void GenerateGeometry(Plane plane, GeneralUnstructurdGrid grid)
+        {
+            int vertexDim = grid.Vertices[0].Length;
+
+            _numVertices = grid.Vertices.Length;
+
+            // Write poition and UV-map data.
+            var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
+            for (int v = 0; v < grid.Vertices.Length; ++v)
+                stream.Write(new Vector4(plane.Origin + grid.Vertices[v][0] * plane.XAxis + grid.Vertices[v][1] * plane.YAxis + grid.Vertices[v][2] * plane.ZAxis, vertexDim > 3 ? grid.Vertices[v][3] : grid.Vertices[v][2]));
+            stream.Position = 0;
+
+            // Create and fill buffer.
+            _vertices = new Buffer(_device, stream, new BufferDescription()
+            {
+                BindFlags = BindFlags.VertexBuffer,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = _numVertices * _vertexSizeBytes,
+                Usage = ResourceUsage.Default
+            });
+            stream.Dispose();
+
+            Index[] indices = grid.AssembleIndexList();
+            stream = new DataStream(indices.Length * 3 * sizeof(uint), true, true);
+            //_numindices = grid.Cells.Length * 4 * 3;
+            for (int c = 0; c < indices.Length; c++)
+            {
+                //for (int s = 0; s < 4; ++s)
+                //{
+                //    _numindices += 3;
+                //    for (int i = 0; i < 4; ++i)
+                //        if (i != s)
+                //            stream.Write(indices[c][i]);
+                //}
+                Debug.Assert(indices[c].Length == 3, "Expected triangles, vertex count: " + indices[c].Length);
+                for (int v = 0; v < 3; ++v)
+                    stream.Write(indices[c][v]);
+            }
+            //for (int i = 0; i < grid.Cells.Length; i ++)
+            //{
+            //    // Dirty quickfix: Duplicate the first cells multiple times, so we don't need to deal with uninitialized tets.
+            //    Index verts = grid.Cells[i].VertexIndices;
+            //    if (verts == null)
+            //        continue;
+            //    _numindices += 12;
+
+            //    stream.WriteRange(new int[] { verts[0], verts[1], verts[2] });
+            //    stream.WriteRange(new int[] { verts[0], verts[2], verts[3] });
+            //    stream.WriteRange(new int[] { verts[0], verts[1], verts[3] });
+            //    stream.WriteRange(new int[] { verts[1], verts[2], verts[3] });
+            //}
+            stream.Position = 0;
+
+            try
+            {
+                _indices = new Buffer(_device, stream, new BufferDescription()
+                {
+                    BindFlags = BindFlags.IndexBuffer,
+                    CpuAccessFlags = CpuAccessFlags.None,
+                    OptionFlags = ResourceOptionFlags.None,
+                    SizeInBytes = indices.Length * 3 * sizeof(int),
+                    Usage = ResourceUsage.Default
+                });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.InnerException);
+            }
+        }
+#endregion TetGrid
 
         public void SetRenderEffect(RenderEffect effect)
         {

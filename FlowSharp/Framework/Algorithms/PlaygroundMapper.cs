@@ -18,7 +18,7 @@ namespace FlowSharp
         FieldPlane _bg;
         FieldPlane _steadyBG;
         VectorField.Integrator _integrator;
-        LineBall _lines;
+        //LineBall _lines;
         bool _flipColor = true;
         Line _core;
         LineBall _coreBall;

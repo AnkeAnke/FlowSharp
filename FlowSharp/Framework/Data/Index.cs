@@ -226,6 +226,13 @@ namespace FlowSharp
             return min;
         }
 
+        public bool Contains(int element)
+        {
+            for (int dim = 0; dim < Length; ++dim)
+                if (_data[dim] == element) return true;
+            return false;
+        }
+
         /// <summary>
         /// Component-wise min.
         /// </summary>
@@ -459,6 +466,12 @@ namespace FlowSharp
         public static bool Equals(Int2 a, Int2 b)
         {
             return (a == b);
+        }
+
+        public override bool Equals(object o)
+        {
+            Int2 b = (o as Int2);
+            return (b != null) && (this == b);
         }
 
         public static explicit operator ManagedCuda.VectorTypes.int2(Int2 v)

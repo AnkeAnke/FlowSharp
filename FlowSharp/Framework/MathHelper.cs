@@ -18,6 +18,7 @@ namespace FlowSharp
             return new SlimDX.Vector3(a.X / b.X, a.Y / b.Y, a.Z / b.Z);
         }
 
+        //public static SlimDX.Matrix MatrixFromColumns(SlimDX.Vector3)
 
     }
 }
