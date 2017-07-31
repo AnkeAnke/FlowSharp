@@ -243,7 +243,7 @@ namespace FlowSharp
             return prod;
         }
 
-        public static Vector operator *(Vector a, SquareMatrix b)
+        public static Vector operator *(VectorRef a, SquareMatrix b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector prod = new Vector(a.Length);
@@ -255,7 +255,7 @@ namespace FlowSharp
             return prod;
         }
 
-        public static Vector operator *(SquareMatrix a, Vector b)
+        public static Vector operator *(SquareMatrix a, VectorRef b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector prod = new Vector(a.Length);

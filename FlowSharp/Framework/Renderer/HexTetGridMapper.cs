@@ -23,9 +23,9 @@ namespace FlowSharp
         public HexTetGridMapper(Plane plane) : base()
         {
             Mapping = ShowSide;
-            Plane = plane;
+            BasePlane = plane;
 
-            LoaderEnsight loader = new LoaderEnsight(Aneurysm.Variable.velocity);
+            LoaderEnsight loader = new LoaderEnsight(Aneurysm.GeometryPart.Wall);
             var hexGrid = loader.LoadGrid();
 
             _grid = TetNeighborGrid.BuildFromHexGrid(hexGrid.Vertices, hexGrid.Indices);
@@ -33,8 +33,8 @@ namespace FlowSharp
             hexGrid = null;
 
 
-            this.Plane = Plane.FitToPoints(Vector3.Zero, 10, _grid.Vertices);
-            Plane.PointSize = 1.0f;
+            this.BasePlane = Plane.FitToPoints(Vector3.Zero, 10, _grid.Vertices);
+            BasePlane.PointSize = 1.0f;
 
             //int[] selection = new int[_grid.Indices.Length / 100];
             //for (int s = 0; s < selection.Length; ++s)
@@ -57,26 +57,26 @@ namespace FlowSharp
         public List<Renderable> ShowSide()
         {
             var wire = new List<Renderable>(5);
-            if (update)
-            {
-                update = false;
-                _cubes = new Mesh(Plane, _grid);
-            }
-            if (_lastSetting == null ||
-                WindowWidthChanged ||
-                WindowStartChanged ||
-                ColormapChanged)
-            {
-                _cubes.LowerBound = WindowStart;
-                _cubes.UpperBound = WindowStart + WindowWidth;
-                _cubes.UsedMap = Colormap;
-            }
-            wire.Add(_cubes);
+            //if (update)
+            //{
+            //    update = false;
+            //    _cubes = new Mesh(BasePlane, _grid);
+            //}
+            //if (_lastSetting == null ||
+            //    WindowWidthChanged ||
+            //    WindowStartChanged ||
+            //    ColormapChanged)
+            //{
+            //    _cubes.LowerBound = WindowStart;
+            //    _cubes.UpperBound = WindowStart + WindowWidth;
+            //    _cubes.UsedMap = Colormap;
+            //}
+            //wire.Add(_cubes);
             if (_vertices == null)
-                _vertices = new PointCloud(Plane, _grid.GetVertices());
+                _vertices = new PointCloud(BasePlane, _grid.GetVertices());
             wire.Add(_vertices);
 
-            var axes = Plane.GenerateAxisGlyph();
+            var axes = BasePlane.GenerateAxisGlyph();
             wire.AddRange(axes);
             return wire;
 

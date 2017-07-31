@@ -124,11 +124,11 @@ namespace FlowSharp
 
             // ~~~~~~~~~~~~~~ Fill CUDA resources ~~~~~~~~~~~~~~ \\
             // vX, t=1
-            _t1X.CopyFromHostToThis<float>((_velocity.GetTimeSlice(StartTime).Scalars[0] as ScalarField).Data);
+            _t1X.CopyFromHostToThis<float>(_velocity.GetTimeSlice(StartTime).Data.GetChannel(0));
             new CudaTextureArray2D(_loadAdvectReference, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
-            _t1Y.CopyFromHostToThis<float>((_velocity.GetTimeSlice(StartTime).Scalars[1] as ScalarField).Data);
+            _t1Y.CopyFromHostToThis<float>(_velocity.GetTimeSlice(StartTime).Data.GetChannel(1));
             new CudaTextureArray2D(_loadAdvectReference, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
 
             // ~~~~~~~~~~~~~ Create texture ~~~~~~~~~~~~~~~~~~~~ \\
@@ -303,18 +303,18 @@ namespace FlowSharp
             new CudaTextureArray2D(_loadAdvectReference, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
 
             // Load new t1.
-            ScalarField t1X = _velocity.GetTimeSlice(CurrentTime + 1).Scalars[0] as ScalarField;
-            ScalarField t1Y = _velocity.GetTimeSlice(CurrentTime + 1).Scalars[1] as ScalarField;
+            float[] t1X = _velocity.GetTimeSlice(CurrentTime + 1).Data.GetChannel(0);
+            float[] t1Y = _velocity.GetTimeSlice(CurrentTime + 1).Data.GetChannel(1);
 
             // vX, t=1
             //            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t1X.CopyFromHostToThis(t1X.Data);
+            _t1X.CopyFromHostToThis(t1X);
             new CudaTextureArray2D(_loadAdvectReference, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
 
             // vY, t=1
             //            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t1Y.CopyFromHostToThis(t1Y.Data);
+            _t1Y.CopyFromHostToThis(t1Y);
             new CudaTextureArray2D(_loadAdvectReference, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
         }
 
@@ -432,11 +432,11 @@ namespace FlowSharp
 
             // ~~~~~~~~~~~~~~ Fill CUDA resources ~~~~~~~~~~~~~~ \\
             // vX, t=1
-            _t1X.CopyFromHostToThis<float>((_velocity.GetTimeSlice(StartTime).Scalars[0] as ScalarField).Data);
+            _t1X.CopyFromHostToThis<float>(_velocity.GetTimeSlice(StartTime).Data.GetChannel(0));
             new CudaTextureArray2D(_loadAdvectCut, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
-            _t1Y.CopyFromHostToThis<float>((_velocity.GetTimeSlice(StartTime).Scalars[1] as ScalarField).Data);
+            _t1Y.CopyFromHostToThis<float>(_velocity.GetTimeSlice(StartTime).Data.GetChannel(1));
             new CudaTextureArray2D(_loadAdvectCut, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
         }
 
@@ -645,18 +645,18 @@ namespace FlowSharp
             new CudaTextureArray2D(_loadAdvectCut, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
 
             // Load new t1.
-            ScalarField t1X = _velocity.GetTimeSlice(CurrentTime + 1).Scalars[0] as ScalarField;
-            ScalarField t1Y = _velocity.GetTimeSlice(CurrentTime + 1).Scalars[1] as ScalarField;
+            float[] t1X = _velocity.GetTimeSlice(CurrentTime + 1).Data.GetChannel(0);
+            float[] t1Y = _velocity.GetTimeSlice(CurrentTime + 1).Data.GetChannel(1);
 
             // vX, t=1
             //            _t1X = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t1X.CopyFromHostToThis(t1X.Data);
+            _t1X.CopyFromHostToThis(t1X);
             new CudaTextureArray2D(_loadAdvectCut, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
 
             // vY, t=1
             //            _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, _height, CudaArray2DNumChannels.One);
-            _t1Y.CopyFromHostToThis(t1Y.Data);
+            _t1Y.CopyFromHostToThis(t1Y);
             new CudaTextureArray2D(_loadAdvectCut, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
         }
 

@@ -295,7 +295,7 @@ namespace FlowSharp
             int sliceSize = grid.Size.Product();// / slice.GetNumTimeSlices();
 
             // Get data. x64 dll fails in debug here...
-            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.Data);
+            ncState = NetCDF.nc_get_vara_float(_fileID, (int)slice.GetVariable(), offsets.Data, sizeInFile, field.BufferData.Data);
             Debug.Assert(ncState == NetCDF.ResultCode.NC_NOERR, ncState.ToString());
 
             // Read in invalid value.

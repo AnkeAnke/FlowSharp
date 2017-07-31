@@ -139,8 +139,8 @@ namespace FlowSharp
 
                         for (int i = 0; i < fields[indexTime].Data.Length; ++i)
                         {
-                            if (fields[indexTime].Data[i] == 0)
-                                fields[indexTime].Data[i] = float.MaxValue;
+                            if (fields[indexTime][i] == 0)
+                                fields[indexTime][i] = float.MaxValue;
                         }
                         fields[indexTime].InvalidValue = float.MaxValue;
                     }
@@ -211,8 +211,6 @@ namespace FlowSharp
             // For each time and subtime step, run through them.
             ScalarField field = new ScalarField(grid);
 
-            int indexTime = 0;
-
             Debug.Assert(sizeInFile[spaceDims] == 1 && sizeInFile[spaceDims + 1] == 1, "Define a single timestep, else use the method for ScalarFieldUnsteady.");
             // Now, load one single file.
             string filename = RedSea.Singleton.GetFilename(offsets[spaceDims], offsets[spaceDims + 1], offsets[3], slice.GetVariable());
@@ -247,8 +245,8 @@ namespace FlowSharp
 
                         for (int i = 0; i < field.Data.Length; ++i)
                         {
-                            if (field.Data[i] == 0)
-                                field.Data[i] = float.MaxValue;
+                            if (field[i] == 0)
+                                field[i] = float.MaxValue;
                         }
                         field.InvalidValue = float.MaxValue;
                     }

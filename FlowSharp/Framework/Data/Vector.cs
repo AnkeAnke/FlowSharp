@@ -39,6 +39,14 @@ namespace FlowSharp
         {
             return !(a == b);
         }
+        public override bool Equals(object obj)
+        {
+            return (obj as Sign?) == null ? false : (Sign)obj == this;
+        }
+        public override int GetHashCode()
+        {
+            return Value;
+        }
         public Sign(Sign a)
         {
             Value = (int)a;
@@ -48,19 +56,25 @@ namespace FlowSharp
             return (int)a > 0;
         }
     }
-    class Vector
+    class Vector : VectorRef
     {
-        public virtual int Length { get { return _data.Length; } }
-
         protected float[] _data;
         public float[] Data
         {
             get { return _data; }
             set { Debug.Assert(_data == null || value.Length == Length); _data = value; }
         }
+        public override float this[int index]
+        {
+            get { return _data[index]; }
+            set { _data[index] = value; }
+        }
+        public override int Length { get { return _data.Length; } }
 
-        public float T { get { return _data[Length - 1]; } set { _data[Length - 1] = value; } }
-
+        protected override void SetSize(int size)
+        {
+            _data = new float[size];
+        }
         public Vector(int dim)
         {
             Data = new float[dim];
@@ -74,6 +88,12 @@ namespace FlowSharp
         public Vector(Vector copy)
         {
             _data = (float[])copy.Data.Clone();
+        }
+        public Vector(VectorRef copy)
+        {
+            _data = new float[copy.Length];
+            for (int l = 0; l < Length; ++l)
+                _data[l] = copy[l];
         }
 
         /// <summary>
@@ -97,8 +117,25 @@ namespace FlowSharp
         {
             _data = new float[] { vec.X, vec.Y, vec.Z, vec.W };
         }
+    }
+    abstract class VectorRef
+    {
+        public abstract int Length { get; }
 
-        public static Vector operator *(Vector a, float b)
+        public abstract float this[int index] { get; set; }
+
+        public float T { get { return this[Length - 1]; } set { this[Length - 1] = value; } }
+
+        protected abstract void SetSize(int size);
+        public VectorRef(VectorRef vec)
+        {
+            SetSize(vec.Length);
+            for (int i = 0; i < vec.Length; ++i)
+                this[i] = vec[i];
+        }
+        protected VectorRef() { }
+
+        public static Vector operator *(VectorRef a, float b)
         {
             Vector prod = new Vector(a);
             for(int dim = 0; dim < a.Length; ++dim)
@@ -107,18 +144,12 @@ namespace FlowSharp
             return prod;
         }
 
-        public static Vector operator *(float a, Vector b)
+        public static Vector operator *(float a, VectorRef b)
         {
             return b * a;
         }
 
-        public float this[int index]
-        {
-            get { return _data[index]; }
-            set { _data[index] = value; }
-        }
-
-        public static Vector operator +(Vector a, Vector b)
+        public static Vector operator +(VectorRef a, VectorRef b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector sum = new Vector(a);
@@ -128,7 +159,7 @@ namespace FlowSharp
             return sum;
         }
 
-        public static Vector operator -(Vector a, Vector b)
+        public static Vector operator -(VectorRef a, VectorRef b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector diff = new Vector(a);
@@ -138,7 +169,7 @@ namespace FlowSharp
             return diff;
         }
 
-        public static Vector operator *(Vector a, Vector b)
+        public static Vector operator *(VectorRef a, VectorRef b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector prod = new Vector(a);
@@ -148,7 +179,7 @@ namespace FlowSharp
             return prod;
         }
 
-        public static Vector operator /(Vector a, Vector b)
+        public static Vector operator /(VectorRef a, VectorRef b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector quot = new Vector(a);
@@ -158,7 +189,7 @@ namespace FlowSharp
             return quot;
         }
 
-        public static Vector operator /(Vector a, float b)
+        public static Vector operator /(VectorRef a, float b)
         {
             Vector quot = new Vector(a);
             for (int dim = 0; dim < a.Length; ++dim)
@@ -167,7 +198,7 @@ namespace FlowSharp
             return quot;
         }
 
-        public static Vector operator -(Vector a)
+        public static Vector operator -(VectorRef a)
         {
             Vector neg = new Vector(a);
             for (int dim = 0; dim < a.Length; ++dim)
@@ -176,7 +207,7 @@ namespace FlowSharp
             return neg;
         }
 
-        public static float Dot(Vector a, Vector b)
+        public static float Dot(VectorRef a, VectorRef b)
         {
             return (a * b).Sum();
         }
@@ -184,7 +215,7 @@ namespace FlowSharp
         /// <summary>
         /// Floor the vector.
         /// </summary>
-        public static explicit operator Index(Vector vec)  // explicit byte to digit conversion operator
+        public static explicit operator Index(VectorRef vec)  // explicit byte to digit conversion operator
         {
             Index result = new Index(vec.Length);
             for(int dim = 0; dim < vec.Length; ++dim)
@@ -193,15 +224,21 @@ namespace FlowSharp
         }
 
 
-        public static explicit operator Vector(float f)
+        public static explicit operator VectorRef(float f)
         {
             return new Vector(f, 1);
+        }
+
+        public static explicit operator float(VectorRef v)
+        {
+            Debug.Assert(v.Length == 1, "Can only cast 1D vector to scalar, given vector is " + v.Length + "D.");
+            return v[0];
         }
 
         /// <summary>
         /// Convert first two elements to SlimDX.Vector2.
         /// </summary>
-        public static explicit operator SlimDX.Vector2(Vector vec)  // explicit byte to digit conversion operator
+        public static explicit operator SlimDX.Vector2(VectorRef vec)  // explicit byte to digit conversion operator
         {
             return new SlimDX.Vector2(vec[0], vec.Length > 1 ? vec[1] : 0);
         }
@@ -209,7 +246,7 @@ namespace FlowSharp
         /// <summary>
         /// Convert first tree elements to SlimDX.Vector3. If less, fill with zeros.
         /// </summary>
-        public static explicit operator SlimDX.Vector3(Vector vec)  // explicit byte to digit conversion operator
+        public static explicit operator SlimDX.Vector3(VectorRef vec)  // explicit byte to digit conversion operator
         {
             return new SlimDX.Vector3(vec[0], vec.Length > 1? vec[1] : 0, vec.Length > 2 ? vec[2] : 0);
         }
@@ -217,10 +254,11 @@ namespace FlowSharp
         /// <summary>
         /// Convert first four elements to SlimDX.Vector4. If less, fill with (0 0 0 1).
         /// </summary>
-        public static explicit operator SlimDX.Vector4(Vector vec)  // explicit byte to digit conversion operator
+        public static explicit operator SlimDX.Vector4(VectorRef vec)  // explicit byte to digit conversion operator
         {
             return new SlimDX.Vector4(vec[0], vec.Length > 1 ? vec[1] : 0, vec.Length > 2 ? vec[2] : 0, vec.Length > 3 ? vec[3] : 1);
         }
+
 
         /// <summary>
         /// Convert first tree elements to a Vec3. If less, fill with zeros.
@@ -254,8 +292,7 @@ namespace FlowSharp
         /// </summary>
         public Vec3 AsVec3()
         {
-            Debug.Assert(Length == 3);
-            return new Vec3(_data);
+            return this.ToVec3();
         }
 
         /// <summary>
@@ -265,8 +302,8 @@ namespace FlowSharp
         public float Product()
         {
             float prod = 1;
-            foreach (float expansion in _data)
-                prod *= expansion;
+            for (int i = 0; i < Length; ++i)
+                prod *= this[i];
 
             return prod;
         }
@@ -278,8 +315,8 @@ namespace FlowSharp
         public float Sum()
         {
             float prod = 0;
-            foreach (float expansion in _data)
-                prod += expansion;
+            for (int i = 0; i < Length; ++i)
+                prod += this[i];
 
             return prod;
         }
@@ -288,7 +325,7 @@ namespace FlowSharp
         {
             float sum = 0;
             for (int dim = 0; dim < Length; ++dim)
-                sum += _data[dim] * _data[dim];
+                sum += this[dim] * this[dim];
 
             return sum;
         }
@@ -305,7 +342,7 @@ namespace FlowSharp
             if (length == 0)
                 return;
             for (int dim = 0; dim < Length; ++dim)
-                _data[dim] /= length;
+                this[dim] /= length;
         }
 
         public Vector Normalized()
@@ -317,17 +354,17 @@ namespace FlowSharp
 
         public float Max()
         {
-            float max = _data[0];
+            float max = this[0];
             for (int dim = 1; dim < Length; ++dim)
-                max = Math.Max(max, _data[dim]);
+                max = Math.Max(max, this[dim]);
             return max;
         }
 
         public float Min()
         {
-            float min = _data[0];
+            float min = this[0];
             for (int dim = 1; dim < Length; ++dim)
-                min = Math.Min(min, _data[dim]);
+                min = Math.Min(min, this[dim]);
             return min;
         }
 
@@ -346,18 +383,46 @@ namespace FlowSharp
         {
             float min = float.MaxValue;
             for (int dim = 0; dim < Length; ++dim)
-                if (_data[dim] > 0 && _data[dim] < min)
-                    min = _data[dim];
+                if (this[dim] > 0 && this[dim] < min)
+                    min = this[dim];
             return min;
         }
 
         public override string ToString()
         {
-            string res = "[" + _data[0];
+            string res = "[" + this[0];
             for (int dim = 1; dim < Length; ++dim)
-                res += ", " + _data[dim];
+                res += ", " + this[dim];
             res += ']';
             return res;
+        }
+
+        public static Vector Subvec(VectorRef v, int length, int offset = 0)
+        {
+            Debug.Assert(offset >= 0 && length + offset < v.Length, "Range outside the vector length.");
+            Vector ret = new Vector(length);
+            for (int i = offset; i < offset + length; ++i)
+                ret[i] = v[i];
+            //Array.Copy(v.Data, offset, ret.Data, 0, length);
+            return ret;
+        }
+
+        public static Vector ToUnsteady(VectorRef v)
+        {
+            Vector ret = new Vector(v.Length + 1);
+            for (int i = 0; i < v.Length; ++i)
+                ret[i] = v[i];
+            //Array.Copy(v.Data, ret.Data, v.Length);
+            ret.T = 1;
+            return ret;
+        }
+
+        public static Vector ToSteady(Vector v)
+        {
+            Debug.Assert(v.Length > 1 && v.T == 1, "Not an unsteady vector.");
+            Vector ret = new Vector(v.Length - 1);
+            Array.Copy(v.Data, ret.Data, v.Length-1);
+            return ret;
         }
     }
 

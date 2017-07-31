@@ -316,7 +316,7 @@ namespace FlowSharp
         {
             float cellLength = 1.0f / (1 << level);
             // For each dimension, check that a positive and negative value are present.
-            for (int dim = 0; dim < field.Scalars.Length; ++dim)
+            for (int dim = 0; dim < field.NumVectorDimensions; ++dim)
             {
                 bool pos = false;
                 bool neg = false;
@@ -330,8 +330,8 @@ namespace FlowSharp
                         position[axis] += (neighbor & (1 << axis)) > 0 ? cellLength : 0;
                     }
 
-                    float value = field.Scalars[dim].Sample(position);
-                    if (value == field.Scalars[dim].InvalidValue)
+                    float value = field.Sample(position)[dim];
+                    if (value == field.InvalidValue)
                         return;
                     if (value >= -_epsZero)
                         pos = true;
@@ -387,7 +387,7 @@ namespace FlowSharp
                     for (int z = 0; z < ((field.NumVectorDimensions == 3) ? field.Size[2] : 1); ++z)
                     {
                         int[] pos = (field.NumVectorDimensions == 3) ? new int[] { x, y, z } : new int[] { x, y };
-                        float data = field.Scalars[0].Sample(new Index(pos));
+                        float data = field.Sample(new Index(pos))[0];
                         // Is the cell data valid?
                         if (data == field.InvalidValue)
                             continue;
@@ -422,7 +422,7 @@ namespace FlowSharp
                 Vector pos = new Vector(0, field.Size.Length);
                 pos[0] = (float)rnd.NextDouble() * (field.Size[0] - 1);
                 pos[1] = (float)rnd.NextDouble() * (field.Size[1] - 1);
-                float data = field.Scalars[0].Sample(pos);
+                float data = field.Sample(pos)[0];
                 if (data == field.InvalidValue)
                 {
                     index--;
@@ -463,7 +463,7 @@ namespace FlowSharp
                 pos[0] = (float)rnd.NextDouble() * (field.Size[0] - 1);
                 pos[1] = (float)rnd.NextDouble() * (field.Size[1] - 1);
                 pos[2] = (float)rnd.NextDouble() * (field.Size[2] - 1);
-                float data = field.Scalars[0].Sample(pos);
+                float data = field.Sample(pos)[0];
                 if (data == field.InvalidValue)
                 {
                     index--;
@@ -488,7 +488,7 @@ namespace FlowSharp
         #region FieldFunctions
 
         public static float AlphaStableFFF = 0;
-        public static Vector StableFFF(Vector v, SquareMatrix J)
+        public static Vector StableFFF(VectorRef v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 3 && J.Length == 3);
 
@@ -517,7 +517,7 @@ namespace FlowSharp
             return res;
         }
 
-        public static Vector StableFFFNegative(Vector v, SquareMatrix J)
+        public static Vector StableFFFNegative(VectorRef v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 3 && J.Length == 3);
             Vec3 f = Vec3.Cross(J.Row(0).AsVec3(), J.Row(1).AsVec3());
@@ -533,7 +533,7 @@ namespace FlowSharp
             return -f + AlphaStableFFF * g;
         }
 
-        public static Vector PathlineCore(Vector v, SquareMatrix J)
+        public static Vector PathlineCore(VectorRef v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 3 && J.Length == 3);
             // FFF
@@ -547,7 +547,7 @@ namespace FlowSharp
             return result;
         }
 
-        public static Vector PathlineCoreLength(Vector v, SquareMatrix J)
+        public static Vector PathlineCoreLength(VectorRef v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 3 && J.Length == 3);
             // FFF
@@ -562,7 +562,7 @@ namespace FlowSharp
         }
 
 
-        public static Vector Acceleration(Vector v, SquareMatrix J)
+        public static Vector Acceleration(VectorRef v, SquareMatrix J)
         {
             // Theoretically, add v_t. Assume to be zero.
             Vector vec = J * v;
@@ -570,7 +570,7 @@ namespace FlowSharp
             return vec.ToVec2();
         }
 
-        public static Vector AccelerationLength(Vector v, SquareMatrix J)
+        public static Vector AccelerationLength(VectorRef v, SquareMatrix J)
         {
             // Theoretically, add v_t. Assume to be zero.
             return (Vector)(J * v).LengthEuclidean();
@@ -593,7 +593,7 @@ namespace FlowSharp
         //    return new VectorField.IntegratorPredictorCorrector(field, PredictCore, CorrectCore, true);
         //}
 
-        public static Vector OkuboWeiss(Vector v, SquareMatrix timeJ)
+        public static Vector OkuboWeiss(VectorRef v, SquareMatrix timeJ)
         {
             SquareMatrix J = timeJ.ToMat2x2();
             SquareMatrix JT = new SquareMatrix(J);
@@ -606,12 +606,12 @@ namespace FlowSharp
             return (Vector)Q;
         }
 
-        public static Vector VFLength(Vector v, SquareMatrix J)
+        public static Vector VFLength(VectorRef v, SquareMatrix J)
         {
             return (Vector)v.LengthEuclidean();
         }
 
-        public static Vector Divergence(Vector v, SquareMatrix J)
+        public static Vector Divergence(VectorRef v, SquareMatrix J)
         {
             float sum = 0;
             for (int dim = 0; dim < v.Length; ++dim)
@@ -619,33 +619,33 @@ namespace FlowSharp
             return (Vector)sum;
         }
 
-        public static Vector DivX(Vector v, SquareMatrix J)
+        public static Vector DivX(VectorRef v, SquareMatrix J)
         {
             return (Vector)J[0][0];
         }
 
-        public static Vector DivY(Vector v, SquareMatrix J)
+        public static Vector DivY(VectorRef v, SquareMatrix J)
         {
             return (Vector)J[1][1];
         }
-        public static Vector Div2D(Vector v, SquareMatrix J)
+        public static Vector Div2D(VectorRef v, SquareMatrix J)
         {
             return new Vec2(J[0][0], J[1][1]);
         }
 
-        public static Vector Vorticity(Vector v, SquareMatrix J)
+        public static Vector Vorticity(VectorRef v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 2); // If not, write other formula.
             return (Vector)(J.Vx - J.Uy);
         }
 
-        public static Vector Shear(Vector v, SquareMatrix J)
+        public static Vector Shear(VectorRef v, SquareMatrix J)
         {
             Debug.Assert(v.Length == 2); // If not, write other formula.
             return (Vector)(J.Vx + J.Uy);
         }
 
-        public static Vector NegativeGradient(Vector v, SquareMatrix J)
+        public static Vector NegativeGradient(VectorRef v, SquareMatrix J)
         {
             // Debug.Assert(v.Length == 1); // If not, write other formula.
             return new Vec3((-J.Row(0)).ToVec2(), 0);
@@ -912,7 +912,6 @@ namespace FlowSharp
                 {
                     // TODO: Count turns!
                     float turnAdd = 0;
-                    int numCrossings = 0;
 
                     angles[l] = new float[line.Length];
                     distances[l] = new float[line.Length];
@@ -958,7 +957,6 @@ namespace FlowSharp
         public static Graph2D[][] GetErrorsToTime(LineSet lines, int angles, float[] radii)
         {
             Debug.Assert(lines.Length == angles * radii.Length);
-            int count = 0;
             Graph2D[][] result = new Graph2D[angles][];
 
             for (int a = 0; a < angles; ++a)

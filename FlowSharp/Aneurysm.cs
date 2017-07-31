@@ -39,6 +39,21 @@ namespace FlowSharp
             velocity = 0
         }
 
+        private string[] Names =
+        {
+            "Velocity",
+            "Static Pressure",
+            "Wall Shear Stress",
+            "Wall Shear Stress X",
+            "Wall Shear Stress Y",
+            "Wall Shear Stress Z"
+        };
+
+        public string VariableName(Variable variable)
+        {
+            return Names[(int)variable];
+        }
+
         //private static Dictionary<Variable, string> _variableShort = new Dictionary<Variable, string>()
         //{
         //    {Variable.TIME, "T" },
@@ -69,7 +84,7 @@ namespace FlowSharp
         public enum Display : int
         {
             NONE,
-            VIEW_TERAHEDRONS,
+            VIEW_TETRAHEDRONS,
             VIEW_HEXAHEDRONS
             //MEMBER_COMPARISON,
             ////SUBSTEP_VIEWER,
@@ -111,35 +126,22 @@ namespace FlowSharp
         }
         public enum Measure : int
         {
-            VELOCITY = 0
-            //SURFACE_HEIGHT = Variable.SURFACE_HEIGHT,
-            //SALINITY = Variable.SALINITY,
-            //TEMPERATURE = Variable.TEMPERATURE,
-            //DIVERGENCE = 1,
-            //DIVERGENCE_2D = 4,
-            //VORTICITY = 2,
-            //SHEAR = 3
+            pressure = 1,
+            wall_shear = 2,
+            x_wall_shear = 3,
+            y_wall_shear = 4,
+            z_wall_shear = 5,
+            velocity = 0
         }
-        public enum DiffusionMeasure : int
-        {
-            Density = 0,
-            //Min,
-            //Max,
-            //Range,
-            //Direction,
-            //Neighbor,
-            //FTLE
-        }
-
 
         public enum GeometryPart : int
         {
-            Solid = 0,
-            Wall = 1,
-            Inlet = 2,
-            Outlet1 = 3,
-            Outlet2 = 4,
-            Outlet3 = 5
+            Solid   = 1,
+            Wall    = 2,
+            Inlet   = 3,
+            Outlet1 = 4,
+            Outlet2 = 5,
+            Outlet3 = 6
         }
         public MainWindow WPFWindow { get; set; }
 
@@ -179,10 +181,28 @@ namespace FlowSharp
                 //name += '_' + _mappers[(int)_currentMapper].CurrentSetting.GetFilename();
                 //return name;
                     } }
+        private string EnsightVariableFilename(Variable variable, int slice)
+        {
+            string filename = "0" + (401 + slice) + '.';
+            if ((int)variable > 0)
+                filename += "scl" + (int)variable;
+            else
+                filename += "vel";
+            return filename;   
+        }
+        public string EnsightVariableFileName(Variable variable, int slice)
+        {
+                return EnsightFolderFilename + EnsightVariableFilename(variable, slice);
+                //if (_mappers[(int)_currentMapper] == null)
+                //    return "Default";
+                //string name = _currentMapper.ToString();
+                //name += '_' + _mappers[(int)_currentMapper].CurrentSetting.GetFilename();
+                //return name;
+        }
 
         public string VtuCompleteFilename(int timestep, GeometryPart geom)
         {
-            return VtuFolderFilename + timestep + '/' + VtuDataFilename + timestep + '_' + (int)geom + "_0.vtu";
+            return VtuFolderFilename + timestep + '/' + VtuDataFilename + timestep + '_' + (((int)geom)-1) + "_0.vtu";
         }
 
         private Aneurysm()

@@ -19,7 +19,7 @@ namespace FlowSharp
         /// <param name="device"></param>
         /// <param name="field"></param>
         /// <returns></returns>
-        public static Texture2D GenerateTextureFromField(Device device, Field field, Texture2DDescription? description = null)
+        public static Texture2D GenerateTextureFromField(Device device, VectorField field, Texture2DDescription? description = null)
         {
             System.Diagnostics.Debug.Assert(field.Size.Length == 2);
 

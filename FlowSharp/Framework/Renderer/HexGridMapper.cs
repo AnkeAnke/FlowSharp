@@ -16,21 +16,21 @@ namespace FlowSharp
         //PointSet<Point> _vertices;
         Mesh _cubes;
         HexGrid _grid;
-        Index[] _indices;
+        IndexArray _indices;
         bool update = true;
         //PointSet<Point> _vertices;
 
         public HexGridMapper(Plane plane) : base()
         {
             Mapping = ShowSide;
-            Plane = plane;
+            BasePlane = plane;
 
-            LoaderEnsight loader = new LoaderEnsight(Aneurysm.Variable.velocity);
+            LoaderEnsight loader = new LoaderEnsight(Aneurysm.GeometryPart.Wall);
             _grid = loader.LoadGrid();
 
 
-            this.Plane = Plane.FitToPoints(Vector3.Zero, 10, _grid.Vertices);
-            Plane.PointSize = 1.0f;
+            this.BasePlane = Plane.FitToPoints(Vector3.Zero, 10, _grid.Vertices);
+            BasePlane.PointSize = 1.0f;
 
             //int[] selection = new int[_grid.Indices.Length / 100];
             //for (int s = 0; s < selection.Length; ++s)
@@ -49,7 +49,7 @@ namespace FlowSharp
             if (update)
             {
                 update = false;
-                _cubes = new Mesh(Plane, _grid.Vertices, _indices);
+                _cubes = new Mesh(BasePlane, new UnstructuredTree(_grid.Vertices, _indices));
             }
             if (_lastSetting == null ||
                 WindowWidthChanged ||
@@ -63,7 +63,7 @@ namespace FlowSharp
             wire.Add(_cubes);
             //wire.Add(new PointCloud(Plane, _vertices));
 
-            var axes = Plane.GenerateAxisGlyph();
+            var axes = BasePlane.GenerateAxisGlyph();
             wire.AddRange(axes);
             return wire;
             

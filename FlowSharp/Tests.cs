@@ -21,8 +21,8 @@ namespace FlowSharp
             {
                 for (int i = 0; i < 4; ++i)
                 {
-                    cell0.Data[i] = (float)rnd.NextDouble() - 0.5f;
-                    cell1.Data[i] = (float)rnd.NextDouble() - 0.5f;
+                    cell0.Data[i][0] = (float)rnd.NextDouble() - 0.5f;
+                    cell1.Data[i][0] = (float)rnd.NextDouble() - 0.5f;
                 }
                 VectorField cell = new VectorField(new ScalarField[] { cell0, cell1 });
                 //PointSet<Point> points = FieldAnalysis.ComputeCriticalPointsRegularAnalytical2D(cell);
@@ -107,7 +107,7 @@ namespace FlowSharp
             
             VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] {new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY)});
             field.InvalidValue = float.MaxValue;
-            field.DoNotScale();
+            //field.DoNotScale();
             return field;
         }
 
@@ -128,7 +128,7 @@ namespace FlowSharp
 
             VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY) });
             field.InvalidValue = float.MaxValue;
-            field.DoNotScale();
+            //field.DoNotScale();
             return field;
         }
 
@@ -165,7 +165,7 @@ namespace FlowSharp
 
             VectorFieldUnsteady field = new VectorFieldUnsteady(new ScalarFieldUnsteady[] { new ScalarFieldUnsteady(vX), new ScalarFieldUnsteady(vY) });
             field.InvalidValue = float.MaxValue;
-            field.DoNotScale();
+            //field.DoNotScale();
             return field;
         }
 

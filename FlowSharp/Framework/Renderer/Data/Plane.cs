@@ -22,47 +22,73 @@ namespace FlowSharp
         /// <summary>
         /// Scaled x axis.
         /// </summary>
-        public Vector3 XAxis { get; protected set; }
+        public Vector3 XAxis { get { return _xAxis * Scale.X; } protected set { _xAxis = value; _xAxis.Normalize(); } }
+        private Vector3 _xAxis;
         /// <summary>
         /// Scaled y axis.
         /// </summary>
-        public Vector3 YAxis { get; protected set; }
+        public Vector3 YAxis { get { return _yAxis * Scale.Y; } protected set { _yAxis = value; _yAxis.Normalize(); } }
+        private Vector3 _yAxis;
         /// <summary>
         /// Scaled y axis.
         /// </summary>
-        public Vector3 ZAxis; // { get { return Vector3.Cross(YAxis, XAxis); } }
+        public Vector3 ZAxis { get { return _zAxis * Scale.Z; } protected set { _zAxis = value; _zAxis.Normalize(); } }
+        private Vector3 _zAxis;
 
-        public float Scale { get { return Math.Min(XAxis.Length(), YAxis.Length()); } }
+        public Vector3 Scale;// { get { return Math.Min(XAxis.Length(), YAxis.Length()); } }
 
         public float PointSize { get; set; }
 
         public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, float scale, float pointSize = 0.1f)
         {
             Origin = origin;
-            XAxis = xAxis * scale;
-            YAxis = yAxis * scale;
+            XAxis = xAxis;// * scale;
+            YAxis = yAxis;// * scale;
             ZAxis = Vector3.Cross(YAxis, XAxis);
+            Scale = new Vector3(scale);
+            PointSize = pointSize;
+        }
+
+        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, Vector3 scale, float pointSize = 0.1f)
+        {
+            Origin = origin;
+            XAxis = xAxis;// * scale;
+            YAxis = yAxis;// * scale;
+            ZAxis = Vector3.Cross(YAxis, XAxis);
+            Scale = scale;
             PointSize = pointSize;
         }
 
         public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, Vector3 zAxis, float scale, float pointSize = 0.1f)
         {
             Origin = origin;
-            XAxis = xAxis * scale;
-            YAxis = yAxis * scale;
-            ZAxis = zAxis * scale;
+            XAxis = xAxis;// * scale;
+            YAxis = yAxis;// * scale;
+            ZAxis = zAxis;// * scale;
+            Scale = new Vector3(scale);
+            PointSize = pointSize;
+        }
+
+        public Plane(Vector3 origin, Vector3 xAxis, Vector3 yAxis, Vector3 zAxis, Vector3 scale, float pointSize = 0.1f)
+        {
+            Origin = origin;
+            XAxis = xAxis;// * scale;
+            YAxis = yAxis;// * scale;
+            ZAxis = zAxis;// * scale;
+            Scale = scale;
             PointSize = pointSize;
         }
 
         public Plane(Plane cpy, Vector3 offset)
         {
-            Origin = cpy.Origin
-                + offset.X * cpy.XAxis
-                + offset.Y * cpy.YAxis
-                + offset.Z * cpy.ZAxis;
+            Origin = cpy.Origin + offset;
+                //+ offset.X * cpy.XAxis
+                //+ offset.Y * cpy.YAxis
+                //+ offset.Z * cpy.ZAxis;
             XAxis = cpy.XAxis;
             YAxis = cpy.YAxis;
             ZAxis = cpy.ZAxis;
+            Scale = cpy.Scale;
             PointSize = cpy.PointSize;
         }
 
@@ -71,7 +97,8 @@ namespace FlowSharp
             Origin = cpy.Origin;
             XAxis  = cpy.XAxis;
             YAxis  = cpy.YAxis;
-            ZAxis  = cpy.ZAxis * zScale;
+            ZAxis = cpy.ZAxis;// * zScale;
+            Scale.Z = zScale;
             PointSize = cpy.PointSize;
         }
 
@@ -81,6 +108,7 @@ namespace FlowSharp
             XAxis = cpy.XAxis;
             YAxis = cpy.YAxis;
             ZAxis = cpy.ZAxis;
+            Scale = cpy.Scale;
             PointSize = cpy.PointSize;
         }
 
@@ -90,7 +118,7 @@ namespace FlowSharp
             Vector3 maxPos = points.Points[0].Position;
 
             // Find min and max in each dimension.
-                        foreach (P p in points.Points)
+            foreach (P p in points.Points)
             {
                 for (int v = 0; v < 3; ++v)
                 {
@@ -98,9 +126,9 @@ namespace FlowSharp
                     maxPos[v] = Math.Max(maxPos[v], p.Position[v]);
                 }
             }
-
-           // Extent.
-           Vector3 extent = maxPos - minPos;
+            
+            // Extent.
+            Vector3 extent = maxPos - minPos;
             float maxEx = Math.Max(Math.Max(extent[0], extent[1]), extent[2]);
 
             //foreach (P p in points.Points)
@@ -109,13 +137,14 @@ namespace FlowSharp
             //}
             float scale = maximalExtent / maxEx;
             Vector3 scaledOrigin = origin - minPos * scale;
+            //Vector3 newOrigin = origin - minPos;
 
-            return new Plane(scaledOrigin, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, scale, scale * 0.01f);
+            return new Plane(scaledOrigin, Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, scale, scale * 0.01f);
 
-//            return new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 1);
+//          return new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 1);
         }
 
-        public static Plane FitToPoints(Vector3 origin, float maximalExtent, Vector[] verts)
+        public static Plane FitToPoints(Vector3 origin, float maximalExtent, VectorData verts)
         {
             Vector3 minPos = (Vector3)verts[0];
             Vector3 maxPos = (Vector3)verts[0];
@@ -166,7 +195,28 @@ namespace FlowSharp
             return result;
         }
 
-        
+        public List<Renderable> GenerateOriginAxisGlyph()
+        {
+            List<Renderable> result = new List<Renderable>(4);
+            Plane noOffset = new Plane(this, -Origin);
+            noOffset.Scale = new Vector3(1);
+            Point[] ends = new Point[3];
+            for (int a = 0; a < 3; ++a)
+            {
+                Vector3 vec = Vector3.Zero;
+                vec[a] = 1;
+
+                Line line = new Line(2);
+                result.Add(new LineBall(noOffset, new LineSet(new Line[] { new Line() { Positions = new Vector3[] { Vector3.Zero, vec } } }) { Color = vec, Thickness = 0.01f }));
+
+                ends[a] = new Point(vec) { Color = vec, Radius = 0.02f };
+            }
+            result.Add(new PointCloud(noOffset, new PointSet<Point>(ends)));
+
+            return result;
+        }
+
+
 
     }
     class FieldPlane : ColormapRenderable
@@ -196,29 +246,29 @@ namespace FlowSharp
         /// <param name="field"></param>
         public FieldPlane(Plane plane, VectorField fields, RenderEffect effect = RenderEffect.DEFAULT, Colormap map = Colormap.Parula)
         {
-#if DEBUG
-            // Assert that the fields are 2 dimensional.
-            foreach(Field field in fields.Scalars)
-                System.Diagnostics.Debug.Assert(field.Size.Length >= 2);
-#endif
+//#if DEBUG
+//            // Assert that the fields are 2 dimensional.
+//            foreach(Field field in fields.Scalars)
+//                System.Diagnostics.Debug.Assert(field.Size.Length >= 2);
+//#endif
             this._effect = _planeEffect;
             this._vertexSizeBytes = 32;
             this._numVertices = 6;
             this.UsedMap = map;
-            this._width  = fields[0].Size[0];
-            this._height = fields[0].Size[1];
+            this._width  = fields.Size[0];
+            this._height = fields.Size[1];
             this._invalid = fields.InvalidValue ?? float.MaxValue;
             this._field = fields;
             
             // Setting up the vertex buffer. 
-            GenerateGeometry(plane, fields[0].Size.ToInt2(), fields.TimeSlice??0);
+            GenerateGeometry(plane, fields.Size.ToInt2(), fields.TimeSlice??0);
 
 
             // Generating Textures from the fields.
-            _fieldTextures = new ShaderResourceView[fields.Scalars.Length];
+            _fieldTextures = new ShaderResourceView[fields.NumVectorDimensions];
             for(int f = 0; f < _field.NumVectorDimensions; ++f)
             {
-                Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields[f]);
+                Texture2D tex = ColorMapping.GenerateTextureFromField(_device, fields); // Was fields[0]...
                 _fieldTextures[f] = new ShaderResourceView(_device, tex);
             }
 
@@ -235,7 +285,7 @@ namespace FlowSharp
             if(effect == RenderEffect.LIC_LENGTH && Effect != RenderEffect.LIC_LENGTH && _field != null)
             {
                 VectorField length = new VectorField(_field, FieldAnalysis.VFLength, 1, false);
-                this.AddScalar(length[0] as ScalarField);
+                this.AddScalar(length.GetChannel(0));
             }
             // Remove length texture?
             else if (effect != RenderEffect.LIC_LENGTH && Effect == RenderEffect.LIC_LENGTH && _field != null)

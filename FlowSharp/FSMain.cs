@@ -9,7 +9,7 @@ namespace FlowSharp
 {
     class FSMain
     {
-        static VectorFieldUnsteady velocity;
+        static VectorField velocity;
 
         static Plane redSea;
 
@@ -41,7 +41,7 @@ namespace FlowSharp
 
         public static void CreateRenderables()
         {
-            Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_TERAHEDRONS, tetTreeMapper);
+            Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_TETRAHEDRONS, tetTreeMapper);
             //Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_HEXAHEDRONS, mapperHexCubes);
         }
     }

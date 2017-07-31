@@ -100,12 +100,12 @@ namespace FlowSharp
 
             // vX, t=1
             _t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
-            _t1X.CopyFromHostToThis<float>(t1X.Data);
+            _t1X.CopyFromHostToThis<float>(t1X.BufferData.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
             _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
-            _t1Y.CopyFromHostToThis<float>(t1Y.Data);
+            _t1Y.CopyFromHostToThis<float>(t1Y.BufferData.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
 
             // ~~~~~~~~~~~~~ Create texture ~~~~~~~~~~~~~~~~~~~~ \\
@@ -200,12 +200,12 @@ namespace FlowSharp
 
             // vX, t=1
             _t1X = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
-            _t1X.CopyFromHostToThis(t1X.Data);
+            _t1X.CopyFromHostToThis(t1X.BufferData.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
             _t1Y = new CudaArray2D(CUArrayFormat.Float, _width, vHeight, CudaArray2DNumChannels.One);
-            _t1Y.CopyFromHostToThis(t1Y.Data);
+            _t1Y.CopyFromHostToThis(t1Y.BufferData.Data);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
         }
 

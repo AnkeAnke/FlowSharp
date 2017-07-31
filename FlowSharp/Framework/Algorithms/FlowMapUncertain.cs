@@ -113,13 +113,13 @@ namespace FlowSharp
             //new CudaTextureArray2D(_advectParticlesKernel, "vY_t0", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t0Y);
 
             float[] paddedArray = new float[_t1X.Width * _t1X.Height];
-            Array.Copy(t1X.Data, paddedArray, t1X.Data.Length);
+            Array.Copy(t1X.BufferData.Data, paddedArray, t1X.Data.Length);
             // vX, t=1
             _t1X.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
             // vY, t=1
-            Array.Copy(t1Y.Data, paddedArray, t1Y.Data.Length);
+            Array.Copy(t1Y.BufferData.Data, paddedArray, t1Y.Data.Length);
             _t1Y.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);
 
@@ -220,12 +220,12 @@ namespace FlowSharp
             int vHeight = _height * _numMembers;
 
             float[] paddedArray = new float[_t1X.Width * _t1X.Height];
-            Array.Copy(t1X.Data, paddedArray, t1X.Data.Length);
+            Array.Copy(t1X.BufferData.Data, paddedArray, t1X.Data.Length);
             // vX, t=1
             _t1X.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vX_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1X);
 
-            Array.Copy(t1Y.Data, paddedArray, t1Y.Data.Length);
+            Array.Copy(t1Y.BufferData.Data, paddedArray, t1Y.Data.Length);
             // vY, t=1
             _t1Y.CopyFromHostToThis<float>(paddedArray);
             new CudaTextureArray2D(_advectParticlesKernel, "vY_t1", CUAddressMode.Wrap, CUFilterMode.Linear, CUTexRefSetFlags.None, _t1Y);

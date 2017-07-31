@@ -10,14 +10,14 @@ namespace FlowSharp
 {
     class HexGrid : FieldGrid
     {
-        public Vector[] Vertices;
-        public Index[] Indices;
+        public VectorBuffer Vertices;
+        public IndexArray Indices;
         private const int NumCorners = 8;
 
         /// <summary>
         /// Create a new hexahedron grid descriptor.
         /// </summary>
-        public HexGrid(Vector[] vertices, Index[] indices, Vector origin = null, float? timeOrigin = null)
+        public HexGrid(VectorBuffer vertices, IndexArray indices, Vector origin = null, float? timeOrigin = null)
         {
             // For Dimensionality.
             Size = new Index(8);
@@ -127,10 +127,10 @@ namespace FlowSharp
             return cubes;
         }
 
-        public Index[] GetCubes()
+        public IndexArray GetCubes()
         {
             int numSides = 1;
-            Index[] cubes = new Index[Indices.Length * numSides];
+            IndexArray cubes = new IndexArray(Indices.Length * numSides, 4);
             for (int i = 0; i < Indices.Length; ++i)
             {
                 Index idx = Indices[i];

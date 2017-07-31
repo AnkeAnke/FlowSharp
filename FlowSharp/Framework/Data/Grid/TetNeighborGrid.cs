@@ -10,7 +10,9 @@ namespace FlowSharp
 {
     class TetNeighborGrid : FieldGrid, GeneralUnstructurdGrid
     {
-        public Vector[] Vertices { get; set; }
+        public VectorBuffer _vertices;
+        public VectorData Vertices { get { return _vertices; } set { _vertices = value as VectorBuffer; } }
+
         //public Index[] Indices;
         public TetNeighbor[] Cells;
         private const int NumCorners = 4;
@@ -19,9 +21,9 @@ namespace FlowSharp
         /// Assemble all inidces to a buffer. Do this here for general Tet grids.
         /// </summary>
         /// <returns></returns>
-        public Index[] AssembleIndexList()
+        public IndexArray AssembleIndexList()
         {
-            Index[] cells = new Index[Cells.Length];
+            IndexArray cells = new IndexArray(Cells.Length, Cells[0].VertexIndices.Length);
             for (int c = 0; c < Cells.Length; ++c)
                 cells[c] = Cells[c].VertexIndices;
             return cells;
@@ -30,7 +32,7 @@ namespace FlowSharp
         /// <summary>
         /// Create a new tetraeder grid descriptor.
         /// </summary>
-        public TetNeighborGrid(Vector[] vertices, TetNeighbor[] indices, Vector origin = null, float? timeOrigin = null)
+        public TetNeighborGrid(VectorBuffer vertices, TetNeighbor[] indices, Vector origin = null, float? timeOrigin = null)
         {
             // For Dimensionality.
             Size = new Index(4);
@@ -257,7 +259,7 @@ namespace FlowSharp
             sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[4], hex[7], hex[5], hex[6] } ), hexIndex * 5 + 3, hexIndex * 5 + 4, hexIndex) );
         }
 
-        public static TetNeighborGrid BuildFromHexGrid(Vector[] vertices, Index[] hexIndices, Vector origin = null, float? timeOrigin = null)
+        public static TetNeighborGrid BuildFromHexGrid(VectorData vertices, IndexArray hexIndices, Vector origin = null, float? timeOrigin = null)
         {
             Console.WriteLine("Converting HexGrid to TetGrid");
 
@@ -305,11 +307,14 @@ namespace FlowSharp
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             // Begin at one hexader. Split into tetraeders.
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            grid.SplitHexAndAppend(0, ref hexIndices[0], true);
+            Index refHex = hexIndices[0];
+            grid.SplitHexAndAppend(0, ref refHex, true);
+            hexIndices[0] = refHex;
 
             // Save the sides that need to be connected here.
             List<Tuple<Index, int, int, int>> sideStack = new List<Tuple<Index, int, int, int>>(hexIndices.Length);
-            grid.AppendSides(0, ref hexIndices[0], sideStack);
+            grid.AppendSides(0, ref refHex, sideStack);
+            hexIndices[0] = refHex;
 
             int numHexesSplit = 1;
 
@@ -342,8 +347,12 @@ namespace FlowSharp
                 // Split and integrate the hex.
                 if (neighbor >= 0 && grid.Cells[neighbor * 5].VertexIndices == null)
                 {
-                    grid.AppendTetrahedrons(neighbor, ref hexIndices[neighbor], sideVerts, side.Item2, side.Item3);
-                    grid.AppendSides(neighbor, ref hexIndices[neighbor], sideStack);
+                    Index refNeighHex = hexIndices[neighbor];
+                    grid.AppendTetrahedrons(neighbor, ref refNeighHex, sideVerts, side.Item2, side.Item3);
+                    hexIndices[neighbor] = refNeighHex;
+                    grid.AppendSides(neighbor, ref refNeighHex, sideStack);
+                    hexIndices[neighbor] = refNeighHex;
+
                     numHexesSplit++;
                     if (numHexesSplit % (hexIndices.Length / 10) == 0)
                         Console.WriteLine(" - " + (numHexesSplit * 100) / (hexIndices.Length) + "% Converted.");

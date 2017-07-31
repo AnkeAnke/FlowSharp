@@ -8,117 +8,147 @@ using System.Diagnostics;
 
 namespace FlowSharp
 {
-    abstract class Field
-    {
-        /// <summary>
-        /// Number of spacial dimensions.
-        /// </summary>
-        public virtual int NumDimensions { get { return Size.Length; } }
+    //abstract class Field
+    //{
+    //    /// <summary>
+    //    /// Number of spacial dimensions.
+    //    /// </summary>
+    //    public virtual int NumDimensions { get { return Size.Length; } }
 
-        public virtual FieldGrid Grid { get; set; }
-        /// <summary>
-        /// Number of grid edges in every dimension.
-        /// </summary>
-        public Index Size { get { return Grid.Size; } }
+    //    public virtual FieldGrid Grid { get; set; }
+    //    /// <summary>
+    //    /// Number of grid edges in every dimension.
+    //    /// </summary>
+    //    public Index Size { get { return Grid.Size; } }
 
-        // Not Grid.TimeOrigin, because a steady field should not have a time origin in the grid (for sampling logic).
-        private float? _timeSlice = null;
-        public virtual float? TimeOrigin //{ get { return Grid.TimeOrigin; } set { Grid.TimeOrigin = value; } }
-        {
-            get { return _timeSlice; }
-            set { _timeSlice = value; }
-        }
+    //    // Not Grid.TimeOrigin, because a steady field should not have a time origin in the grid (for sampling logic).
+    //    private float? _timeSlice = null;
+    //    public virtual float? TimeOrigin //{ get { return Grid.TimeOrigin; } set { Grid.TimeOrigin = value; } }
+    //    {
+    //        get { return _timeSlice; }
+    //        set { _timeSlice = value; }
+    //    }
 
-        public abstract float this[int index]
-        { get; set; }
+    //    public abstract float this[int index]
+    //    { get; set; }
 
 
-        private float? _invalid = null;
-        public virtual float? InvalidValue
-        {
-            get { return _invalid; }
-            set { _invalid = value; }
-        }
+    //    private float? _invalid = null;
+    //    public virtual float? InvalidValue
+    //    {
+    //        get { return _invalid; }
+    //        set { _invalid = value; }
+    //    }
 
-        /// <summary>
-        /// Returns a value from the grid.
-        /// </summary>
-        /// <param name="gridPosition"></param>
-        /// <returns></returns>
-        public abstract float Sample(Index gridPosition);
+    //    /// <summary>
+    //    /// Returns a value from the grid.
+    //    /// </summary>
+    //    /// <param name="gridPosition"></param>
+    //    /// <returns></returns>
+    //    public abstract float Sample(Index gridPosition);
 
-        public abstract float Sample(Vector position);
+    //    public abstract float Sample(Vector position);
 
-        public abstract Vector SampleDerivative(Vector position);
+    //    public abstract Vector SampleDerivative(Vector position);
 
-        public abstract DataStream GetDataStream();
-        /// <summary>
-        /// Compare the value to the defined invalid value.
-        /// </summary>
-        /// <param name="gridPosition"></param>
-        /// <returns></returns>
-        public bool IsValid(Index gridPosition)
-        {
-            return (InvalidValue == null || Sample(gridPosition) != InvalidValue);
-        }
+    //    public abstract DataStream GetDataStream();
+    //    /// <summary>
+    //    /// Compare the value to the defined invalid value.
+    //    /// </summary>
+    //    /// <param name="gridPosition"></param>
+    //    /// <returns></returns>
+    //    public bool IsValid(Index gridPosition)
+    //    {
+    //        return (InvalidValue == null || Sample(gridPosition) != InvalidValue);
+    //    }
 
-        public abstract bool IsUnsteady();
+    //    public abstract bool IsUnsteady();
 
-        public virtual bool IsValid(Vector pos)
-        {
-            float[] weights;
-            int[] neighbors = this.Grid.FindAdjacentIndices(pos, out weights);
-            foreach (int neighbor in neighbors)
-                if (this[neighbor] == InvalidValue)
-                    return false;
-            return true;
-        }
+    //    public virtual bool IsValid(Vector pos)
+    //    {
+    //        float[] weights;
+    //        int[] neighbors = this.Grid.FindAdjacentIndices(pos, out weights);
+    //        foreach (int neighbor in neighbors)
+    //            if (this[neighbor] == InvalidValue)
+    //                return false;
+    //        return true;
+    //    }
 
-        public abstract void ChangeEndian();
+    //    public abstract void ChangeEndian();
 
-        public static void FlipEndian(float[] data)
-        {
-            int length = data.Length;
-            // Rewrite the data in memory.
-            unsafe
-            {
-                fixed (float* floatPtr = data)
-                {
-                    byte* byteData = (byte*)floatPtr;
+    //    public static void FlipEndian(float[] data)
+    //    {
+    //        int length = data.Length;
+    //        // Rewrite the data in memory.
+    //        unsafe
+    //        {
+    //            fixed (float* floatPtr = data)
+    //            {
+    //                byte* byteData = (byte*)floatPtr;
 
-                    // Swap beginning and ending float after multiplication.
-                    for (int i = 0; i < length; ++i)
-                    {
-                        byte tmp = byteData[i * 4];
-                        byteData[i * 4] = byteData[i * 4 + 3];
-                        byteData[i * 4 + 3] = tmp;
+    //                // Swap beginning and ending float after multiplication.
+    //                for (int i = 0; i < length; ++i)
+    //                {
+    //                    byte tmp = byteData[i * 4];
+    //                    byteData[i * 4] = byteData[i * 4 + 3];
+    //                    byteData[i * 4 + 3] = tmp;
 
-                        tmp = byteData[i * 4 + 1];
-                        byteData[i * 4 + 1] = byteData[i * 4 + 2];
-                        byteData[i * 4 + 2] = tmp;
+    //                    tmp = byteData[i * 4 + 1];
+    //                    byteData[i * 4 + 1] = byteData[i * 4 + 2];
+    //                    byteData[i * 4 + 2] = tmp;
 
-                    }
-                }
-            }
-        }
-    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
     /// <summary>
     /// Class for N dimensional float fields.
     /// </summary>
-    class ScalarField : Field
+    class ScalarField : VectorField
     {
-        private float[] _data;
+        public VectorBuffer BufferData { get { return base.Data as VectorBuffer; } set { Debug.Assert(value as VectorBuffer != null); Data = value; } }
 
-        public float[] Data
+        public new float this[int index]
         {
-            get { return _data; }
-            protected set { _data = value; }
+            get { return (float)base.Data[index]; }
+            set { ((VectorBuffer)base.Data).Data[index] = value; }
         }
 
-        public override float this[int index]
+        public new float this[Index gridPosition]
         {
-            get { return _data[index]; }
-            set { _data[index] = value; }
+            get
+            {
+                Debug.Assert(gridPosition < Size && gridPosition.IsPositive());
+
+                int offsetScale = 1;
+                int index = 0;
+
+                // Have last dimension running fastest.
+                for (int dim = 0; dim < NumVectorDimensions; ++dim)
+                {
+                    index += offsetScale * gridPosition[dim];
+                    offsetScale *= Size[dim];
+                }
+
+                return this[index];
+            }
+            protected set
+            {
+                Debug.Assert(gridPosition < Size && gridPosition.IsPositive());
+
+                int offsetScale = 1;
+                int index = 0;
+
+                // Have last dimension running fastest.
+                for (int dim = 0; dim < NumVectorDimensions; ++dim)
+                {
+                    index += offsetScale * gridPosition[dim];
+                    offsetScale *= Size[dim];
+                }
+
+                this[index] = value;
+            }
         }
 
         //private float? _timeSlice = null;
@@ -142,7 +172,14 @@ namespace FlowSharp
         public ScalarField(FieldGrid grid)
         {
             Grid = grid;
-            _data = new float[Size.Product()];
+            base.Data = new VectorBuffer(grid.Size.Product(), 1);
+        }
+
+        public ScalarField(VectorBuffer buff, FieldGrid grid)
+        {
+            Debug.Assert(buff.Length == grid.Size.Product());
+            Grid = grid;
+            Data = buff;
         }
 
         protected ScalarField() { }
@@ -152,29 +189,17 @@ namespace FlowSharp
         /// </summary>
         /// <param name="gridPosition"></param>
         /// <returns></returns>
-        public override float Sample(Index gridPosition)
+        public new float Sample(Index gridPosition)
         {
-            Debug.Assert(gridPosition < Size && gridPosition.IsPositive());
-
-            int offsetScale = 1;
-            int index = 0;
-
-            // Have last dimension running fastest.
-            for(int dim = 0; dim < NumDimensions; ++dim)
-            {
-                index += offsetScale * gridPosition[dim];
-                offsetScale *= Size[dim];
-            }
-
-            return _data[index];
+            return this[gridPosition];
         }
 
-        public override float Sample(Vector position)
+        public new float Sample(Vector position)
         {
-            return Grid.Sample(this, position);
+            return Grid.Sample(this, position)[0];
         }
 
-        public override Vector SampleDerivative(Vector center)
+        public new Vector SampleDerivative(Vector center)
         {
             Vector gradient = new Vector(0, Size.Length);
 
@@ -200,10 +225,9 @@ namespace FlowSharp
         /// </summary>
         /// <param name="pos"></param>
         /// <returns></returns>
-        public Vector SampleDerivative(Index pos)
+        public new Vector SampleDerivative(Index pos)
         {
-            Debug.Assert(NumDimensions == Size.Length);
-            Vector jacobian = new Vector(NumDimensions);
+            Vector gradient = new Vector(NumDimensions);
 
             // For all dimensions, so please reset each time.
             Index samplePos = new Index(pos);
@@ -226,19 +250,19 @@ namespace FlowSharp
                     {
                         // Regular case. Interpolate.
                         samplePos[dim]++;
-                        jacobian[dim] = Sample(samplePos);
+                        gradient[dim] = Sample(samplePos);
                         samplePos[dim] -= 2;
-                        jacobian[dim] -= Sample(samplePos);
-                        jacobian[dim] *= 0.5f;
+                        gradient[dim] -= Sample(samplePos);
+                        gradient[dim] *= 0.5f;
                         samplePos[dim]++;
                     }
                     else
                     {
                         // Left border.
                         samplePos[dim]++;
-                        jacobian[dim] = Sample(samplePos);
+                        gradient[dim] = Sample(samplePos);
                         samplePos[dim]--;
-                        jacobian[dim] -= Sample(samplePos);
+                        gradient[dim] -= Sample(samplePos);
                     }
                 }
                 else
@@ -246,21 +270,21 @@ namespace FlowSharp
                     if (leftValid)
                     {
                         // Right border.
-                        jacobian[dim] = Sample(samplePos);
+                        gradient[dim] = Sample(samplePos);
                         samplePos[dim]--;
-                        jacobian[dim] -= Sample(samplePos);
+                        gradient[dim] -= Sample(samplePos);
                         samplePos[dim]++;
                     }
                     else
                     {
                         // Weird case. 
-                        jacobian[dim] = 0;
+                        gradient[dim] = 0;
                     }
                 }
                 Debug.Assert(posCpy == samplePos[dim]);
             }
 
-            return jacobian;
+            return gradient;
         }
 
         /// <summary>
@@ -272,7 +296,7 @@ namespace FlowSharp
 
         public ScalarField(ScalarField field, SGFunction function, bool needJ = true)
         {
-            _data = new float[field.Size.Product()];
+            base.Data = new VectorBuffer(field.Size.Product(), 1);
             Grid = field.Grid;
 
             this.InvalidValue = field.InvalidValue;
@@ -324,16 +348,6 @@ namespace FlowSharp
             return field;
         }
 
-        public override DataStream GetDataStream()
-        {
-            return new DataStream(Data, true, false);
-        }
-
-        public override bool IsUnsteady()
-        {
-            return false;
-        }
-
         public void ComputeStatistics(out float validRegion, out float mean, out float sd)
         {
             int numValidCells = 0;
@@ -366,11 +380,6 @@ namespace FlowSharp
             }
             sd /= numValidCells;
             sd = (float)Math.Sqrt(sd);
-        }
-
-        public override void ChangeEndian()
-        {
-            FlipEndian(Data);
         }
 
         //class SliceRange

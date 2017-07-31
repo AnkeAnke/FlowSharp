@@ -44,7 +44,7 @@ namespace FlowSharp
             // Straight core.
             set = new LineSet(new Line[] { new Line() { Positions = new Vector3[] { _core[0], _core[0] + Vector3.UnitZ * (_velocity.Size.T - 1) } } }) { Color = new Vector3(0.2f) };
             set.Thickness *= 3;
-            _straightCoreBall = new LineBall(Plane, set);
+            _straightCoreBall = new LineBall(BasePlane, set);
 
             var center = Tests.CreatePerfect(new Vec2(0, 0), NUM_CELLS, new Vec2(0), 1, 200);
             _steadyField = center.GetTimeSlice(0); //[0] as ScalarField;
@@ -57,8 +57,8 @@ namespace FlowSharp
             #region BackgroundPlane
             if (_bg == null)
             {
-                _bg = new FieldPlane(Plane, _velocity.GetTimeSlice(0), Shader, Colormap);
-                _steadyBG = new FieldPlane(Plane, _steadyField, Shader, Colormap);
+                _bg = new FieldPlane(BasePlane, _velocity.GetTimeSlice(0), Shader, Colormap);
+                _steadyBG = new FieldPlane(BasePlane, _steadyField, Shader, Colormap);
             }
 
             _bg.SetRenderEffect(Shader);
@@ -130,7 +130,7 @@ namespace FlowSharp
                     var set = new LineSet(new Line[] { newLine }) { Color = _flipColor? Vector3.UnitX : Vector3.UnitZ};
                     
                     set.Thickness *= 3;
-                    var ball = new LineBall(Plane, set, LineBall.RenderEffect.DEFAULT, Colormap, false);
+                    var ball = new LineBall(BasePlane, set, LineBall.RenderEffect.DEFAULT, Colormap, false);
                     _selections.Add(ball);
 
                     if (_selections.Count > LineX)
@@ -156,7 +156,7 @@ namespace FlowSharp
                     }
                     set = new LineSet(new Line[] { newLine }) { Color = _flipColor ? Vector3.UnitX : Vector3.UnitZ };
                     set.Thickness *= 3;
-                    ball = new LineBall(Plane, set, LineBall.RenderEffect.DEFAULT, Colormap, false);
+                    ball = new LineBall(BasePlane, set, LineBall.RenderEffect.DEFAULT, Colormap, false);
                     _selectionsAngle.Add(ball);
 
                     _integrator.Field = _steadyField;
@@ -165,7 +165,7 @@ namespace FlowSharp
                     newLine = new Line() { Positions = line };
                     set = new LineSet(new Line[] { newLine }) { Color = _flipColor ? Vector3.UnitX : Vector3.UnitZ };
                     set.Thickness *= 3;
-                    ball = new LineBall(new Plane(Plane, Vector3.UnitZ * 0.1f), set, LineBall.RenderEffect.DEFAULT, Colormap, false);
+                    ball = new LineBall(new Plane(BasePlane, Vector3.UnitZ * 0.1f), set, LineBall.RenderEffect.DEFAULT, Colormap, false);
                     _steadySelection.Add(ball);
                     _integrator.Field = _velocity;
                     _integrator.MaxNumSteps = 10000;

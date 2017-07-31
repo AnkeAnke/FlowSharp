@@ -21,8 +21,8 @@ namespace FlowSharp
         public UnstructuredTree LoadGeometry()
         {
             int numPoints = 0, numCells = 0;
-            Vector[] vertices = null;
-            Index[] indices = null;
+            VectorBuffer vertices = null;
+            IndexArray indices = null;
             bool readNumberPointsAndCells = false;
 
             string rawString = null;
@@ -72,7 +72,7 @@ namespace FlowSharp
                                 Debug.Assert(!reader.IsStartElement(), "Expected binary data block now");
                                 
                                 // Read in positions float by float. 
-                                vertices = new Vector[numPoints];
+                                vertices = new VectorBuffer(numPoints, 3);
 
                                // byte[] rawData = new byte[numPoints * 4 * 3];
                                 //char[] raw64Data = new char[12 + numPoints * 4 * 4];
@@ -85,16 +85,18 @@ namespace FlowSharp
                                 rawData = Convert.FromBase64String(rawString);
                                 Int64 someNumber = BitConverter.ToInt64(rawData, 0);
 
-                                //Array.Reverse(rawData);
-                                for (int v = 0; v < numPoints; ++v)
-                                {
-                                    vertices[v] = new Vec3();
-                                    Buffer.BlockCopy(rawData, v*4*3 + sizeof(Int64), vertices[v].Data, 0, 4*3);
 
-                                    //Debug.Assert(vertices[v][0] <= rangeMax && vertices[v][0] >= rangeMin, "First value out of read range.");
-                                    //Debug.Assert(vertices[v][1] <= rangeMax && vertices[v][1] >= rangeMin, "Second value out of read range.");
-                                    //Debug.Assert(vertices[v][2] <= rangeMax && vertices[v][2] >= rangeMin, "Third value out of read range.");
-                                }
+                                Buffer.BlockCopy(rawData, sizeof(Int64), vertices.Data, 0, 4 * 3 * numPoints);
+                                //Array.Reverse(rawData);
+                                //for (int v = 0; v < numPoints; ++v)
+                                //{
+                                //    vertices[v] = new Vec3();
+                                //    Buffer.BlockCopy(rawData, v*4*3 + sizeof(Int64), vertices[v].Data, 0, 4*3);
+
+                                //    //Debug.Assert(vertices[v][0] <= rangeMax && vertices[v][0] >= rangeMin, "First value out of read range.");
+                                //    //Debug.Assert(vertices[v][1] <= rangeMax && vertices[v][1] >= rangeMin, "Second value out of read range.");
+                                //    //Debug.Assert(vertices[v][2] <= rangeMax && vertices[v][2] >= rangeMin, "Third value out of read range.");
+                                //}
 
                                 break;
 
@@ -122,9 +124,6 @@ namespace FlowSharp
                                 // Next element should be a binary block.
                                 reader.Read();
                                 Debug.Assert(!reader.IsStartElement(), "Expected binary data block now");
-
-                                // Read in positions float by float. 
-                                indices = new Index[numCells];
 
                                 rawString = reader.ReadContentAsString();
                                 //int actualSize = reader.ReadContentAsBase64(rawData, 0, rawData.Length);
@@ -160,23 +159,42 @@ namespace FlowSharp
                                 Int64 bytesForCells = BitConverter.ToInt64(rawDataOffsets, 0);
                                 Debug.Assert(bytesForCells == numCells * 8, "The first number is not the number of bytes used for cell indices.");
 
-                                Int64 lastOffset = 0;
-                                for (int o = 0; o < numCells; ++o)
-                                {
-                                    Int64 offset = BitConverter.ToInt64(rawDataOffsets, (o+1) * sizeof(Int64) );
-                                    int size = (int)(offset - lastOffset);
-                                    indices[o] = new Index(size);
-                                    Int64[] data = new Int64[size];
+                                // Old variant: We allowed for different primitives in one field.
 
-                                    // Convert to int indices.
-                                    Buffer.BlockCopy(rawData, (int)(lastOffset + 1) * sizeof(Int64), data, 0, size * sizeof(Int64));
-                                    for (int i = 0; i < size; ++i)
-                                        indices[o][i] = (int)data[i];
-                                    lastOffset = offset;
-                                    //Debug.Assert(vertices[v][0] <= rangeMax && vertices[v][0] >= rangeMin, "First value out of read range.");
-                                    //Debug.Assert(vertices[v][1] <= rangeMax && vertices[v][1] >= rangeMin, "Second value out of read range.");
-                                    //Debug.Assert(vertices[v][2] <= rangeMax && vertices[v][2] >= rangeMin, "Third value out of read range.");
-                                }
+                                //Int64 lastOffset = 0;
+                                //for (int o = 0; o < numCells; ++o)
+                                //{
+                                //    Int64 offset = BitConverter.ToInt64(rawDataOffsets, (o+1) * sizeof(Int64) );
+                                //    int size = (int)(offset - lastOffset);
+                                //    indices[o] = new Index(size);
+                                //    Int64[] data = new Int64[size];
+
+                                //    // Convert to int indices.
+                                //    Buffer.BlockCopy(rawData, (int)(lastOffset + 1) * sizeof(Int64), data, 0, size * sizeof(Int64));
+                                //    for (int i = 0; i < size; ++i)
+                                //    {
+                                //        indices[o][i] = (int)data[i];
+                                //        Debug.Assert(data[i] >= 0 && data[i] < numPoints, "Index out of bounds.");
+                                //    }
+                                //    lastOffset = offset;
+                                //    //Debug.Assert(vertices[v][0] <= rangeMax && vertices[v][0] >= rangeMin, "First value out of read range.");
+                                //    //Debug.Assert(vertices[v][1] <= rangeMax && vertices[v][1] >= rangeMin, "Second value out of read range.");
+                                //    //Debug.Assert(vertices[v][2] <= rangeMax && vertices[v][2] >= rangeMin, "Third value out of read range.");
+                                //}
+
+                                // Read the length of first element - assume all will be the same length.
+                                int firstElementSize = (int)BitConverter.ToInt64(rawDataOffsets, (1) * sizeof(Int64));
+                                Debug.Assert(firstElementSize * numCells == rawData.Length / sizeof(Int64) - 1, "Assuming all cells have the same number of points.");
+                                int[] croppedData = new int[numCells * firstElementSize];
+                                for (int n = 0; n < numCells * firstElementSize; ++n)
+                                    croppedData[n] = BitConverter.ToInt32(rawData, (n + 1) * 8);
+
+                                //int[] croppedData = new int[numCells * firstElementSize];
+                                //Debug.Assert(sizeof(int) == sizeof(Int64));
+                                //Buffer.BlockCopy(rawData, sizeof(Int64), croppedData, 0, numCells * firstElementSize * sizeof(Int64));
+
+
+                                indices = new IndexArray(croppedData, firstElementSize);
 
                                 break;
                             default:
@@ -186,9 +204,7 @@ namespace FlowSharp
                 }
             }
 
-            Grid = new UnstructuredTree();
-            Grid.Vertices = vertices;
-            Grid.Primitives = indices;
+            Grid = new UnstructuredTree(vertices, indices);
             return Grid;
         }
 

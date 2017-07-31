@@ -131,6 +131,12 @@ namespace FlowSharp
             return result;
         }
 
+        public static explicit operator int(Index i)
+        {
+            Debug.Assert(i.Length == 1, "Can only cast 1D index to scalar, given index is " + i.Length + "D.");
+            return i[0];
+        }
+
         /// <summary>
         /// Compare all values component-wise.
         /// </summary>

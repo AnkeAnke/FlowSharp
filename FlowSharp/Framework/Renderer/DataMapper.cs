@@ -28,7 +28,7 @@ namespace FlowSharp
         /// One function will generate a set of renderables based on the set parameters. Corresponds to the Disply/Preset setting.
         /// </summary>
         public delegate List<Renderable> ViewFunction();
-        public Plane Plane
+        public Plane BasePlane
         {
             get { return _plane; }
             set
@@ -189,7 +189,7 @@ namespace FlowSharp
         protected float _planeOffsetZ
         {
             get { return _planeOffsetZ_intern; }
-            set { _planeOffsetZ_intern = value; Plane = Plane; }
+            set { _planeOffsetZ_intern = value; BasePlane = BasePlane; }
         }
         protected Plane _intersectionPlane;
         private Plane _plane;
@@ -272,7 +272,7 @@ namespace FlowSharp
             [FieldOffset(64)]
             public float IntegrationTime;
             [FieldOffset(68)]
-            public Context.DiffusionMeasure DiffusionMeasure;
+            public Context.GeometryPart GeometryPart;
             //{
             //    get { return (Context.DiffusionMeasure)this[Element.DiffusionMeasure]; }
             //    set { this[Element.DiffusionMeasure] = (int)value; }
@@ -367,7 +367,7 @@ namespace FlowSharp
                 Measure,
                 SliceHeight,
                 IntegrationTime,
-                DiffusionMeasure,
+                GeometryPart,
                 VarX,
                 VarY,
                 StartX,
@@ -402,7 +402,7 @@ namespace FlowSharp
                 Measure = cpy.Measure;
                 SliceHeight = cpy.SliceHeight;
                 IntegrationTime = cpy.IntegrationTime;
-                DiffusionMeasure = cpy.DiffusionMeasure;
+                GeometryPart = cpy.GeometryPart;
                 VarX = cpy.VarX;
                 VarY = cpy.VarY;
                 StartX = cpy.StartX;
@@ -513,7 +513,21 @@ namespace FlowSharp
             }
         }
 
-#region SettingChanged
+        public virtual int? GetStart(Setting.Element element)
+        {
+            switch (element)
+            {
+                case Setting.Element.MemberMain:
+                case Setting.Element.MemberReference:
+                    return 0;
+                case Setting.Element.LineX:
+                    return 0;
+                default:
+                    return null;
+            }
+        }
+
+        #region SettingChanged
         public virtual bool LineSettingChanged { get { return _currentSetting.LineSetting != _lastSetting.LineSetting; } }
         public virtual bool SliceTimeMainChanged { get { return _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain; } }
         public virtual bool SliceTimeReferenceChanged { get { return _currentSetting.SliceTimeReference != _lastSetting.SliceTimeReference; } }
@@ -531,7 +545,7 @@ namespace FlowSharp
         public virtual bool MeasureChanged { get { return _currentSetting.Measure != _lastSetting.Measure; } }
         public virtual bool SliceHeightChanged { get { return _currentSetting.SliceHeight != _lastSetting.SliceHeight; } }
         public virtual bool IntegrationTimeChanged { get { return _currentSetting.IntegrationTime != _lastSetting.IntegrationTime; } }
-        public virtual bool DiffusionMeasureChanged { get { return _currentSetting.DiffusionMeasure != _lastSetting.DiffusionMeasure; } }
+        public virtual bool GeometryPartChanged { get { return _currentSetting.GeometryPart != _lastSetting.GeometryPart; } }
         public virtual bool VarXChanged { get { return _currentSetting.VarX != _lastSetting.VarX; } }
         public virtual bool VarYChanged { get { return _currentSetting.VarY != _lastSetting.VarY; } }
         public virtual bool StartXChanged { get { return _currentSetting.StartX != _lastSetting.StartX; } }
@@ -597,8 +611,8 @@ namespace FlowSharp
         protected float IntegrationTime
         { get { return _currentSetting.IntegrationTime; } }
 
-        protected Context.DiffusionMeasure DiffusionMeasure
-        { get { return _currentSetting.DiffusionMeasure; } }
+        protected Context.GeometryPart GeometryPart
+        { get { return _currentSetting.GeometryPart; } }
 
         protected Sign Flat
         { get { return _currentSetting.Flat; } }
@@ -642,7 +656,7 @@ namespace FlowSharp
                 SlicesToRender[slice] = velocity.GetSlice(slice);
             }
             Mapping = TrackCP;
-            Plane = plane;
+            BasePlane = plane;
         }
 
         protected CriticalPointTracking() { }
@@ -655,9 +669,9 @@ namespace FlowSharp
                 SliceTimeReferenceChanged)
             {
                 _slice1 = new List<Renderable>(2);
-                _planes[0] = new FieldPlane(Plane, SlicesToRender[_currentSetting.SliceTimeReference], FieldPlane.RenderEffect.LIC);
+                _planes[0] = new FieldPlane(BasePlane, SlicesToRender[_currentSetting.SliceTimeReference], FieldPlane.RenderEffect.LIC);
                 _slice1.Add(_planes[0]);
-                _slice1.Add(new PointCloud(Plane, CP[_currentSetting.SliceTimeReference].ToBasicSet()));
+                _slice1.Add(new PointCloud(BasePlane, CP[_currentSetting.SliceTimeReference].ToBasicSet()));
             }
 
 
@@ -675,11 +689,11 @@ namespace FlowSharp
                     _slice0 = new List<Renderable>(2);
 
                     // ~~~~~~~~~~~~ Field Mapping ~~~~~~~~~~~~~ \\
-                    _planes[1] = new FieldPlane(Plane, SlicesToRender[_currentSetting.SliceTimeMain], FieldPlane.RenderEffect.LIC);
+                    _planes[1] = new FieldPlane(BasePlane, SlicesToRender[_currentSetting.SliceTimeMain], FieldPlane.RenderEffect.LIC);
                     _slice0.Add(_planes[1]);
 
                     // ~~~~~~~~ Critical Point Mapping ~~~~~~~~ \\
-                    _slice0.Add(new PointCloud(Plane, CP[_currentSetting.SliceTimeMain].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet()));
+                    _slice0.Add(new PointCloud(BasePlane, CP[_currentSetting.SliceTimeMain].SelectTypes(new CriticalPoint2D.TypeCP[] { CriticalPoint2D.TypeCP.ATTRACTING_FOCUS, CriticalPoint2D.TypeCP.REPELLING_FOCUS }).ToBasicSet()));
                 }
 
                 // Re-compute the feature flow field. Costly operation.
@@ -725,7 +739,7 @@ namespace FlowSharp
                         foreach (LineSet line in _rawLines)
                         {
                             PointSet<Point> linePoints = Velocity.ColorCodeArbitrary(line, Context.DisplayLineFunctions[(int)_currentSetting.LineSetting]);
-                            _lines.Add(new PointCloud(Plane, linePoints));
+                            _lines.Add(new PointCloud(BasePlane, linePoints));
                         }
                         break;
 
@@ -734,7 +748,7 @@ namespace FlowSharp
                     case Context.DisplayLines.LINE:
                         foreach (LineSet line in _rawLines)
                         {
-                            _lines.Add(new LineBall(Plane, line));
+                            _lines.Add(new LineBall(BasePlane, line));
                         }
                         break;
                 }
@@ -785,7 +799,7 @@ namespace FlowSharp
                 SlicesToRender[slice] = Velocity.GetSlice(slice);
             }
             Mapping = TrackCP;
-            Plane = plane;
+            BasePlane = plane;
         }
     }
 #if false
@@ -956,7 +970,7 @@ namespace FlowSharp
             Debug.Assert(velocity.NumVectorDimensions == 2 + 1);
             _fieldOW = velocity;
 
-            Plane = plane;
+            BasePlane = plane;
             Mapping = GetTimeSlice;
         }
 
@@ -964,9 +978,9 @@ namespace FlowSharp
         {
             _fieldOW = new VectorFieldUnsteady(_fieldOW, FieldAnalysis.OkuboWeiss, 1);
 
-            float mean, fill;
-            _fieldOW.ScalarsAsSFU[0].TimeSlices[0].ComputeStatistics(out fill, out mean, out _standardDeviation);
-            Console.WriteLine("Mean: " + mean + ", SD: " + _standardDeviation + ", valid cells: " + fill);
+            //float mean, fill;
+            //_fieldOW.ScalarsAsSFU[0].TimeSlices[0].ComputeStatistics(out fill, out mean, out _standardDeviation);
+            //Console.WriteLine("Mean: " + mean + ", SD: " + _standardDeviation + ", valid cells: " + fill);
         }
 
         /// <summary>
@@ -982,7 +996,7 @@ namespace FlowSharp
                 SliceTimeMainChanged)
             {
                 VectorField sliceOW = _fieldOW.GetTimeSlice(_currentSetting.SliceTimeMain);
-                _fieldSlice = new FieldPlane(Plane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
+                _fieldSlice = new FieldPlane(BasePlane, sliceOW, FieldPlane.RenderEffect.COLORMAP, Colormap.Heatstep);
             }
             if (_lastSetting == null ||
                 WindowWidthChanged)
@@ -1418,8 +1432,8 @@ namespace FlowSharp
 
         public SelectionMapper(Plane plane, Int2 fieldSize2D)
         {
-            Plane = plane;
-            _subrangePlane = Plane;
+            BasePlane = plane;
+            _subrangePlane = BasePlane;
             _maxPlane = fieldSize2D;
             _globalMaxPlane = fieldSize2D;
         }
@@ -1432,7 +1446,7 @@ namespace FlowSharp
             {
                 _startPoint += _minPlane;
                 _algorithm.CompleteRange(_startPoint);
-                _subrangePlane = Plane;
+                _subrangePlane = BasePlane;
             }
             // Select subrange.
             else
@@ -1463,7 +1477,7 @@ namespace FlowSharp
                     _startPoint = (max - min) / 2;
 
                 _algorithm.Subrange(min, max - min, _startPoint);
-                _subrangePlane = new Plane(Plane, new Vector3(min.X, min.Y, 0));
+                _subrangePlane = new Plane(BasePlane, new Vector3(min.X, min.Y, 0));
                 _minPlane = min;
                 _maxPlane = max;
             }

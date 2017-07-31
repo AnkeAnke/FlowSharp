@@ -105,10 +105,10 @@ namespace FlowSharp
             AlphaSlider.Value = 3;
 
             DropDownMeasure.ItemsSource = Enum.GetValues(typeof(Context.Measure)).Cast<Context.Measure>();
-            DropDownMeasure.SelectedIndex = (int)Context.Measure.VELOCITY;
+            DropDownMeasure.SelectedIndex = (int)Context.Measure.velocity;
 
-            DropDownDiffusionMeasure.ItemsSource = Enum.GetValues(typeof(Context.DiffusionMeasure)).Cast<Context.DiffusionMeasure>();
-            DropDownDiffusionMeasure.SelectedIndex = (int)Context.DiffusionMeasure.Density;
+            DropDownDiffusionMeasure.ItemsSource = Enum.GetValues(typeof(Context.GeometryPart)).Cast<Context.GeometryPart>();
+            DropDownDiffusionMeasure.SelectedIndex = (int)Context.GeometryPart.Wall;
 
             DropDownTracking.ItemsSource = Enum.GetValues(typeof(Context.DisplayTracking)).Cast<Context.DisplayTracking>();
             DropDownTracking.SelectedIndex = (int)Context.DisplayTracking.LINE_POINTS;
@@ -156,7 +156,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.Tracking] = DropDownTracking;
             _windowObjects[(int)DataMapper.Setting.Element.WindowStart] = WindowStartBlock;
             _windowObjects[(int)DataMapper.Setting.Element.Measure] = DropDownMeasure;
-            _windowObjects[(int)DataMapper.Setting.Element.DiffusionMeasure] = DropDownDiffusionMeasure;
+            _windowObjects[(int)DataMapper.Setting.Element.GeometryPart] = DropDownDiffusionMeasure;
             _windowObjects[(int)DataMapper.Setting.Element.IntegrationTime] = IntegrationTimeBlock;
             _windowObjects[(int)DataMapper.Setting.Element.VarX] = MatrixBox;
             _windowObjects[(int)DataMapper.Setting.Element.VarY] = MatrixBox;
@@ -183,13 +183,23 @@ namespace FlowSharp
             _mapper.CurrentSetting = new DataMapper.Setting(last.CurrentSetting);
 
             _mapperChanged = true;
-            //AlphaStable = (float)alpha.Value;
-            //_mapper.CurrentSetting.IntegrationType = (VectorField.Integrator.Type)DropDownIntegrator.SelectedIndex;
-            //_mapper.CurrentSetting.LineSetting = (Context.DisplayLines)DropDownDisplayLines.SelectedIndex;
-            //_mapper.CurrentSetting.SliceTimeMain = DropDownSlice0.SelectedIndex;
-            //_mapper.CurrentSetting.SliceTimeReference = DropDownSlice1.SelectedIndex;
-            //_mapper.CurrentSetting.StepSize = (float)step.Value / 10f;
-            //_display = (Context.Display)(comboBox.SelectedItem as Context.Display?);
+
+            int? start = _mapper.GetStart(DataMapper.Setting.Element.WindowStart);
+            int? length = _mapper.GetLength(DataMapper.Setting.Element.WindowStart);
+            if (start != null && length != null)
+            {
+                WindowStart.Minimum = (int)start;
+                WindowStart.Maximum = (int)length;
+            }
+
+            start = _mapper.GetStart(DataMapper.Setting.Element.WindowWidth);
+            length = _mapper.GetLength(DataMapper.Setting.Element.WindowWidth);
+            if (start != null && length != null)
+            {
+                WindowWidth.Minimum = (int)start;
+                WindowWidth.Maximum = (int)length;
+            }
+
             UpdateRenderer();
         }
 
@@ -253,7 +263,7 @@ namespace FlowSharp
         private void OnChangeDiffusionMeasure(object sender, RoutedEventArgs e)
         {
             var comboBox = sender as ComboBox;
-            _mapper.CurrentSetting.DiffusionMeasure = (Context.DiffusionMeasure)(comboBox.SelectedItem as Context.DiffusionMeasure?);
+            _mapper.CurrentSetting.GeometryPart = (Context.GeometryPart)(comboBox.SelectedItem as Context.GeometryPart?);
             UpdateRenderer();
         }
 

@@ -212,7 +212,7 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public Mesh(Plane plane, GeneralUnstructurdGrid grid, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
+        public Mesh(Plane plane, GeneralUnstructurdGrid grid, VectorData data = null, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
         {
             _color = Vector3.UnitZ;
             this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
@@ -225,7 +225,7 @@ namespace FlowSharp
             _effect = _meshEffect;
             SetRenderEffect(effect);
 
-            GenerateGeometry(plane, grid);
+            GenerateGeometry(plane, grid, data);
 
             this._vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
                 new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
@@ -240,16 +240,16 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Plane plane, GeneralUnstructurdGrid grid)
+        protected void GenerateGeometry(Plane plane, GeneralUnstructurdGrid grid, VectorData data)
         {
-            int vertexDim = grid.Vertices[0].Length;
+            int vertexDim = grid.Vertices.NumVectorDimensions;
 
             _numVertices = grid.Vertices.Length;
 
-            // Write poition and UV-map data.
+            // Write position and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
             for (int v = 0; v < grid.Vertices.Length; ++v)
-                stream.Write(new Vector4(plane.Origin + grid.Vertices[v][0] * plane.XAxis + grid.Vertices[v][1] * plane.YAxis + grid.Vertices[v][2] * plane.ZAxis, vertexDim > 3 ? grid.Vertices[v][3] : grid.Vertices[v][2]));
+                stream.Write(new Vector4(plane.Origin + grid.Vertices[v][0] * plane.XAxis + grid.Vertices[v][1] * plane.YAxis + grid.Vertices[v][2] * plane.ZAxis, vertexDim > 3 ? grid.Vertices[v][3] : (data?[v][0] ?? grid.Vertices[v][2])));
             stream.Position = 0;
 
             // Create and fill buffer.
@@ -263,52 +263,29 @@ namespace FlowSharp
             });
             stream.Dispose();
 
-            Index[] indices = grid.AssembleIndexList();
-            stream = new DataStream(indices.Length * 3 * sizeof(uint), true, true);
-            //_numindices = grid.Cells.Length * 4 * 3;
+            IndexArray indices = grid.AssembleIndexList();
+
+            stream.Position = 0;
+            _numindices = indices.Length * 3;
+
+
+            stream = new DataStream(_numindices * sizeof(uint), true, true);
             for (int c = 0; c < indices.Length; c++)
             {
-                //for (int s = 0; s < 4; ++s)
-                //{
-                //    _numindices += 3;
-                //    for (int i = 0; i < 4; ++i)
-                //        if (i != s)
-                //            stream.Write(indices[c][i]);
-                //}
-                Debug.Assert(indices[c].Length == 3, "Expected triangles, vertex count: " + indices[c].Length);
+                //Debug.Assert(indices[c].Length == 3, "Expected triangles, vertex count: " + indices[c].Length);
                 for (int v = 0; v < 3; ++v)
                     stream.Write(indices[c][v]);
             }
-            //for (int i = 0; i < grid.Cells.Length; i ++)
-            //{
-            //    // Dirty quickfix: Duplicate the first cells multiple times, so we don't need to deal with uninitialized tets.
-            //    Index verts = grid.Cells[i].VertexIndices;
-            //    if (verts == null)
-            //        continue;
-            //    _numindices += 12;
-
-            //    stream.WriteRange(new int[] { verts[0], verts[1], verts[2] });
-            //    stream.WriteRange(new int[] { verts[0], verts[2], verts[3] });
-            //    stream.WriteRange(new int[] { verts[0], verts[1], verts[3] });
-            //    stream.WriteRange(new int[] { verts[1], verts[2], verts[3] });
-            //}
             stream.Position = 0;
 
-            try
+            _indices = new Buffer(_device, stream, new BufferDescription()
             {
-                _indices = new Buffer(_device, stream, new BufferDescription()
-                {
-                    BindFlags = BindFlags.IndexBuffer,
-                    CpuAccessFlags = CpuAccessFlags.None,
-                    OptionFlags = ResourceOptionFlags.None,
-                    SizeInBytes = indices.Length * 3 * sizeof(int),
-                    Usage = ResourceUsage.Default
-                });
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.InnerException);
-            }
+                BindFlags = BindFlags.IndexBuffer,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = _numindices * sizeof(int),
+                Usage = ResourceUsage.Default
+            });
         }
 #endregion TetGrid
 

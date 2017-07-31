@@ -43,7 +43,7 @@ namespace FlowSharp
             // Add the other weightes grid points.
             for (int dim = 0; dim < indices.Length; ++dim)
             {
-                Vector add = field.Sample(indices[dim]);
+                VectorRef add = field.Sample(indices[dim]);
                 if(add[0] == field.InvalidValue)
                 {
                     return new Vector(field.InvalidValue??float.MaxValue, field.NumVectorDimensions);
@@ -54,31 +54,31 @@ namespace FlowSharp
             return result;
         }
 
-        public virtual float Sample(ScalarField field, Vector position)
-        {
-            // Query relevant edges and their weights. Reault varies with different grid types.
-            int numCells = NumAdjacentPoints();
-            float[] weights;
-            int[] indices = FindAdjacentIndices(position, out weights);
+        //public virtual float Sample(ScalarField field, Vector position)
+        //{
+        //    // Query relevant edges and their weights. Reault varies with different grid types.
+        //    int numCells = NumAdjacentPoints();
+        //    float[] weights;
+        //    int[] indices = FindAdjacentIndices(position, out weights);
 
-            Debug.Assert(indices.Length == weights.Length);
+        //    Debug.Assert(indices.Length == weights.Length);
 
-            // Start with the first grid point.
-            float result = field[indices[0]];
-            if (result == field.InvalidValue)
-                return (float)field.InvalidValue;
-            result *= weights[0];
+        //    // Start with the first grid point.
+        //    float result = field[indices[0]];
+        //    if (result == field.InvalidValue)
+        //        return (float)field.InvalidValue;
+        //    result *= weights[0];
 
-            // Add the other weightes grid points.
-            for (int dim = 1; dim < indices.Length; ++dim)
-            {
-                if (field[indices[dim]] == field.InvalidValue)
-                    return (float)field.InvalidValue;
-                result += weights[dim] * field[indices[dim]];
-            }
+        //    // Add the other weightes grid points.
+        //    for (int dim = 1; dim < indices.Length; ++dim)
+        //    {
+        //        if (field[indices[dim]] == field.InvalidValue)
+        //            return (float)field.InvalidValue;
+        //        result += weights[dim] * field[indices[dim]];
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         public abstract FieldGrid Copy();
         public abstract FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart, float timeStep);

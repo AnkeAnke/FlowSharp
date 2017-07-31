@@ -244,12 +244,12 @@ namespace FlowSharp
         protected void ResetCamera()
         {
             phi = -Math.PI / 2;
-            theta = -Math.PI / 2;
+            theta = -Math.PI / 2 - 0.3f;
             lastMouseX = 0;
             lastMouseY = 0;
 
-            viewDirection = new Vector3(0, 0, 1);
-            position = new Vector3(0, 6.8f, -19);
+            //viewDirection = new Vector3(0, 0, 1);
+            position = new Vector3(2f, 2.25f, -3.6f);
         }
 
         public Vector2[] IntersectPlane(Plane plane)

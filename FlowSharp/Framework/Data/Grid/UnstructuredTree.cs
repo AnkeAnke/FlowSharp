@@ -9,23 +9,29 @@ namespace FlowSharp
 {
     interface GeneralUnstructurdGrid
     {
-        Vector[] Vertices { get; }
+        VectorData Vertices { get; }
         int NumCells { get; }
-        Index[] AssembleIndexList();
+        IndexArray AssembleIndexList();
         PointSet<Point> GetVertices();
     }
 
     class UnstructuredTree : GeneralUnstructurdGrid
     {
-        public Vector[] Vertices{ get; set; }
-        public Index[] Primitives;
+        public VectorBuffer _vertices;
+        public VectorData Vertices { get { return _vertices; } set { _vertices = value as VectorBuffer; } }
+        public IndexArray Primitives;
 
+        public UnstructuredTree(VectorBuffer vec, IndexArray ind)
+        {
+            _vertices = vec;
+            Primitives = ind;
+        }
         public int NumCells { get { return Primitives.Length; } }
         /// <summary>
         /// Assemble all inidces to a buffer. Do this here for general Tet grids.
         /// </summary>
         /// <returns></returns>
-        public Index[] AssembleIndexList()
+        public IndexArray AssembleIndexList()
         {
             return Primitives;
         }

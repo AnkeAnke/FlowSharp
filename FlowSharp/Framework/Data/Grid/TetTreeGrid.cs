@@ -10,7 +10,8 @@ namespace FlowSharp
 {
     class TetTreeGrid : FieldGrid, GeneralUnstructurdGrid
     {
-        public Vector[] Vertices { get; set; }
+        public VectorList _vertices;
+        public VectorData Vertices { get { return _vertices; } set { _vertices = value as VectorList; } }
 
         public Tet[] Cells;
         private const int NumCorners = 4;
@@ -19,13 +20,13 @@ namespace FlowSharp
         /// Assemble all inidices to a buffer. Do this here for general Tet grids.
         /// </summary>
         /// <returns></returns>
-        public Index[] AssembleIndexList()
+        public IndexArray AssembleIndexList()
         {
             //Index[] cells = new Index[Cells.Length];
             //for (int c = 0; c < Cells.Length; ++c)
             //        cells[c] = Cells[c].VertexIndices;
             //return cells;
-            Index[] tris = new Index[Cells.Length * 4];
+            IndexArray tris = new IndexArray(Cells.Length, 4);
             for (int c = 0; c < Cells.Length; c++)
             {
                 for (int s = 0; s < 4; ++s)
@@ -44,7 +45,7 @@ namespace FlowSharp
         /// <summary>
         /// Create a new tetraeder grid descriptor.
         /// </summary>
-        public TetTreeGrid(Vector[] vertices, Tet[] indices, Vector origin = null, float? timeOrigin = null)
+        public TetTreeGrid(VectorList vertices, Tet[] indices, Vector origin = null, float? timeOrigin = null)
         {
             // For Dimensionality.
             Size = new Index(4);
@@ -55,9 +56,9 @@ namespace FlowSharp
             Debug.Assert(vertices.Length > 0 && indices.Length > 0, "No data given.");
             int dim = vertices[0].Length;
 #if DEBUG
-            foreach (Vector v in vertices)
+            for (int i = 0; i < vertices.Length; ++i)
             {
-                Debug.Assert(v.Length == dim, "Varying vertex dimensions.");
+                Debug.Assert(vertices[i].Length == dim, "Varying vertex dimensions.");
             }
             foreach (Tet i in indices)
             {

@@ -108,7 +108,10 @@
     <Compile Include="Framework\Data\Grid\TetNeighborGrid.cs" />
     <Compile Include="Framework\Data\Grid\UnstructuredTree.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
-    <Compile Include="Framework\Data\VectorArray.cs" />
+    <Compile Include="Framework\Data\IndexArray.cs" />
+    <Compile Include="Framework\Data\VectorData.cs" />
+    <Compile Include="Framework\Data\VectorFieldBlock.cs" />
+    <Compile Include="Framework\Data\VectorFieldScalars.cs" />
     <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
     <Compile Include="Framework\Renderer\CUDAMappers.cs" />
     <Compile Include="Framework\Renderer\DataMapper.cs" />
@@ -117,7 +120,7 @@
     <Compile Include="Framework\Data\Matrix.cs" />
     <Compile Include="Framework\Data\Points.cs" />
     <Compile Include="Framework\Data\Unsteady.cs" />
-    <Compile Include="Framework\MathHelper.cs" />
+    <Compile Include="Framework\Util.cs" />
     <Compile Include="Framework\Renderer\Camera.cs" />
     <Compile Include="Framework\Renderer\Data\ColorMapping.cs" />
     <Compile Include="Framework\Renderer\Data\LineBall.cs" />
