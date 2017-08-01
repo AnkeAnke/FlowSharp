@@ -184,22 +184,6 @@ namespace FlowSharp
 
             _mapperChanged = true;
 
-            int? start = _mapper.GetStart(DataMapper.Setting.Element.WindowStart);
-            int? length = _mapper.GetLength(DataMapper.Setting.Element.WindowStart);
-            if (start != null && length != null)
-            {
-                WindowStart.Minimum = (int)start;
-                WindowStart.Maximum = (int)length;
-            }
-
-            start = _mapper.GetStart(DataMapper.Setting.Element.WindowWidth);
-            length = _mapper.GetLength(DataMapper.Setting.Element.WindowWidth);
-            if (start != null && length != null)
-            {
-                WindowWidth.Minimum = (int)start;
-                WindowWidth.Maximum = (int)length;
-            }
-
             UpdateRenderer();
         }
 
@@ -430,7 +414,7 @@ namespace FlowSharp
         private void UpdateRenderer()
         {
             // Enable/disable GUI elements.
-            if(_mapperChanged)
+            if (_mapperChanged)
                 foreach (DataMapper.Setting.Element element in Enum.GetValues(typeof(DataMapper.Setting.Element)))  // (int element = 0; element < _windowObjects.Length; ++element)
                 {
                     bool elementActive = _mapper.IsUsed(element);
@@ -447,6 +431,45 @@ namespace FlowSharp
 
             if (Renderer.Singleton.Initialized && _mapper != null)
                 Context.Singleton.Update();
+
+            try
+            {
+                // Update slider ranges.
+                float? start = _mapper.GetMin(DataMapper.Setting.Element.WindowStart);
+                float? length = _mapper.GetMax(DataMapper.Setting.Element.WindowStart);
+                if (start != null && length != null)
+                {
+                    double relativeSelection = (WindowStart.Value - WindowStart.Minimum) / (WindowStart.Maximum - WindowStart.Minimum);
+                    WindowStart.Minimum = (float)start;
+                    WindowStart.Maximum = (float)length;
+
+                    double range = WindowStart.Maximum - WindowStart.Minimum;
+                    WindowStart.Value = WindowStart.Minimum + relativeSelection * range;
+
+                    WindowStart.SmallChange = range / 100;
+                    WindowStart.LargeChange = range / 10;
+                }
+
+                // Update slider ranges.
+                start = _mapper.GetMin(DataMapper.Setting.Element.WindowWidth);
+                length = _mapper.GetMax(DataMapper.Setting.Element.WindowWidth);
+                if (start != null && length != null)
+                {
+                    double relativeSelection = (WindowWidth.Value - WindowWidth.Minimum) / (WindowWidth.Maximum - WindowWidth.Minimum);
+                    WindowWidth.Minimum = (float)start;
+                    WindowWidth.Maximum = (float)length;
+
+                    double range = WindowWidth.Maximum - WindowWidth.Minimum;
+                    WindowWidth.Value = WindowWidth.Minimum + relativeSelection * range;
+
+                    WindowWidth.SmallChange = range / 100;
+                    WindowWidth.LargeChange = range / 10;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         private void ActivateCamera(object sender, MouseEventArgs e)

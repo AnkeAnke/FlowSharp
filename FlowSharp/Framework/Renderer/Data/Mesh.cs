@@ -242,14 +242,19 @@ namespace FlowSharp
         /// <param name="scale"></param>
         protected void GenerateGeometry(Plane plane, GeneralUnstructurdGrid grid, VectorData data)
         {
+
+            var geom = grid.AssembleIndexList();
+            var vertices = geom.Item1;
+            var indices = geom.Item2;
+
             int vertexDim = grid.Vertices.NumVectorDimensions;
 
-            _numVertices = grid.Vertices.Length;
+            _numVertices = vertices.Length;
 
             // Write position and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
-            for (int v = 0; v < grid.Vertices.Length; ++v)
-                stream.Write(new Vector4(plane.Origin + grid.Vertices[v][0] * plane.XAxis + grid.Vertices[v][1] * plane.YAxis + grid.Vertices[v][2] * plane.ZAxis, vertexDim > 3 ? grid.Vertices[v][3] : (data?[v][0] ?? grid.Vertices[v][2])));
+            for (int v = 0; v < vertices.Length; ++v)
+                stream.Write(new Vector4(plane.Origin + vertices[v][0] * plane.XAxis + vertices[v][1] * plane.YAxis + vertices[v][2] * plane.ZAxis, vertexDim > 3 ? vertices[v][3] : (data?[v][0] ?? vertices[v][2])));
             stream.Position = 0;
 
             // Create and fill buffer.
@@ -263,8 +268,9 @@ namespace FlowSharp
             });
             stream.Dispose();
 
-            IndexArray indices = grid.AssembleIndexList();
+            
 
+            Debug.Assert(indices.IndexLength == 3);
             stream.Position = 0;
             _numindices = indices.Length * 3;
 

@@ -199,7 +199,23 @@ namespace FlowSharp
         public P[] Points;
         public int Length { get { return Points.Length; } }
 
-
+        private Vector3? _minPosition, _maxPosition;
+        public Vector3 MinPosition {
+            get {
+                if (_minPosition == null)
+                    ExtractMinMax();
+                return (Vector3)_minPosition;
+            }
+        }
+        public Vector3 MaxPosition
+        {
+            get
+            {
+                if (_maxPosition == null)
+                    ExtractMinMax();
+                return (Vector3)_maxPosition;
+            }
+        }
         public PointSet(P[] points)
         {
             Points = points;
@@ -214,6 +230,28 @@ namespace FlowSharp
         {
             get { return Points[index]; }
             set { Points[index] = value; }
+        }
+
+        public void ExtractMinMax()
+        {
+            if (_minPosition != null && _maxPosition != null)
+                return;
+
+            Vector3 minPos = Points[0].Position;
+            Vector3 maxPos = Points[0].Position;
+
+            // Find min and max in each dimension.
+            foreach (P p in Points)
+            {
+                for (int v = 0; v < 3; ++v)
+                {
+                    minPos[v] = Math.Min(minPos[v], p.Position[v]);
+                    maxPos[v] = Math.Max(maxPos[v], p.Position[v]);
+                }
+            }
+
+            _minPosition = minPos;
+            _maxPosition = maxPos;
         }
     }
 

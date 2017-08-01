@@ -114,21 +114,10 @@ namespace FlowSharp
 
         public static Plane FitToPoints<P>(Vector3 origin, float maximalExtent, PointSet<P> points) where P : Point
         {
-            Vector3 minPos = points.Points[0].Position;
-            Vector3 maxPos = points.Points[0].Position;
-
-            // Find min and max in each dimension.
-            foreach (P p in points.Points)
-            {
-                for (int v = 0; v < 3; ++v)
-                {
-                    minPos[v] = Math.Min(minPos[v], p.Position[v]);
-                    maxPos[v] = Math.Max(maxPos[v], p.Position[v]);
-                }
-            }
+            points.ExtractMinMax();
             
             // Extent.
-            Vector3 extent = maxPos - minPos;
+            Vector3 extent = points.MaxPosition - points.MinPosition;
             float maxEx = Math.Max(Math.Max(extent[0], extent[1]), extent[2]);
 
             //foreach (P p in points.Points)
@@ -136,7 +125,7 @@ namespace FlowSharp
             //    p.Position = (p.Position - minPos) / maxEx;
             //}
             float scale = maximalExtent / maxEx;
-            Vector3 scaledOrigin = origin - minPos * scale;
+            Vector3 scaledOrigin = origin - points.MinPosition * scale;
             //Vector3 newOrigin = origin - minPos;
 
             return new Plane(scaledOrigin, Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, scale, scale * 0.01f);

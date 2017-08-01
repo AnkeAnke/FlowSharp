@@ -499,7 +499,7 @@ namespace FlowSharp
             }
         }
 
-        public virtual int? GetLength(Setting.Element element)
+        public virtual float? GetMax(Setting.Element element)
         {
             switch (element)
             {
@@ -513,7 +513,7 @@ namespace FlowSharp
             }
         }
 
-        public virtual int? GetStart(Setting.Element element)
+        public virtual float? GetMin(Setting.Element element)
         {
             switch (element)
             {

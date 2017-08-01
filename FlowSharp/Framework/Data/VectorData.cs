@@ -11,6 +11,8 @@ namespace FlowSharp
 {
     abstract class VectorData : IEnumerable<VectorRef>
     {
+        public Vector MinValue;
+        public Vector MaxValue;
         /// <summary>
         /// THe length of each vector returned.
         /// </summary>
@@ -45,7 +47,23 @@ namespace FlowSharp
         /// </summary>
         public abstract void ChangeEndian();
 
+        public virtual void ExtractMinMax()
+        {
+            if (MinValue != null && MaxValue != null)
+                return;
 
+            Debug.Assert(Length > 0, "No data.");
+
+            MinValue = new Vector(this[0]);
+            MaxValue = new Vector(this[0]);
+
+            foreach (VectorRef v in this)
+            {
+                MinValue.MinOf(v);
+                MaxValue.MaxOf(v);
+            }
+
+        }
         #region Enumerator
         public IEnumerator<VectorRef> GetEnumerator()
         {
@@ -110,6 +128,19 @@ namespace FlowSharp
             foreach (DataType buff in data)
                 Debug.Assert(buff.Length == length && buff.NumVectorDimensions == vecLength, "Different dimensions in given data blocks.");
 #endif
+            MinValue = data[0].MinValue;
+            MaxValue = data[0].MaxValue;
+            foreach (DataType d in data)
+            {
+                if (d.MinValue == null || d.MaxValue == null)
+                {
+                    MinValue = null;
+                    MaxValue = null;
+                    break;
+                }
+                MinValue.MinOf(d.MinValue);
+                MaxValue.MaxOf(d.MaxValue);
+            }
             _data = data;
         }
 
@@ -176,6 +207,8 @@ namespace FlowSharp
         public VectorDataUnsteady(DataType data)
         {
             _data = data;
+            MinValue = VectorRef.ToUnsteady(data.MinValue);
+            MaxValue = VectorRef.ToUnsteady(data.MaxValue);
         }
 
         public VectorDataUnsteady() { }
@@ -501,7 +534,7 @@ namespace FlowSharp
             {
                 get
                 {
-                    Debug.Assert(index > 0 && index < Length, "Index out of bounds.");
+                    Debug.Assert(index >= 0 && index < Length, "Index out of bounds.");
                     return _parent._data[index][_index];
                 }
                 set

@@ -11,14 +11,14 @@ namespace FlowSharp
     class LoaderVTU : Loader
     {
         public Aneurysm.GeometryPart Part { get; protected set; }
-        public UnstructuredTree Grid { get; protected set; }
+        public UnstructuredGeometry Grid { get; protected set; }
 
         public LoaderVTU(Aneurysm.GeometryPart part)
         {
             Part = part;
         }
 
-        public UnstructuredTree LoadGeometry()
+        public UnstructuredGeometry LoadGeometry()
         {
             int numPoints = 0, numCells = 0;
             VectorBuffer vertices = null;
@@ -204,7 +204,7 @@ namespace FlowSharp
                 }
             }
 
-            Grid = new UnstructuredTree(vertices, indices);
+            Grid = new UnstructuredGeometry(vertices, indices);
             return Grid;
         }
 

@@ -21,12 +21,12 @@ namespace FlowSharp
         /// Assemble all inidces to a buffer. Do this here for general Tet grids.
         /// </summary>
         /// <returns></returns>
-        public IndexArray AssembleIndexList()
+        public Tuple<VectorData, IndexArray> AssembleIndexList()
         {
             IndexArray cells = new IndexArray(Cells.Length, Cells[0].VertexIndices.Length);
             for (int c = 0; c < Cells.Length; ++c)
                 cells[c] = Cells[c].VertexIndices;
-            return cells;
+            return new Tuple<VectorData, IndexArray>(Vertices, cells);
         }
 
         /// <summary>

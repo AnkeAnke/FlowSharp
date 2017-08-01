@@ -49,7 +49,7 @@ namespace FlowSharp
             if (update)
             {
                 update = false;
-                _cubes = new Mesh(BasePlane, new UnstructuredTree(_grid.Vertices, _indices));
+                _cubes = new Mesh(BasePlane, new UnstructuredGeometry(_grid.Vertices, _indices));
             }
             if (_lastSetting == null ||
                 WindowWidthChanged ||

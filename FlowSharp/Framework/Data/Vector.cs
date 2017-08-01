@@ -55,6 +55,11 @@ namespace FlowSharp
         {
             return (int)a > 0;
         }
+
+        public static explicit operator Sign(bool a)
+        {
+            return a ? POSITIVE : NEGATIVE;
+        }
     }
     class Vector : VectorRef
     {
@@ -159,12 +164,30 @@ namespace FlowSharp
             return sum;
         }
 
+        public static Vector operator +(VectorRef a, float b)
+        {
+            Vector sum = new Vector(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                sum[dim] += b;
+
+            return sum;
+        }
+
         public static Vector operator -(VectorRef a, VectorRef b)
         {
             Debug.Assert(a.Length == b.Length);
             Vector diff = new Vector(a);
             for (int dim = 0; dim < a.Length; ++dim)
                 diff[dim] -= b[dim];
+
+            return diff;
+        }
+
+        public static Vector operator -(VectorRef a, float b)
+        {
+            Vector diff = new Vector(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                diff[dim] -= b;
 
             return diff;
         }
@@ -205,6 +228,42 @@ namespace FlowSharp
                 neg[dim] = -neg[dim];
 
             return neg;
+        }
+
+        public static bool operator <(VectorRef a, VectorRef b)
+        {
+            for (int dim = 0; dim < a.Length; ++dim)
+                if (a[dim] >= b[dim])
+                    return false;
+
+            return true;
+        }
+
+        public static bool operator >(VectorRef a, VectorRef b)
+        {
+            for (int dim = 0; dim < a.Length; ++dim)
+                if (a[dim] <= b[dim])
+                    return false;
+
+            return true;
+        }
+
+        public static bool operator <=(VectorRef a, VectorRef b)
+        {
+            for (int dim = 0; dim < a.Length; ++dim)
+                if (a[dim] > b[dim])
+                    return false;
+
+            return true;
+        }
+
+        public static bool operator >=(VectorRef a, VectorRef b)
+        {
+            for (int dim = 0; dim < a.Length; ++dim)
+                if (a[dim] < b[dim])
+                    return false;
+
+            return true;
         }
 
         public static float Dot(VectorRef a, VectorRef b)
@@ -423,6 +482,55 @@ namespace FlowSharp
             Vector ret = new Vector(v.Length - 1);
             Array.Copy(v.Data, ret.Data, v.Length-1);
             return ret;
+        }
+
+        public static Vector Min(VectorRef a, VectorRef b)
+        {
+            Debug.Assert(a.Length == b.Length, "Not the same length.");
+            Vector ret = new Vector(a.Length);
+            for (int d = 0; d < a.Length; ++d)
+                ret[d] = Math.Min(a[d], b[d]);
+            return ret;
+        }
+
+        public static Vector Max(VectorRef a, VectorRef b)
+        {
+            Debug.Assert(a.Length == b.Length, "Not the same length.");
+            Vector ret = new Vector(a.Length);
+            for (int d = 0; d < a.Length; ++d)
+                ret[d] = Math.Max(a[d], b[d]);
+            return ret;
+        }
+
+        public VectorRef MinOf(VectorRef b)
+        {
+            Debug.Assert(this.Length == b.Length, "Not the same length.");
+            for (int d = 0; d < Length; ++d)
+                this[d] = Math.Min(this[d], b[d]);
+            return this;
+        }
+
+        public VectorRef MaxOf(VectorRef b)
+        {
+            Debug.Assert(this.Length == b.Length, "Not the same length.");
+            for (int d = 0; d < Length; ++d)
+                this[d] = Math.Max(this[d], b[d]);
+            return this;
+        }
+
+        /// <summary>
+        /// COmponent-wise comparison. Element is + iff vec >= reference.
+        /// </summary>
+        /// <param name="vec"></param>
+        /// <param name="reference"></param>
+        /// <returns></returns>
+        public static Sign[] Compare(VectorRef vec, VectorRef reference)
+        {
+            Debug.Assert(vec.Length == reference.Length);
+            Sign[] comp = new Sign[vec.Length];
+            for (int d = 0; d < vec.Length; ++d)
+                comp[d] = (Sign)(vec[d] >= reference[d]);
+            return comp;
         }
     }
 

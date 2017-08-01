@@ -44,37 +44,15 @@ namespace FlowSharp
             "Velocity",
             "Static Pressure",
             "Wall Shear Stress",
-            "Wall Shear Stress X",
-            "Wall Shear Stress Y",
-            "Wall Shear Stress Z"
+            "X-Wall Shear Stress",
+            "Y-Wall Shear Stress",
+            "Z-Wall Shear Stress"
         };
 
         public string VariableName(Variable variable)
         {
             return Names[(int)variable];
         }
-
-        //private static Dictionary<Variable, string> _variableShort = new Dictionary<Variable, string>()
-        //{
-        //    {Variable.TIME, "T" },
-        //    {Variable.GRID_X,"GX"},
-        //    {Variable.CENTER_X,"CX"},
-        //    {Variable.GRID_Y,"GY"},
-        //    {Variable.CENTER_Y,"CY"},
-        //    {Variable.GRID_Z,"GZ"},
-        //    {Variable.CENTER_Z,"CZ"},
-        //    {Variable.SALINITY, "S"},
-        //    {Variable.TEMPERATURE, "T"},
-        //    {Variable.VELOCITY_X, "U"},
-        //    {Variable.VELOCITY_Y, "V"},
-        //    {Variable.VELOCITY_Z, "W"},
-        //    {Variable.SURFACE_HEIGHT, "Eta"}
-        //};
-
-        //public static string GetShortName(Variable var)
-        //{
-        //    return _variableShort[var];
-        //}
 
         public enum Dimension : int
         {

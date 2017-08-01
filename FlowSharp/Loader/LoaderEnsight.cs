@@ -223,12 +223,12 @@ namespace FlowSharp
             return new HexGrid(vertices, indices);
         }
 
-        public VectorBuffer LoadAttribute(Aneurysm.Variable variable, int timeslice)
+        public VectorChannels LoadAttribute(Aneurysm.Variable variable, int timeslice)
         {
             LoadGridSizes();
 
             string filename = Aneurysm.Singleton.EnsightVariableFileName(variable, timeslice);
-            VectorBuffer vertices;
+            VectorChannels vertices;
 
             Debug.Assert(File.Exists(filename));
 
@@ -271,8 +271,18 @@ namespace FlowSharp
                         }
                     }
 
-                    //vertices = new VectorBuffer(numVerts, numDims);
-                    vertices = new VectorBuffer(reader.ReadBytes(numVerts * numDims * sizeof(float)), numDims);
+                    float[][] channels = new float[numDims][];
+                    byte[] raw = reader.ReadBytes(numVerts * numDims * sizeof(float));
+
+                    for (int d = 0; d < numDims; ++d)
+                    {
+                        channels[d] = new float[numVerts];
+                        Buffer.BlockCopy(raw, numVerts * sizeof(float) * d, channels[d], 0, numVerts * sizeof(float));
+                    }
+                    vertices = new VectorChannels(channels);
+
+                    //vertices = new VectorBuffer(reader.ReadBytes(numVerts * numDims * sizeof(float)), numDims);
+
                     Debug.Assert(vertices.Length == numVerts);
                     //for (int dim = 0; dim < numDims; ++dim)
                     //    for (int v = 0; v < numVerts; ++v)

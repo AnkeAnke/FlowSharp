@@ -134,5 +134,11 @@ namespace FlowSharp
                 Buffer.BlockCopy(data[i].Data, 0, Data, i * IndexLength, IndexLength * sizeof(int));
             }
         }
+
+        public void SetBlock(int intOffset, int[] data)
+        {
+            Debug.Assert(intOffset + data.Length <= Length);
+            Buffer.BlockCopy(data, 0, Data, intOffset * sizeof(int), data.Length * sizeof(int));
+        }
     }
 }

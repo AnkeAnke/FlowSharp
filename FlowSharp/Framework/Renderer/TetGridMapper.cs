@@ -14,33 +14,30 @@ namespace FlowSharp
     {
         //LineSet _wireframe;
         //PointSet<Point> _vertices;
-        Mesh _cubes;
+        Mesh _viewGeom;
+
+
         //TetTreeGrid _grid;'
-        GeneralUnstructurdGrid _geometry;
+        TetTreeGrid _geometry;
         //Index[] _indices;
         //bool update = true;
         PointCloud _vertices;
-        VectorBuffer _attribute;
+        VectorData _attribute;
+        Octree _tree;
+
+        Mesh _octreeLeafs;
 
         public TetGridMapper(Plane plane) : base()
         {
             Mapping = ShowSide;
             BasePlane = plane;
 
-            //Aneurysm.GeometryPart part = Aneurysm.GeometryPart.Wall;
+
+            LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
+            var hexGrid = geomLoader.LoadGeometry();
+            _tree = new Octree(geomLoader.Grid, 10000);
+
             
-            //hexGrid = null;
-
-            //// TMP
-            //tmp = new PointSet<Point>(new Point[]
-            //{
-            //    new Point(new Vector3(-3, 0, -3)),
-            //    new Point(new Vector3(-6, -3, -6)),
-            //    new Point(new Vector3(-6, -3, 0))
-            //});
-            //// \TMP
-
-
 
 
             //int[] selection = new int[_grid.Indices.Length / 100];
@@ -71,10 +68,20 @@ namespace FlowSharp
                 LoaderVTU geomLoader = new LoaderVTU(GeometryPart);
                 var hexGrid = geomLoader.LoadGeometry();
 
-                _geometry = geomLoader.Grid;
+
+                //int divFactor = 10000;
+                //IndexArray subset = new IndexArray(hexGrid.Primitives.Length / divFactor, hexGrid.Primitives.IndexLength);
+                //for (int s = 0; s < subset.Length; ++s)
+                //    subset[s] = hexGrid.Primitives[s * divFactor];
+                //hexGrid.Primitives = subset;
+
+
+                //_geometry = new TetTreeGrid(geomLoader.Grid);
+
+
 
                 // Fit plane to data.
-                this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, _geometry.GetVertices());
+                this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, geomLoader.Grid.Vertices);
                 BasePlane.PointSize = 1.0f;
 
                 //update = false;
@@ -87,11 +94,12 @@ namespace FlowSharp
             {
                 LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
                 _attribute = attribLoader.LoadAttribute((Aneurysm.Variable)(int)Measure, 0);
+                _attribute.ExtractMinMax();
                 updateCubes = true;
             }
 
             if (updateCubes)
-                _cubes = new Mesh(BasePlane, _geometry, _attribute);
+                _viewGeom = new Mesh(BasePlane, _geometry, _attribute);
 
 
             if (_lastSetting == null ||
@@ -101,12 +109,17 @@ namespace FlowSharp
                 ColormapChanged ||
                 updateCubes)
             {
-                _cubes.LowerBound = WindowStart;
-                _cubes.UpperBound = WindowStart + WindowWidth;
-                _cubes.UsedMap = Colormap;
+                _viewGeom.LowerBound = WindowStart;
+                _viewGeom.UpperBound = WindowStart + WindowWidth;
+                _viewGeom.UsedMap = Colormap;
             }
 
-            wire.Add(_cubes);
+            wire.Add(_viewGeom);
+
+            if (_octreeLeafs == null)
+                _octreeLeafs = new Mesh(BasePlane, _tree.LeafGeometry());
+
+            wire.Add(_octreeLeafs);
             //if (_vertices == null)
             //    _vertices = new PointCloud(BasePlane, _geometry.GetVertices());
             //wire.Add(_vertices);
@@ -131,29 +144,33 @@ namespace FlowSharp
             }
         }
 
-        public override int? GetLength(Setting.Element element)
+        public override float? GetMin(Setting.Element element)
         {
-            switch (element)
-            {
-                case Setting.Element.WindowWidth:
-                    return 1000;
-                case Setting.Element.WindowStart:
-                    return 500;
-                default:
-                    return base.GetLength(element);
-            }
-        }
+            float min = _attribute?.MinValue?[0] ?? -500f;
 
-        public override int? GetStart(Setting.Element element)
-        {
             switch (element)
             {
                 case Setting.Element.WindowWidth:
                     return 0;
                 case Setting.Element.WindowStart:
-                    return -500;
+                    return min;
                 default:
-                    return base.GetLength(element);
+                    return base.GetMin(element);
+            }
+        }
+
+        public override float? GetMax(Setting.Element element)
+        {
+            float min = _attribute?.MinValue?[0] ?? -500f;
+            float max = _attribute?.MaxValue?[0] ?? 500;
+            switch (element)
+            {
+                case Setting.Element.WindowWidth:
+                    return max - min;
+                case Setting.Element.WindowStart:
+                    return max;
+                default:
+                    return base.GetMax(element);
             }
         }
     }

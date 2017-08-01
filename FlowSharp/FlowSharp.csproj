@@ -103,10 +103,11 @@
     <Compile Include="Framework\Data\Graph.cs" />
     <Compile Include="Framework\Data\Grid\GridConverter.cs" />
     <Compile Include="Framework\Data\Grid\HexGrid.cs" />
+    <Compile Include="Framework\Data\Grid\Octree.cs" />
     <Compile Include="Framework\Data\Grid\RectlinearGrid.cs" />
     <Compile Include="Framework\Data\Grid\TetTreeGrid.cs" />
     <Compile Include="Framework\Data\Grid\TetNeighborGrid.cs" />
-    <Compile Include="Framework\Data\Grid\UnstructuredTree.cs" />
+    <Compile Include="Framework\Data\Grid\UnstructuredGrid.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
     <Compile Include="Framework\Data\IndexArray.cs" />
     <Compile Include="Framework\Data\VectorData.cs" />
