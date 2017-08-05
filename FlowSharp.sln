@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowSharp", "FlowSharp\FlowSharp.csproj", "{EB07C1D6-3558-48E6-8A12-6DAEC2514727}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RescaleRawData", "RescaleRawData\RescaleRawData.csproj", "{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +21,6 @@ Global
 		{EB07C1D6-3558-48E6-8A12-6DAEC2514727}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EB07C1D6-3558-48E6-8A12-6DAEC2514727}.Release|x64.ActiveCfg = Release|x64
 		{EB07C1D6-3558-48E6-8A12-6DAEC2514727}.Release|x64.Build.0 = Release|x64
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Debug|x64.Build.0 = Debug|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Release|x64.ActiveCfg = Release|Any CPU
-		{81CC5483-C079-4B3A-A7F2-A90FE2B7B2E3}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

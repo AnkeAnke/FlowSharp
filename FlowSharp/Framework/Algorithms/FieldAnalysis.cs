@@ -2132,7 +2132,7 @@ namespace FlowSharp
 
                     SquareMatrix cauchy = stress.Transposed() * stress;
 
-                    Vector lambdas = cauchy.EigenvaluesReal();
+                    VectorRef lambdas = cauchy.EigenvaluesReal();
                     float lMax = lambdas.Max();
                     fx[r] = (float)(Math.Log(Math.Sqrt(lMax)) / integrationTime);// pathlines[idx].Length > 0 ? (pathlines[idx][0]- origin).Length()  : 0;
                     min = Math.Min(min, fx[r]);

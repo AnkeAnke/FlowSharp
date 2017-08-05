@@ -79,11 +79,11 @@ namespace FlowSharp
         /// <param name="pos"></param>
         /// <param name="indices"></param>
         /// <param name="weights"></param>
-        public override int[] FindAdjacentIndices(Vector pos, out float[] weights)
+        public override Index FindAdjacentIndices(VectorRef pos, out VectorRef weights)
         {
             int numPoints = NumAdjacentPoints();
-            int[] indices = new int[numPoints];
-            weights = new float[numPoints];
+            Index indices = new Index(numPoints);
+            weights = new Vector(numPoints);
 
             Vector position = new Vector(pos);
 

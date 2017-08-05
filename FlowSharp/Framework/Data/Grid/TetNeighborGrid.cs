@@ -76,7 +76,7 @@ namespace FlowSharp
                         int idx = 0;
                         for (int i = 0; i < 4; ++i)
                             if (i != s)
-                                sides[sides.Count-1][idx++] = tet.VertexIndices[i];
+                                sides[sides.Count - 1][idx++] = tet.VertexIndices[i];
                     }
             }
 
@@ -93,10 +93,10 @@ namespace FlowSharp
                 Index verts = Cells[c].VertexIndices;
                 if (verts == null)
                     continue;
-                sides.Add( new Index( new int[] { verts[0], verts[1], verts[2] } ) );
-                sides.Add( new Index( new int[] { verts[0], verts[2], verts[3] } ) );
-                sides.Add( new Index( new int[] { verts[0], verts[1], verts[3] } ) );
-                sides.Add( new Index( new int[] { verts[1], verts[2], verts[3] } ) );
+                sides.Add(new Index(new int[] { verts[0], verts[1], verts[2] }));
+                sides.Add(new Index(new int[] { verts[0], verts[2], verts[3] }));
+                sides.Add(new Index(new int[] { verts[0], verts[1], verts[3] }));
+                sides.Add(new Index(new int[] { verts[1], verts[2], verts[3] }));
             }
 
             return sides.ToArray();
@@ -250,13 +250,13 @@ namespace FlowSharp
             // { cuboid[0], cuboid[7], cuboid[5], cuboid 4  } +3
             // { cuboid[2], cuboid[7], cuboid[5], cuboid 6  } +4
             Debug.Assert(hex[0] == Cells[hexIndex * 5].VertexIndices[0], "Hex and tets are not mapping as expected.");
-            sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[1], hex[2], hex[0], hex[3] } ), hexIndex * 5 + 1, hexIndex * 5 + 2, hexIndex) );
-            sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[1], hex[0], hex[5], hex[4] } ), hexIndex * 5 + 1, hexIndex * 5 + 3, hexIndex) );
-            sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[1], hex[5], hex[2], hex[6] } ), hexIndex * 5 + 1, hexIndex * 5 + 4, hexIndex) );
+            sideStack.Add(new Tuple<Index, int, int, int>(new FlowSharp.Index(new int[] { hex[1], hex[2], hex[0], hex[3] }), hexIndex * 5 + 1, hexIndex * 5 + 2, hexIndex));
+            sideStack.Add(new Tuple<Index, int, int, int>(new FlowSharp.Index(new int[] { hex[1], hex[0], hex[5], hex[4] }), hexIndex * 5 + 1, hexIndex * 5 + 3, hexIndex));
+            sideStack.Add(new Tuple<Index, int, int, int>(new FlowSharp.Index(new int[] { hex[1], hex[5], hex[2], hex[6] }), hexIndex * 5 + 1, hexIndex * 5 + 4, hexIndex));
 
-            sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[3], hex[7], hex[0], hex[4] } ), hexIndex * 5 + 2, hexIndex * 5 + 3, hexIndex) );
-            sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[3], hex[2], hex[7], hex[6] } ), hexIndex * 5 + 2, hexIndex * 5 + 4, hexIndex) );
-            sideStack.Add(new Tuple<Index, int, int, int>( new FlowSharp.Index(new int[] { hex[4], hex[7], hex[5], hex[6] } ), hexIndex * 5 + 3, hexIndex * 5 + 4, hexIndex) );
+            sideStack.Add(new Tuple<Index, int, int, int>(new FlowSharp.Index(new int[] { hex[3], hex[7], hex[0], hex[4] }), hexIndex * 5 + 2, hexIndex * 5 + 3, hexIndex));
+            sideStack.Add(new Tuple<Index, int, int, int>(new FlowSharp.Index(new int[] { hex[3], hex[2], hex[7], hex[6] }), hexIndex * 5 + 2, hexIndex * 5 + 4, hexIndex));
+            sideStack.Add(new Tuple<Index, int, int, int>(new FlowSharp.Index(new int[] { hex[4], hex[7], hex[5], hex[6] }), hexIndex * 5 + 3, hexIndex * 5 + 4, hexIndex));
         }
 
         public static TetNeighborGrid BuildFromHexGrid(VectorData vertices, IndexArray hexIndices, Vector origin = null, float? timeOrigin = null)
@@ -363,7 +363,7 @@ namespace FlowSharp
             return grid;
         }
 
-#endregion FromHexGrid
+        #endregion FromHexGrid
 
         public override FieldGrid Copy()
         {
@@ -399,11 +399,11 @@ namespace FlowSharp
         /// <param name="pos"></param>
         /// <param name="indices"></param>
         /// <param name="weights"></param>
-        public override int[] FindAdjacentIndices(Vector pos, out float[] weights)
+        public override Index FindAdjacentIndices(VectorRef pos, out VectorRef weights)
         {
             int numPoints = NumAdjacentPoints();
-            int[] indices = new int[numPoints];
-            weights = new float[numPoints];
+            Index indices = new Index(numPoints);
+            weights = new Vector(numPoints);
 
 
             return indices;
@@ -497,7 +497,7 @@ namespace FlowSharp
             Debug.Assert(verts.Length == 4, "Tetraeders have exactly 4 corners.");
             Debug.Assert(neighs == null || neighs.Length == 4, "Tetraeders have exactly 4 neighbors. -1 if invalid.");
             VertexIndices = verts;
-            NeighborIndices = neighs ?? new Index(-1,4);
+            NeighborIndices = neighs ?? new Index(-1, 4);
         }
 
         //public void SetCoord(TetGrid grid)

@@ -14,6 +14,7 @@ namespace FlowSharp
         POSITIVE = -1,
         NEGATIVE = 1
     }
+
     struct Sign
     {
         public int Value { get; private set; }
@@ -60,7 +61,13 @@ namespace FlowSharp
         {
             return a ? POSITIVE : NEGATIVE;
         }
+
+        public override string ToString()
+        {
+            return this? "+" : "-";
+        }
     }
+
     class Vector : VectorRef
     {
         protected float[] _data;
@@ -263,6 +270,22 @@ namespace FlowSharp
                 if (a[dim] < b[dim])
                     return false;
 
+            return true;
+        }
+
+        public bool IsStrictlyPositive()
+        {
+            for (int dim = 0; dim < Length; ++dim)
+                if (this[dim] <= 0)
+                    return false;
+            return true;
+        }
+
+        public bool IsPositive()
+        {
+            for (int dim = 0; dim < Length; ++dim)
+                if (this[dim] < 0)
+                    return false;
             return true;
         }
 

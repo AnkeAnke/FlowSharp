@@ -60,12 +60,12 @@ namespace FlowSharp
             {
                 Debug.Assert(Vertices.NumVectorDimensions == 3);
                 IndexArray indices = new IndexArray(Primitives.Length * 12, 3);
-                VectorBuffer verts = new VectorBuffer(Primitives.Length * 4, 3);
+                VectorBuffer verts = new VectorBuffer(Primitives.Length * 8, 3);
 
                 for (int i = 0; i < Primitives.Length; ++i)
                 {
-                    Vector min = (Vector)Vertices[Primitives[i][0]];
-                    Vector max = (Vector)Vertices[Primitives[i][1]];
+                    VectorRef min = Vertices[Primitives[i][0]];
+                    VectorRef max = Vertices[Primitives[i][1]];
 
                     int idx = i * 8;
 

@@ -18,13 +18,15 @@ namespace FlowSharp
 
 
         //TetTreeGrid _grid;'
-        TetTreeGrid _geometry;
+        GeneralUnstructurdGrid _geometry;
         //Index[] _indices;
         //bool update = true;
+        PointSet<Point> _points;
         PointCloud _vertices;
         VectorData _attribute;
-        Octree _tree;
 
+        TetTreeGrid _grid;
+        //KDTree _tree;
         Mesh _octreeLeafs;
 
         public TetGridMapper(Plane plane) : base()
@@ -32,30 +34,13 @@ namespace FlowSharp
             Mapping = ShowSide;
             BasePlane = plane;
 
-
-            LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
+            LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
-            _tree = new Octree(geomLoader.Grid, 10000);
 
-            
+            _grid = new TetTreeGrid(hexGrid, 1000);
 
-
-            //int[] selection = new int[_grid.Indices.Length / 100];
-            //for (int s = 0; s < selection.Length; ++s)
-            //    selection[s] = s*100;
-
-            //try
-            //{
-            //    _indices = _grid.GetAllSides();
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.Write(e);
-            //    Debug.Assert(false);
-            //}
-
-
-            //Console.WriteLine("Num sides: {0}", _indices.Length);
+            _points = _grid.SampleTest(100);
+            //_tree = new KDTree(geomLoader.Grid, 100);
         }
 
         public List<Renderable> ShowSide()
@@ -76,7 +61,7 @@ namespace FlowSharp
                 //hexGrid.Primitives = subset;
 
 
-                //_geometry = new TetTreeGrid(geomLoader.Grid);
+                _geometry = geomLoader.Grid;
 
 
 
@@ -116,10 +101,16 @@ namespace FlowSharp
 
             wire.Add(_viewGeom);
 
-            if (_octreeLeafs == null)
-                _octreeLeafs = new Mesh(BasePlane, _tree.LeafGeometry());
+            if (_vertices == null)
+            {
+                _vertices = new PointCloud(BasePlane, _points);
+            }
+            wire.Add(_vertices);
+            //if (_octreeLeafs == null)
+            //    _octreeLeafs = new Mesh(BasePlane, _tree.LeafGeometry());
 
-            wire.Add(_octreeLeafs);
+            //wire.Add(_octreeLeafs);
+
             //if (_vertices == null)
             //    _vertices = new PointCloud(BasePlane, _geometry.GetVertices());
             //wire.Add(_vertices);
@@ -129,6 +120,7 @@ namespace FlowSharp
             return wire;
 
         }
+
         public override bool IsUsed(Setting.Element element)
         {
             switch (element)

@@ -34,8 +34,8 @@ namespace FlowSharp
         {
             // Query relevant edges and their weights. Result varies with different grid types.
             int numCells = NumAdjacentPoints();
-            float[] weights;
-            int[] indices = FindAdjacentIndices(position, out weights);
+            VectorRef weights;
+            Index indices = FindAdjacentIndices(position, out weights);
 
             Debug.Assert(indices.Length == weights.Length);
 
@@ -90,7 +90,7 @@ namespace FlowSharp
         /// <param name="position">The position in either world or grid space.</param>
         /// <param name="weights">The weights used for linear interpolation.</param>
         /// <returns>Scalar indices for acessing the grid.</returns>
-        public abstract int[] FindAdjacentIndices(Vector position, out float[] weights);
+        public abstract Index FindAdjacentIndices(VectorRef position, out VectorRef weights);
     }
 
     public enum CellType

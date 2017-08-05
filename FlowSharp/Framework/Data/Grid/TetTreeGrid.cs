@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SlimDX;
+using static FlowSharp.Octree;
 
 namespace FlowSharp
 {
@@ -17,6 +18,8 @@ namespace FlowSharp
         public int NumCells { get { return Cells.Length; } }
 
         public Octree Tree;
+
+        private List<int>[] _cellsPerVertex;
         /// <summary>
         /// Assemble all inidices to a buffer. Do this here for general Tet grids.
         /// </summary>
@@ -43,12 +46,12 @@ namespace FlowSharp
             return new Tuple<VectorData, IndexArray>(Vertices,tris);
         }
 
-        public TetTreeGrid(UnstructuredGeometry geom, Vector origin = null, float? timeOrigin = null) : this(geom.Vertices, geom.Primitives, origin, timeOrigin) { }
+        public TetTreeGrid(UnstructuredGeometry geom, int maxNumVertices = 100, int maxLevel = -1, Vector origin = null, float? timeOrigin = null) : this(geom.Vertices, geom.Primitives, maxNumVertices, maxLevel, origin, timeOrigin) { }
 
         /// <summary>
         /// Create a new tetraeder grid descriptor.
         /// </summary>
-        public TetTreeGrid(VectorData vertices, IndexArray indices, Vector origin = null, float? timeOrigin = null)
+        public TetTreeGrid(VectorData vertices, IndexArray indices, int maxNumVertices = 100, int maxLevel = -1, Vector origin = null, float? timeOrigin = null)
         {
             // For Dimensionality.
             Size = new Index(4);
@@ -60,24 +63,29 @@ namespace FlowSharp
             Debug.Assert(indices.IndexLength == 4, "Not tets.");
             int dim = vertices[0].Length;
 
-//#if DEBUG
-//            for (int i = 0; i < vertices.Length; ++i)
-//            {
-//                Debug.Assert(vertices[i].Length == dim, "Varying vertex dimensions.");
-//            }
-//            foreach (Tet i in indices)
-//            {
-//                Debug.Assert(i.VertexIndices.Length == NumCorners, "Cells should have " + NumCorners + " corners each.");
-//                foreach (int idx in i.VertexIndices.Data)
-//                    Debug.Assert(idx >= 0 && idx < vertices.Length, "Invalid index, out of vertex list bounds.");
-//            }
-//#endif
-
+            // Space position.
             Origin = origin ?? new Vector(0, 4);
             TimeDependant = timeOrigin != null;
             Origin.T = timeOrigin ?? Origin.T;
 
-            Tree = new Octree(this, 100);
+            // Setup KDTree for fast access.
+            Tree = new Octree(this, maxNumVertices, maxLevel);
+
+            // Link vertices to cells for stabbing queries.
+            // Setup data structure.
+            _cellsPerVertex = new List<int>[Vertices.Length];
+            for (int v = 0; v < _cellsPerVertex.Length; ++v)
+                _cellsPerVertex[v] = new List<int>(16);
+
+
+            // Each cell registers itself with all of its vertices.
+            for (int c = 0; c < Cells.Length; ++c)
+            {
+                for (int v = 0; v < Cells.IndexLength; ++v)
+                {
+                    _cellsPerVertex[Cells[c][v]].Add(c);
+                }
+            }
         }
 
         public Index[] GetAllSides()
@@ -128,20 +136,96 @@ namespace FlowSharp
         /// <param name="pos"></param>
         /// <param name="indices"></param>
         /// <param name="weights"></param>
-        public override int[] FindAdjacentIndices(Vector pos, out float[] weights)
+        public override Index FindAdjacentIndices(VectorRef pos, out VectorRef weights)
         {
+            // Setup return values.
             int numPoints = NumAdjacentPoints();
-            int[] indices = new int[numPoints];
-            weights = new float[numPoints];
+            //Index indices = new int[numPoints];
+            //weights = new float[numPoints];
 
-
-            return indices;
+            int cell = FindCell(pos, out weights);
+            //Debug.Assert(cell >= 0, "Not in the grid.");
+            return cell >= 0 ? new Index(Cells[cell]) : null;
         }
 
         public override bool InGrid(Vector position)
         {
-            Debug.Assert(position.Length == Size.Length, "Trying to access " + Size.Length + "D field with " + position.Length + "D index.");
-            return false;
+            return true;
+            //Debug.Assert(position.Length == Size.Length, "Trying to access " + Size.Length + "D field with " + position.Length + "D index.");
+
+            //Vector bary;
+            //return FindCell(position, out bary) >= 0;
+        }
+
+        private int FindCell(VectorRef pos, out VectorRef bary)
+        {
+            // Stab the tree.
+            // Search through all cells that have a vertex in the stabbed leaf.
+            Node leaf;
+            var vertices = Tree.StabCell(pos, out leaf);
+
+            // Outside?
+            if (leaf == null)
+            {
+                bary = null;
+                return -1;
+            }
+
+            int tet = FindInNode(vertices, pos, out bary);
+
+            if (tet >= 0)
+                return tet;
+            
+            // Well, test the neighbor cells on the same tree level.
+            var moreVertices = Tree.FindNeighborNodes(leaf);
+            foreach (CellData verts in moreVertices)
+            {
+                tet = FindInNode(vertices, pos, out bary);
+                if (tet >= 0)
+                    return tet;
+            }
+
+            return -1;
+        }
+
+        private int FindInNode(CellData vertices, VectorRef pos, out VectorRef bary)
+        {
+            bary = null;
+            HashSet<int> tets = new HashSet<int>();
+
+            // Collect all tet indices.
+            foreach (int vert in vertices)
+            {
+                tets.UnionWith(_cellsPerVertex[vert]);
+            }
+
+            // Test whether inside.
+            foreach (int tet in tets)
+            {
+                bary = ToBaryCoord(tet, pos);
+                if (bary.IsPositive())
+                {
+                    return tet;
+                }
+            }
+
+            return -1;
+        }
+
+        public Vector ToBaryCoord(int cell, VectorRef worldPos)
+        {
+            Debug.Assert(worldPos.Length == Vertices.NumVectorDimensions);
+            SquareMatrix tet = new SquareMatrix(3);
+            VectorRef origin = Vertices[Cells[cell][0]];
+            for (int i = 0; i < 3; ++i)
+            {
+                tet[i] = Vertices[Cells[cell][i+1]] - origin;
+            }
+
+            Vector result = tet.Inverse() * ((worldPos - origin));
+            result = new Vector(new float[] { 1f - result.Sum(), result[0], result[1], result[2] });
+
+            return result;
         }
 
         #region DebugRendering
@@ -161,6 +245,30 @@ namespace FlowSharp
 
         //    return new LineSet(lines);
         //}
+
+        public PointSet<Point> SampleTest(int vertsPerSide = 100)
+        {
+            List<Point> verts = new List<Point>(vertsPerSide * vertsPerSide * vertsPerSide / 5);
+            Vector extent = Vertices.MaxValue - Vertices.MinValue;
+            VectorRef weight;
+
+            for (int x = 0; x < vertsPerSide; ++x)
+                for (int y = 0; y < vertsPerSide; ++y)
+                    for (int z = 0; z < vertsPerSide; ++z)
+                    {
+                        Vector pos = Vertices.MinValue +
+                            new Vector(new float[] {
+                                       ((float)x) / vertsPerSide * extent[0],
+                                       ((float)y) / vertsPerSide * extent[1],
+                                       ((float)z) / vertsPerSide * extent[2] });
+                        Index tet = this.FindAdjacentIndices(pos, out weight);
+
+                        if (tet != null)
+                            verts.Add(new Point((Vector3)pos) { Radius = 0.1f } );
+                    }
+
+            return new PointSet<Point>(verts.ToArray());
+        }
 
         public PointSet<Point> GetVertices()
         {

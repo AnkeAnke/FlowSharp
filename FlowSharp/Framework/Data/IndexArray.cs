@@ -137,7 +137,7 @@ namespace FlowSharp
 
         public void SetBlock(int intOffset, int[] data)
         {
-            Debug.Assert(intOffset + data.Length <= Length);
+            Debug.Assert(intOffset + data.Length <= Length * IndexLength);
             Buffer.BlockCopy(data, 0, Data, intOffset * sizeof(int), data.Length * sizeof(int));
         }
     }

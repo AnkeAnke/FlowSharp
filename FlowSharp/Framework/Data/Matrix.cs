@@ -9,7 +9,7 @@ namespace FlowSharp
 {
     class SquareMatrix
     {
-        protected Vector[] Columns;
+        protected VectorRef[] Columns;
         public int Length { get { return Columns.Length; } }
         public SquareMatrix(Vector[] columns)
         {
@@ -48,7 +48,7 @@ namespace FlowSharp
                 Columns[row] = new Vector(0, length);
         }
 
-        public Vector this[int index]
+        public VectorRef this[int index]
         {
             get { return Columns[index]; }
             set { Debug.Assert(value.Length == Length); Columns[index] = value; }
@@ -60,7 +60,7 @@ namespace FlowSharp
             set { this[index.X][index.Y] = value; }
         }
 
-        public Vector Column(int index)
+        public VectorRef Column(int index)
         {
             return this[index];
         }
@@ -175,12 +175,34 @@ namespace FlowSharp
             }
         }
 
-        public Vector EigenvaluesReal()
+        public VectorRef EigenvaluesReal()
         {
             SquareMatrix vals, vecs;
             Eigenanalysis(out vals, out vecs);
 
             return vals[0];
+        }
+
+        public SquareMatrix Inverse()
+        {
+            Debug.Assert(Length == 3, "Only implemented 3x3.");
+            SquareMatrix inv = new SquareMatrix(Length);
+
+            for (int c = 0; c < 3; ++c)
+            {
+                for (int r = 0; r < 3; ++r)
+                {
+                    int col0 = (c + 1) % 3;
+                    int col1 = (c + 2) % 3;
+                    int row0 = (r + 1) % 3;
+                    int row1 = (r + 2) % 3;
+                    int sign = (c + r) % 2 == 0 ? 1 : -1;
+                    inv[r][c] = (this[col0][row0] * this[col1][row1] - this[col0][row1] * this[col1][row0]);
+                }
+            }
+            // -6.2938e-14
+            float det = -this[0][0] * inv[0][0] + this[0][1] * inv[0][1] - this[0][2] * inv[0][2];
+            return inv/det;
         }
 
         public SquareMatrix ToMat2x2()
@@ -217,6 +239,15 @@ namespace FlowSharp
             SquareMatrix c = new SquareMatrix(a.Length);
             for (int col = 0; col < c.Length; ++col)
                 c[col] = a[col] * b;
+
+            return c;
+        }
+
+        public static SquareMatrix operator /(SquareMatrix a, float b)
+        {
+            SquareMatrix c = new SquareMatrix(a.Length);
+            for (int col = 0; col < c.Length; ++col)
+                c[col] = a[col] / b;
 
             return c;
         }

@@ -989,8 +989,8 @@ namespace FlowSharp
 
         public bool IsValid(Vector pos)
         {
-            float[] weights;
-            int[] neighbors = Grid.FindAdjacentIndices(pos, out weights);
+            VectorRef weights;
+            int[] neighbors = Grid.FindAdjacentIndices(pos, out weights).Data;
             foreach (int neighbor in neighbors)
                 for (int n = 0; n < NumVectorDimensions; ++n)
                     if (Data[neighbor][n] == InvalidValue)
