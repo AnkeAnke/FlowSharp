@@ -54,5 +54,10 @@ namespace FlowSharp
                 raw[e] = data[e][index];
             return raw;
         }
+
+        public static Index GetSize(object[,,] data)
+        {
+            return new Index(new int[] { data.GetLength(0), data.GetLength(1), data.GetLength(2) });
+        }
     }
 }

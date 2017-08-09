@@ -84,6 +84,24 @@ namespace FlowSharp
             return sum;
         }
 
+        public static Index operator +(Index a, int b)
+        {
+            Index sum = new Index(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                sum[dim] += b;
+
+            return sum;
+        }
+
+        public static Index operator -(Index a, int b)
+        {
+            Index sum = new Index(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                sum[dim] -= b;
+
+            return sum;
+        }
+
         public static Index operator *(Index a, Index b)
         {
             Debug.Assert(a.Length == b.Length);
@@ -281,11 +299,11 @@ namespace FlowSharp
         /// <returns></returns>
         public override string ToString()
         {
-            string str = "(";
+            string str = "[";
             for (int dim = 0; dim < Length - 1; ++dim)
                 str += _data[dim] + ", ";
             str += _data[Length - 1];
-            str += ')';
+            str += ']';
 
             return str;
         }
@@ -311,7 +329,7 @@ namespace FlowSharp
     //    public Index4(int val) : base(val, 4) { }
     //}
 
-    class GridIndex : IEnumerator<Index>, IEnumerable<Index>, IEnumerable<GridIndex>, IEnumerator<GridIndex>
+    class GridIndex : /*IEnumerator<Index>, IEnumerable<Index>, */IEnumerable<GridIndex>, IEnumerator<GridIndex>
     {
         private Index _current;
         private Index _max;
@@ -329,7 +347,7 @@ namespace FlowSharp
 
         public IEnumerator GetEnumerator()
         {
-            return (IEnumerator)this;
+            return this;
         }
 
         //IEnumerator
@@ -361,11 +379,6 @@ namespace FlowSharp
 
         public void Dispose()
         {
-        }
-
-        IEnumerator<Index> IEnumerable<Index>.GetEnumerator()
-        {
-            return this;
         }
 
         IEnumerator<GridIndex> IEnumerable<GridIndex>.GetEnumerator()

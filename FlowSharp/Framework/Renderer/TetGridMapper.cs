@@ -41,7 +41,7 @@ namespace FlowSharp
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
 
-            _grid = new TetTreeGrid(hexGrid, 10);
+            _grid = new TetTreeGrid(hexGrid, 4);
             //_grid.Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename); // Fun fact: never loaded yet.
 
             // Fit plane to data.
@@ -52,8 +52,8 @@ namespace FlowSharp
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
             _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
 
-            _points = _grid.SampleTest(_vectorField, 10);
-            TetTreeGrid.ShowSampleStatistics();
+            _points = _grid.SampleTest(_vectorField, 100);
+            TetLatticeGrid.ShowSampleStatistics();
             //VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
             //integrator.StepSize = _grid.CellSizeReference / 2;
             //_streamlines = integrator.Integrate(_points)[0];
