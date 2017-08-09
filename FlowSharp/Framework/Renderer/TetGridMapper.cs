@@ -25,6 +25,10 @@ namespace FlowSharp
         PointCloud _vertices;
         VectorData _attribute;
 
+        VectorField _vectorField;
+        LineSet _streamlines;
+        LineBall _streamBall;
+
         TetTreeGrid _grid;
         //KDTree _tree;
         Mesh _octreeLeafs;
@@ -37,9 +41,24 @@ namespace FlowSharp
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
 
-            _grid = new TetTreeGrid(hexGrid, 1000);
+            _grid = new TetTreeGrid(hexGrid, 10);
+            //_grid.Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename); // Fun fact: never loaded yet.
 
-            _points = _grid.SampleTest(100);
+            // Fit plane to data.
+            this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, hexGrid.Vertices);
+            BasePlane.PointSize = 1f;
+
+            // Load some attribute.
+            LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
+            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
+
+            _points = _grid.SampleTest(_vectorField, 10);
+            TetTreeGrid.ShowSampleStatistics();
+            //VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
+            //integrator.StepSize = _grid.CellSizeReference / 2;
+            //_streamlines = integrator.Integrate(_points)[0];
+            //_points = _streamlines.GetAllEndPoints().ToBasicSet();
+
             //_tree = new KDTree(geomLoader.Grid, 100);
         }
 
@@ -63,12 +82,6 @@ namespace FlowSharp
 
                 _geometry = geomLoader.Grid;
 
-
-
-                // Fit plane to data.
-                this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, geomLoader.Grid.Vertices);
-                BasePlane.PointSize = 1.0f;
-
                 //update = false;
                 updateCubes = true;
             }
@@ -84,7 +97,15 @@ namespace FlowSharp
             }
 
             if (updateCubes)
+            {
                 _viewGeom = new Mesh(BasePlane, _geometry, _attribute);
+            }
+
+            //if (_lastSetting == null ||
+            //    _streamBall == null)
+            //{
+            //    _streamBall = new LineBall(BasePlane, _streamlines);
+            //}
 
 
             if (_lastSetting == null ||
@@ -100,12 +121,15 @@ namespace FlowSharp
             }
 
             wire.Add(_viewGeom);
+//            wire.Add(_streamBall);
 
-            if (_vertices == null)
+            if (_vertices == null || updateCubes)
             {
                 _vertices = new PointCloud(BasePlane, _points);
             }
             wire.Add(_vertices);
+
+
             //if (_octreeLeafs == null)
             //    _octreeLeafs = new Mesh(BasePlane, _tree.LeafGeometry());
 
@@ -138,6 +162,7 @@ namespace FlowSharp
 
         public override float? GetMin(Setting.Element element)
         {
+            _attribute.ExtractMinMax();
             float min = _attribute?.MinValue?[0] ?? -500f;
 
             switch (element)
@@ -153,6 +178,7 @@ namespace FlowSharp
 
         public override float? GetMax(Setting.Element element)
         {
+            _attribute.ExtractMinMax();
             float min = _attribute?.MinValue?[0] ?? -500f;
             float max = _attribute?.MaxValue?[0] ?? 500;
             switch (element)

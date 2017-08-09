@@ -987,15 +987,18 @@ namespace FlowSharp
         //    return newField;
         //}
 
-        public bool IsValid(Vector pos)
+        public bool IsValid(Vector pos, out Vector sample)
         {
-            VectorRef weights;
-            int[] neighbors = Grid.FindAdjacentIndices(pos, out weights).Data;
-            foreach (int neighbor in neighbors)
-                for (int n = 0; n < NumVectorDimensions; ++n)
-                    if (Data[neighbor][n] == InvalidValue)
-                        return false;
-            return true;
+            sample = Sample(pos);
+            return sample != null && sample[0] != InvalidValue;
+            //VectorRef weights;
+            //Index neighbors = Grid.FindAdjacentIndices(pos, out weights);
+            //return neighbors != null;
+            //foreach (int neighbor in neighbors)
+            //    for (int n = 0; n < NumVectorDimensions; ++n)
+            //        if (Data[neighbor][n] == InvalidValue)
+            //            return false;
+            //return true;
         }
         /// <summary>
         /// Access field by scalar index.
@@ -1227,75 +1230,88 @@ namespace FlowSharp
             public virtual float EpsCriticalPoint { get { return _epsCriticalPoint; } set { _epsCriticalPoint = value; } }
             public int MaxNumSteps = 2000;
 
-            public abstract Status Step(Vector pos, out Vector stepped, out float stepLength);
+            public abstract Status Step(Vector pos, Vector sample, out Vector next, out float stepLength);
             /// <summary>
             /// Perform one step, knowing that the border is nearby.
             /// </summary>
             /// <param name="pos"></param>
             /// <param name="stepped"></param>
-            public abstract bool StepBorder(Vector pos, out Vector stepped, out float stepLength);
-            public abstract bool StepBorderTime(Vector pos, float timeBorder, out Vector stepped, out float stepLength);
+            public abstract bool StepBorder(Vector pos, Vector sample, out Vector stepped, out float stepLength);
+            public abstract bool StepBorderTime(Vector pos, Vector sample, float timeBorder, out Vector stepped, out float stepLength);
             public virtual StreamLine<Vector3> IntegrateLineForRendering(Vector pos, float? maxTime = null)
             {
-                StreamLine<Vector3> line = new StreamLine<Vector3>((int)(Field.Size.Max() * 1.5f / StepSize)); // Rough guess.
-                //line.Points.Add((Vector3)pos);
-                float timeBorder = maxTime ?? (((Field as VectorFieldUnsteady) == null) ? float.MaxValue : (Field.Grid.TimeOrigin ?? 0) + Field.Size.T);
-
-                Vector point;
-                Vector next = pos;
-                if (CheckPosition(next) != Status.OK)
+                StreamLine<Vector3> line = new StreamLine<Vector3>();
+                if (StepSize <= 0)
+                    Console.WriteLine("StepSize is " + StepSize);
+            
+                try
                 {
                     //line.Points.Add((Vector3)pos);
-                    return line;
-                }
-                Status status;
-                int step = -1;
-                bool attachTimeZ = Field.NumVectorDimensions == 2 && Field.TimeSlice != 0;
-                float stepLength;
-                do
-                {
-                    step++;
-                    point = next;
-                    Vector3 posP = (Vector3)point;
-                    if (attachTimeZ)
-                        posP.Z = (float)Field.TimeSlice;
-                    line.Points.Add(posP);
-                    status = Step(point, out next, out stepLength);
-                    if (status == Status.OK)
-                        line.LineLength += stepLength;
-                } while (status == Status.OK && step < MaxNumSteps && next.T <= timeBorder);
+                    float timeBorder = maxTime ?? (((Field as VectorFieldUnsteady) == null) ? float.MaxValue : (Field.Grid.TimeOrigin ?? 0) + Field.Size.T);
 
-                // If a border was hit, take a small step at the end.
-                if (status == Status.BORDER)
-                {
-                    if (StepBorder(point, out next, out stepLength))
+                    Vector point;
+                    Vector next = pos;
+
+                    Vector sample;
+                    if (CheckPosition(next, out sample) != Status.OK)
                     {
-                        line.Points.Add((Vector3)next);
-                        line.LineLength += stepLength;
+                        return line;
                     }
-                }
-
-                // If the time was exceeded, take a small step at the end.
-                if (status == Status.OK && next.T > timeBorder)
-                {
-                    status = Status.TIME_BORDER;
-
-                    if (StepBorderTime(point, timeBorder, out next, out stepLength))
+                    Status status;
+                    int step = -1;
+                    bool attachTimeZ = Field.NumVectorDimensions == 2 && Field.TimeSlice != 0;
+                    float stepLength;
+                    do
                     {
-                        line.Points.Add((Vector3)next);
-                        line.LineLength += stepLength;
+                        step++;
+                        point = next;
+                        Vector3 posP = (Vector3)point;
+                        if (attachTimeZ)
+                            posP.Z = (float)Field.TimeSlice;
+                        line.Points.Add(posP);
+                        status = Step(point, sample, out next, out stepLength);
+                        if (status == Status.OK)
+                            line.LineLength += stepLength;
+                    } while (status == Status.OK && step < MaxNumSteps && next.T <= timeBorder);
+
+                    // If a border was hit, take a small step at the end.
+                    if (status == Status.BORDER)
+                    {
+                        if (StepBorder(point, sample, out next, out stepLength))
+                        {
+                            line.Points.Add((Vector3)next);
+                            line.LineLength += stepLength;
+                        }
                     }
 
-                    if (next[1] < 0)
-                        Console.WriteLine("Wut?");
-                }
-                // Single points are confusing for everybody.
-                if (line.Points.Count < 2)
+                    // If the time was exceeded, take a small step at the end.
+                    if (status == Status.OK && next.T > timeBorder)
+                    {
+                        status = Status.TIME_BORDER;
+
+                        if (StepBorderTime(point, sample, timeBorder, out next, out stepLength))
+                        {
+                            line.Points.Add((Vector3)next);
+                            line.LineLength += stepLength;
+                        }
+
+                        if (next[1] < 0)
+                            Console.WriteLine("Wut?");
+                    }
+                    // Single points are confusing for everybody.
+                    if (line.Points.Count < 2)
+                    {
+                        line.Points.Clear();
+                        line.LineLength = 0;
+                    }
+                    line.Status = status;
+                    
+                } catch (Exception e)
                 {
-                    line.Points.Clear();
-                    line.LineLength = 0;
+
+                    Console.WriteLine("Caught it! For Rendering!");
+                    Console.WriteLine(e);
                 }
-                line.Status = status;
                 return line;
             }
 
@@ -1310,15 +1326,26 @@ namespace FlowSharp
 
                 for (int index = 0; index < positions.Length; ++index)
                 {
+                    try
+                    {
+                        StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)positions.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
+                        lines[index] = new Line();
+                        lines[index].Positions = streamline.Points.ToArray();
+                        lines[index].Status = streamline.Status;
+                        lines[index].LineLength = streamline.LineLength;
 
-                    StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)positions.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
-                    lines[index] = new Line();
-                    lines[index].Positions = streamline.Points.ToArray();
-                    lines[index].Status = streamline.Status;
-                    lines[index].LineLength = streamline.LineLength;
+                        //System.DivideByZeroException: Attempted to divide by zero.
+                        //   at FlowSharp.VectorField.Integrator.Integrate[P](PointSet`1 positions, Boolean forwardAndBackward, Nullable`1 maxTime) in C: \Users\Anke\Documents\Uni\Semester10\FlowSharp\FlowSharp\Framework\Data\VectorField.cs:line 1335
+                        //Exception thrown: 'System.DivideByZeroException' in FlowSharp.exe
 
-                    if ((index) % (positions.Length / 10) == 0)
-                        Console.WriteLine("Integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index * 100) / positions.Length);
+                        if ((index) % (positions.Length / 10) == 0)
+                            Console.WriteLine("Integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index * 100) / positions.Length);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Caught it in Integrate! Index " + index);
+                        Console.WriteLine(e);
+                    }
                 }
                 result[0] = new LineSet(lines) { Color = (Vector3)Direction };
 
@@ -1364,15 +1391,21 @@ namespace FlowSharp
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e.InnerException);
                 }
             }
 
-            protected Status CheckPosition(Vector pos)
+            protected Status CheckPosition(Vector pos, out Vector sample)
             {
+                sample = null;
                 if (!Field.Grid.InGrid(pos))
                     return Status.BORDER;
-                if (!Field.IsValid(pos))
+
+                sample = Field.Sample(pos);
+                if (sample == null)
+                    return Status.BORDER;
+
+                if (sample[0] == Field.InvalidValue)
                     return Status.INVALID;
                 return Status.OK;
             }
@@ -1422,12 +1455,11 @@ namespace FlowSharp
                 Field = field;
             }
             int counter = 0;
-            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
+            public override Status Step(Vector pos, Vector dir, out Vector next, out float stepLength)
             {
                 ++counter;
-                stepped = new Vector(pos);
+                next = new Vector(pos);
                 stepLength = 0;
-                Vector dir = Field.Sample(pos);
 
                 if (!ScaleAndCheckVector(dir, out dir))
                     return Status.CP;
@@ -1435,29 +1467,32 @@ namespace FlowSharp
                 if (float.IsNaN(dir[0]))
                     Console.WriteLine("NaN NaN NaN NaN WATMAN!");
 
-                stepped += dir;
+                next += dir;
                 stepLength += dir.LengthEuclidean();
 
-                return CheckPosition(stepped);
+                return CheckPosition(next, out dir);
             }
 
-            public override bool StepBorder(Vector position, out Vector stepped, out float stepLength)
+            public override bool StepBorder(Vector position, Vector dir, out Vector nextPos, out float stepLength)
             {
-                stepped = new Vector(position);
+                nextPos = new Vector(position);
                 stepLength = 0;
-                Vector dir = Field.Sample(position) * (int)Direction;
+                dir *= (int)Direction;
                 if (NormalizeField)
                     dir.Normalize();
 
-                // How big is the smallest possible scale to hit a maximum border?
-                float scale = (((Vector)Field.Size - new Vector(1, Field.Size.Length) - position) / dir).MinPos();
-                scale = Math.Min(scale, (position / dir).MinPos());
+                nextPos = Field.Grid.CutToBorder(Field, position, dir);
 
-                if (scale >= StepSize)
-                    return false;
+                stepLength = (nextPos - position).LengthEuclidean();
+                //// How big is the smallest possible scale to hit a maximum border?
+                //float scale = (((Vector)Field.Size - new Vector(1, Field.Size.Length) - position) / dir).MinPos();
+                //scale = Math.Min(scale, (position / dir).MinPos());
 
-                stepped += dir * scale;
-                stepLength = dir.LengthEuclidean() * scale;
+                //if (scale >= StepSize)
+                //    return false;
+
+                //nextPos += dir * scale;
+                //stepLength = dir.LengthEuclidean() * scale;
                 return true;
             }
 
@@ -1475,11 +1510,11 @@ namespace FlowSharp
                 return true;
             }
 
-            public override bool StepBorderTime(Vector position, float timeBorder, out Vector stepped, out float stepLength)
+            public override bool StepBorderTime(Vector position, Vector dir, float timeBorder, out Vector stepped, out float stepLength)
             {
                 stepped = new Vector(position);
                 stepLength = 0;
-                Vector dir = Field.Sample(position) * (int)Direction;
+                dir *= (int)Direction;
                 if (NormalizeField)
                     dir.Normalize();
 
@@ -1503,49 +1538,44 @@ namespace FlowSharp
             public IntegratorRK4(VectorField field) : base(field)
             { }
 
-            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, out Vector nextPos, out float stepLength)
             {
-                stepped = new Vector(pos);
+                nextPos = new Vector(pos);
                 stepLength = 0;
                 Status status;
+                Vector v0, v1, v2, v3;
 
                 // v0
-                Vector v0 = Field.Sample(pos);
+                v0 = new Vector(sample);
                 if (!ScaleAndCheckVector(v0, out v0))
                     return Status.CP;
-                status = CheckPosition(pos + v0 / 2);
+                status = CheckPosition(pos + v0 / 2, out v1);
                 if (status != Status.OK)
                     return status;
 
                 // v1
-                Vector v1 = Field.Sample(pos + v0 / 2);
                 if (!ScaleAndCheckVector(v1, out v1))
                     return Status.CP;
-                status = CheckPosition(pos + v1 / 2);
+                status = CheckPosition(pos + v1 / 2, out v2);
                 if (status != Status.OK)
                     return status;
 
                 // v2
-                Vector v2 = Field.Sample(pos + v1 / 2);
                 if (!ScaleAndCheckVector(v2, out v2))
                     return Status.CP;
-                status = CheckPosition(pos + v2);
+                status = CheckPosition(pos + v2, out v3);
                 if (status != Status.OK)
                     return status;
 
                 // v3
-                Vector v3 = Field.Sample(pos + v2);
                 if (!ScaleAndCheckVector(v3, out v3))
                     return Status.CP;
-                status = CheckPosition(pos + v2);
-                if (status != Status.OK)
-                    return status;
 
                 Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
-                stepped += dir;
+                nextPos += dir;
                 stepLength = dir.LengthEuclidean();
 
-                return CheckPosition(stepped);
+                return CheckPosition(nextPos, out sample);
             }
         }
 
@@ -1568,49 +1598,48 @@ namespace FlowSharp
                 return ((Vec3)(dir * Force)).ToVec(pos.Length);
             }
 
-            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, out Vector nextPos, out float stepLength)
             {
-                stepped = new Vector(pos);
+                nextPos = new Vector(pos);
                 stepLength = 0;
                 Status status;
 
+                Vector v0, v1, v2, v3;
+
                 // v0
-                Vector v0 = Field.Sample(pos) + Repell(pos);
+                v0 = new Vector(sample) + Repell(pos);
                 if (!ScaleAndCheckVector(v0, out v0))
                     return Status.CP;
-                status = CheckPosition(pos + v0 / 2);
+                status = CheckPosition(pos + v0 / 2, out v1);
                 if (status != Status.OK)
                     return status;
 
                 // v1
-                Vector v1 = Field.Sample(pos + v0 / 2) + Repell(pos + v0 / 2);
+                v1 += Repell(pos + v0 / 2);
                 if (!ScaleAndCheckVector(v1, out v1))
                     return Status.CP;
-                status = CheckPosition(pos + v1 / 2);
+                status = CheckPosition(pos + v1 / 2, out v2);
                 if (status != Status.OK)
                     return status;
 
                 // v2
-                Vector v2 = Field.Sample(pos + v1 / 2) + Repell(pos + v1 / 2);
+                v2 += Repell(pos + v1 / 2);
                 if (!ScaleAndCheckVector(v2, out v2))
                     return Status.CP;
-                status = CheckPosition(pos + v2);
+                status = CheckPosition(pos + v2, out v3);
                 if (status != Status.OK)
                     return status;
 
                 // v3
-                Vector v3 = Field.Sample(pos + v2) + Repell(pos + v2);
+                v3 += Repell(pos + v2);
                 if (!ScaleAndCheckVector(v3, out v3))
                     return Status.CP;
-                status = CheckPosition(pos + v2);
-                if (status != Status.OK)
-                    return status;
 
                 Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
-                stepped += dir;
+                nextPos += dir;
                 stepLength = dir.LengthEuclidean();
 
-                return CheckPosition(stepped);
+                return CheckPosition(nextPos, out sample);
             }
         }
 
@@ -1629,26 +1658,26 @@ namespace FlowSharp
                 Field = Predictor.Field;
             }
 
-            public override Status Step(Vector pos, out Vector stepped, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, out Vector nextPos, out float stepLength)
             {
                 // One predictor step.
-                Status status = Predictor.Step(pos, out stepped, out stepLength);
+                Status status = Predictor.Step(pos, sample, out nextPos, out stepLength);
                 if (status != Status.OK)
                     return status;
                 // Now, step until the corrector reaches a critical point.
                 Vector point;
-                Vector next = stepped;
-                if (CheckPosition(next) != Status.OK)
+                Vector next = nextPos;
+                if (CheckPosition(next, out sample) != Status.OK)
                 {
-                    StepBorder(pos, out stepped, out stepLength);
-                    return CheckPosition(stepped);
+                    StepBorder(pos, sample, out nextPos, out stepLength);
+                    return CheckPosition(nextPos, out sample);
                 }
                 int step = -1;
                 do
                 {
                     step++;
                     point = next;
-                    status = Corrector.Step(point, out next, out stepLength);
+                    status = Corrector.Step(point, sample, out next, out stepLength);
                 } while (status == Status.OK && step < Corrector.MaxNumSteps);
 
                 if (status == Status.CP)
@@ -1657,15 +1686,15 @@ namespace FlowSharp
             }
 
             //TODO: Correct.
-            public override bool StepBorder(Vector position, out Vector stepped, out float stepLength)
+            public override bool StepBorder(Vector position, Vector sample, out Vector stepped, out float stepLength)
             {
-                return Predictor.StepBorder(position, out stepped, out stepLength);
+                return Predictor.StepBorder(position, sample, out stepped, out stepLength);
             }
 
             //TODO: Correct.
-            public override bool StepBorderTime(Vector position, float timeBorder, out Vector stepped, out float stepLength)
+            public override bool StepBorderTime(Vector position, Vector sample, float timeBorder, out Vector stepped, out float stepLength)
             {
-                return Predictor.StepBorderTime(position, timeBorder, out stepped, out stepLength);
+                return Predictor.StepBorderTime(position, sample, timeBorder, out stepped, out stepLength);
             }
         }
         #endregion Integrators

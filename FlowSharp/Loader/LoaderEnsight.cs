@@ -132,7 +132,7 @@ namespace FlowSharp
                 using (BinaryReader reader = new BinaryReader(fs))
                 {
                     // Read in all floats.
-                    Debug.Assert(reader.BaseStream.Length > 8*80 + 2, "Less bytes than a header requires.");
+                    Debug.Assert(reader.BaseStream.Length > 8 * 80 + 2, "Less bytes than a header requires.");
 
                     string l0_type = ReadBlock(reader);
                     Debug.Assert(l0_type.Equals("C Binary"), "Not the expected file type format.");
@@ -170,33 +170,21 @@ namespace FlowSharp
                     // Read vertex positions.
                     int numVerts = reader.ReadInt32();
 
-                    //numVerts = 8;
+
                     vertices = new VectorBuffer(numVerts, 3);
-                    //vertices = new Vector[numVerts];
-                    //for (int i = 0; i < numVerts; ++i)
-                    //{
-                    //    vertices[i] = new Vector(3);
-                    //}
+                    byte[] verts = reader.ReadBytes(numVerts * 3 * sizeof(float));
+                    Buffer.BlockCopy(verts, 0, vertices.Data, 0, verts.Length);
+                    //                    for (int dim = 0; dim < 3; ++dim)
+                    //                        for (int v = 0; v < numVerts; ++v)
+                    //                        {
+                    //                            vertices[v][dim] = reader.ReadSingle();
+                    //                            //if (v < 8)
+                    //                            //{
+                    //                            //    minPos[dim] = Math.Min(minPos[dim], vertices[v][dim]);
+                    //                            //    maxPos[dim] = Math.Max(maxPos[dim], vertices[v][dim]);
+                    //                            //}
+                    //                        }
 
-                    //Vector minPos = new Vector(float.MaxValue, 3);
-                    //Vector maxPos = new Vector(float.MinValue, 3);
-
-                    for (int dim = 0; dim < 3; ++dim)
-                        for (int v = 0; v < numVerts; ++v)
-                        {
-                            vertices[v][dim] = reader.ReadSingle();
-                            //if (v < 8)
-                            //{
-                            //    minPos[dim] = Math.Min(minPos[dim], vertices[v][dim]);
-                            //    maxPos[dim] = Math.Max(maxPos[dim], vertices[v][dim]);
-                            //}
-                        }
-
-                    //Vector extent = maxPos - minPos;
-                    //float maxEx = Math.Max(Math.Max(extent[0], extent[1]), extent[2]);
-
-                    //for (int v = 0; v < numVerts; ++v)
-                    //    vertices[v] = (vertices[v] - minPos) / maxEx;
 
 
                     // Read indices.

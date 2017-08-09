@@ -444,6 +444,10 @@ namespace FlowSharp
                     WindowStart.Maximum = (float)length;
 
                     double range = WindowStart.Maximum - WindowStart.Minimum;
+
+                    if (double.IsNaN(range / 100) || double.IsNaN(WindowStart.Minimum + relativeSelection * range))
+                        Console.WriteLine("Found {0} for start {1} and end {2}, relative selection {3}", range / 100, WindowStart.Minimum, WindowStart.Maximum, relativeSelection);
+
                     WindowStart.Value = WindowStart.Minimum + relativeSelection * range;
 
                     WindowStart.SmallChange = range / 100;

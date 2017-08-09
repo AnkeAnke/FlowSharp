@@ -22,6 +22,8 @@ namespace FlowSharp
         public string VtuFolderFilename;
         public string VtuDataFilename;
 
+        public string OctreeFilename;
+
         public int NumSteps = 200;
 
         public float DomainScale = 1.0f; //2.593f / 15;

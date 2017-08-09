@@ -13,6 +13,7 @@ namespace FlowSharp
     {
         public Vector MinValue;
         public Vector MaxValue;
+        public Vector Extent { get { return MaxValue - MinValue; } }
         /// <summary>
         /// THe length of each vector returned.
         /// </summary>

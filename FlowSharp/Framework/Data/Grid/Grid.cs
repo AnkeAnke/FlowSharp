@@ -37,6 +37,9 @@ namespace FlowSharp
             VectorRef weights;
             Index indices = FindAdjacentIndices(position, out weights);
 
+            if (indices == null)
+                return null;
+
             Debug.Assert(indices.Length == weights.Length);
 
             Vector result = new Vector(0, field.NumVectorDimensions);
@@ -46,7 +49,7 @@ namespace FlowSharp
                 VectorRef add = field.Sample(indices[dim]);
                 if(add[0] == field.InvalidValue)
                 {
-                    return new Vector(field.InvalidValue??float.MaxValue, field.NumVectorDimensions);
+                    new Vector(field.InvalidValue??float.MaxValue, field.NumVectorDimensions);
                 }
                 result += add * weights[dim];
             }
@@ -91,6 +94,8 @@ namespace FlowSharp
         /// <param name="weights">The weights used for linear interpolation.</param>
         /// <returns>Scalar indices for acessing the grid.</returns>
         public abstract Index FindAdjacentIndices(VectorRef position, out VectorRef weights);
+
+        public abstract Vector CutToBorder(VectorField field, VectorRef pos, VectorRef dir);
     }
 
     public enum CellType

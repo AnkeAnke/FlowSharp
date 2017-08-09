@@ -31,6 +31,7 @@ namespace FlowSharp
             Aneurysm.Singleton.EnsightFilename = "Rupture_01";
             Aneurysm.Singleton.VtuFolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/vtu/tets_";
             Aneurysm.Singleton.VtuDataFilename = "tets_";
+            Aneurysm.Singleton.OctreeFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/oc.tree";
             redSea = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
             //mapperTetWireframe = new HexTetGridMapper(redSea);

@@ -28,6 +28,9 @@ namespace FlowSharp
             string rawString = null;
             byte[] rawData = null;
 
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+
             using (XmlReader reader = XmlReader.Create(Aneurysm.Singleton.VtuCompleteFilename(0, Part)))
             {
                 while (reader.Read())
@@ -205,6 +208,10 @@ namespace FlowSharp
             }
 
             Grid = new UnstructuredGeometry(vertices, indices);
+
+            watch.Stop();
+            Console.WriteLine("Geometry loading took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+
             return Grid;
         }
 

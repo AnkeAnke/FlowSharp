@@ -153,5 +153,18 @@ namespace FlowSharp
                     return false;
             return true;
         }
+
+        public override Vector CutToBorder(VectorField field, VectorRef position, VectorRef dir)
+        {
+            Vector nextPos = new Vector(position);
+
+            // How big is the smallest possible scale to hit a maximum border?
+            float scale = (((Vector)field.Size - new Vector(1, field.Size.Length) - position) / dir).MinPos();
+            scale = Math.Min(scale, (position / dir).MinPos());
+
+            nextPos += dir * scale;
+
+            return nextPos;
+        }
     }
 }

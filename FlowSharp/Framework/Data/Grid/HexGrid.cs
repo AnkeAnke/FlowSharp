@@ -159,6 +159,11 @@ namespace FlowSharp
 
             return new PointSet<Point>(verts);
         }
+
+        public override Vector CutToBorder(VectorField field, VectorRef pos, VectorRef dir)
+        {
+            throw new NotImplementedException();
+        }
         #endregion DebugRendering
     }
 }
