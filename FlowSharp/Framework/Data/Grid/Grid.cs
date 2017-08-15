@@ -43,7 +43,7 @@ namespace FlowSharp
             Debug.Assert(indices.Length == weights.Length);
 
             Vector result = new Vector(0, field.NumVectorDimensions);
-            // Add the other weightes grid points.
+            // Add the other weighted grid points.
             for (int dim = 0; dim < indices.Length; ++dim)
             {
                 VectorRef add = field.Sample(indices[dim]);

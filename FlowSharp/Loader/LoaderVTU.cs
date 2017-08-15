@@ -159,8 +159,13 @@ namespace FlowSharp
                                 byte[] rawDataOffsets = Convert.FromBase64String(rawString);
                                 Int64[] offsets = new Int64[numCells];
 
+#if DEBUG
                                 Int64 bytesForCells = BitConverter.ToInt64(rawDataOffsets, 0);
                                 Debug.Assert(bytesForCells == numCells * 8, "The first number is not the number of bytes used for cell indices.");
+#endif
+
+
+
 
                                 // Old variant: We allowed for different primitives in one field.
 
@@ -188,6 +193,11 @@ namespace FlowSharp
                                 // Read the length of first element - assume all will be the same length.
                                 int firstElementSize = (int)BitConverter.ToInt64(rawDataOffsets, (1) * sizeof(Int64));
                                 Debug.Assert(firstElementSize * numCells == rawData.Length / sizeof(Int64) - 1, "Assuming all cells have the same number of points.");
+
+                                //// TODO REMOVE
+                                //numCells = Math.Max(numCells, 1000000);
+
+
                                 int[] croppedData = new int[numCells * firstElementSize];
                                 for (int n = 0; n < numCells * firstElementSize; ++n)
                                     croppedData[n] = BitConverter.ToInt32(rawData, (n + 1) * 8);

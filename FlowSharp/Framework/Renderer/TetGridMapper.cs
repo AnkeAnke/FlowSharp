@@ -16,7 +16,7 @@ namespace FlowSharp
         //PointSet<Point> _vertices;
         Mesh _viewGeom;
 
-
+        ColormapRenderable _test;
         //TetTreeGrid _grid;'
         GeneralUnstructurdGrid _geometry;
         //Index[] _indices;
@@ -33,6 +33,8 @@ namespace FlowSharp
         //KDTree _tree;
         Mesh _octreeLeafs;
 
+        IndexData _tmpTest;
+
         public TetGridMapper(Plane plane) : base()
         {
             Mapping = ShowSide;
@@ -41,19 +43,21 @@ namespace FlowSharp
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
 
-            _grid = new TetTreeGrid(hexGrid, 4);
+            _grid = new TetTreeGrid(hexGrid, 100);
             //_grid.Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename); // Fun fact: never loaded yet.
 
             // Fit plane to data.
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, hexGrid.Vertices);
             BasePlane.PointSize = 1f;
 
+
+            //_tmpTest = _grid.BorderGeometry();
             // Load some attribute.
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
-            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
+            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.pressure, 0), _grid);
 
             _points = _grid.SampleTest(_vectorField, 100);
-            TetLatticeGrid.ShowSampleStatistics();
+            TetTreeGrid.ShowSampleStatistics();
             //VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
             //integrator.StepSize = _grid.CellSizeReference / 2;
             //_streamlines = integrator.Integrate(_points)[0];
@@ -99,6 +103,7 @@ namespace FlowSharp
             if (updateCubes)
             {
                 _viewGeom = new Mesh(BasePlane, _geometry, _attribute);
+                //_test = new Mesh(BasePlane, _grid.Vertices, _tmpTest);
             }
 
             //if (_lastSetting == null ||
@@ -118,16 +123,27 @@ namespace FlowSharp
                 _viewGeom.LowerBound = WindowStart;
                 _viewGeom.UpperBound = WindowStart + WindowWidth;
                 _viewGeom.UsedMap = Colormap;
+
+                if (_test != null)
+                {
+                    _test.LowerBound = WindowStart;
+                    _test.UpperBound = WindowStart + WindowWidth;
+                    _test.UsedMap = Colormap;
+                }
             }
 
             wire.Add(_viewGeom);
+
+            if (_test != null)
+                wire.Add(_test);
 //            wire.Add(_streamBall);
 
-            if (_vertices == null || updateCubes)
+            if (_points != null && (_vertices == null || updateCubes))
             {
                 _vertices = new PointCloud(BasePlane, _points);
             }
-            wire.Add(_vertices);
+            if (_vertices != null)
+                wire.Add(_vertices);
 
 
             //if (_octreeLeafs == null)

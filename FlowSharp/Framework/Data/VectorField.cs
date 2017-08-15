@@ -823,7 +823,7 @@ namespace FlowSharp
         /// <summary>
         /// Number of dimensions per vector.
         /// </summary>
-        public virtual int NumVectorDimensions { get { return Data.NumVectorDimensions; } }
+        public virtual int NumVectorDimensions { get { return Data.VectorLength; } }
         public int NumDimensions { get { return Size.Length; } }
 
         public virtual float? InvalidValue { get; set; }
@@ -1182,14 +1182,14 @@ namespace FlowSharp
         {
             for (int n = 0; n < Data.Length; ++n)
                 if (IsValid(n))
-                    for (int dim = 0; dim < Data.NumVectorDimensions; ++dim)
+                    for (int dim = 0; dim < Data.VectorLength; ++dim)
                         Data[n][dim] *= dimwiseScale;
         }
 
         public virtual void ScaleToGrid(Vector scale)
         {
-            Debug.Assert(Data.NumVectorDimensions == scale.Length);
-            for (int dim = 0; dim < Data.NumVectorDimensions; ++dim)
+            Debug.Assert(Data.VectorLength == scale.Length);
+            for (int dim = 0; dim < Data.VectorLength; ++dim)
             {
                 for (int n = 0; n < Data.Length; ++n)
                     Data[n][dim] *= scale[dim];

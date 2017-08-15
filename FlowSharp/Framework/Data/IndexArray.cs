@@ -131,7 +131,7 @@ namespace FlowSharp
             for (int i = 0; i < data.Length; ++i)
             {
                 Debug.Assert(data[i].Length == IndexLength);
-                Buffer.BlockCopy(data[i].Data, 0, Data, i * IndexLength, IndexLength * sizeof(int));
+                Buffer.BlockCopy(data[i].Data, 0, Data, i * IndexLength * sizeof(int), IndexLength * sizeof(int));
             }
         }
 

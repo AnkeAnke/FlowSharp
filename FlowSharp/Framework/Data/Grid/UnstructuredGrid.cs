@@ -58,7 +58,7 @@ namespace FlowSharp
             // Make axis aligned boxes.
             if (Primitives.IndexLength == 2)
             {
-                Debug.Assert(Vertices.NumVectorDimensions == 3);
+                Debug.Assert(Vertices.VectorLength == 3);
                 IndexArray indices = new IndexArray(Primitives.Length * 12, 3);
                 VectorBuffer verts = new VectorBuffer(Primitives.Length * 8, 3);
 

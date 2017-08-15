@@ -211,6 +211,31 @@ namespace FlowSharp
             return !(a > b);
         }
 
+        public static bool operator ==(Index a, Index b)
+        {
+            if (a?.Data == null || b?.Data == null)
+                return a?.Data == b?.Data;
+
+            Debug.Assert(a.Length == b.Length);
+            for (int dim = 0; dim < a.Length; ++dim)
+                if (a[dim] != b[dim])
+                    return false;
+            return true;
+        }
+
+        public static bool operator !=(Index a, Index b)
+        {
+            return !(a == b);
+        }
+
+        public static int Compare(Index a, Index b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            for (int dim = 0; dim < a.Length; ++dim)
+                if (a[dim] != b[dim])
+                    return a[dim] - b[dim];
+            return 0;
+        }
         #endregion
 
         /// <summary>
@@ -320,6 +345,15 @@ namespace FlowSharp
         public Int2 ToInt2()
         {
             return new Int2(this[0], Length > 1 ? this[1] : 0);
+        }
+
+        public Index ToIntX(int x)
+        {
+            Index idx = new Index(0, x);
+            for (int n = 0; n < Math.Min(x, Length); ++n)
+                idx[n] = this[n];
+
+            return idx;
         }
     }
 

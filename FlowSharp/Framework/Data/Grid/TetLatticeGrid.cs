@@ -53,7 +53,7 @@ namespace FlowSharp
             //    _cellsPerVertex[v] = new List<int>(16);
 
 
-            _cellCenters = new VectorBuffer(Cells.Length, Vertices.NumVectorDimensions);
+            _cellCenters = new VectorBuffer(Cells.Length, Vertices.VectorLength);
 
             // Each cell registers itself with all of its vertices.
             for (int c = 0; c < Cells.Length; ++c)
@@ -199,7 +199,7 @@ namespace FlowSharp
 
         public Vector ToBaryCoord(int cell, VectorRef worldPos)
         {
-            Debug.Assert(worldPos.Length == Vertices.NumVectorDimensions);
+            Debug.Assert(worldPos.Length == Vertices.VectorLength);
             SquareMatrix tet = new SquareMatrix(3);
             VectorRef origin = Vertices[Cells[cell][0]];
             for (int i = 0; i < 3; ++i)

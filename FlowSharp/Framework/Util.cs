@@ -48,7 +48,7 @@ namespace FlowSharp
 
         public static float[] GetChannel(VectorData data, int index)
         {
-            Debug.Assert(index >= 0 && index < data.NumVectorDimensions);
+            Debug.Assert(index >= 0 && index < data.VectorLength);
             float[] raw = new float[data.Length];
             for (int e = 0; e < data.Length; ++e)
                 raw[e] = data[e][index];

@@ -43,12 +43,12 @@ namespace FlowSharp
         /// <summary>
         /// Number of dimensions per vector. Including one time dimension.
         /// </summary>
-        public override int NumVectorDimensions { get { return Data.NumVectorDimensions + 1; } }
+        public override int NumVectorDimensions { get { return Data.VectorLength + 1; } }
 
         public override void ScaleToGrid(Vector scale)
         {
-            Debug.Assert(Data.NumVectorDimensions == scale.Length);
-            for (int dim = 0; dim < Data.NumVectorDimensions; ++dim)
+            Debug.Assert(Data.VectorLength == scale.Length);
+            for (int dim = 0; dim < Data.VectorLength; ++dim)
             {
                 ScaleToGrid(scale[dim]);
             }

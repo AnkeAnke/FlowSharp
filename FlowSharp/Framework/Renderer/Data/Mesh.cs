@@ -112,7 +112,7 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public Mesh(Plane plane, Vector[] verts, Index[] sides, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
+        public Mesh(Plane plane, VectorData verts, IndexData sides, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula)
         {
             _color = Vector3.UnitZ;
             this._vertexSizeBytes = Marshal.SizeOf(typeof(Vector4));
@@ -140,7 +140,7 @@ namespace FlowSharp
         /// <param name="xAxis"></param>
         /// <param name="yAxis"></param>
         /// <param name="scale"></param>
-        protected void GenerateGeometry(Plane plane, Vector[] verts, Index[] sides)
+        protected void GenerateGeometry(Plane plane, VectorData verts, IndexData sides)
         {
             // COnvert from Vector to SlimDX.Vector4.
             Vector4[] vertices = new Vector4[verts.Length];
@@ -247,7 +247,7 @@ namespace FlowSharp
             var vertices = geom.Item1;
             var indices = geom.Item2;
 
-            int vertexDim = grid.Vertices.NumVectorDimensions;
+            int vertexDim = grid.Vertices.VectorLength;
 
             _numVertices = vertices.Length;
 

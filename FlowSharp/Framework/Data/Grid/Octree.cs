@@ -11,37 +11,51 @@ namespace FlowSharp
 {
     class Octree
     {
-        public Vector Minimum { get { return Grid.Vertices.MinValue; } }
-        public Vector Maximum { get { return Grid.Vertices.MaxValue; } }
+        public Vector Minimum { get { return Vertices.MinValue; } }
+        public Vector Maximum { get { return Vertices.MaxValue; } }
         public int VectorLength { get { return Minimum.Length; } }
         private Node _root { get { return _nodes[0]; } }
         private List<Node> _nodes;
 
-        public GeneralUnstructurdGrid Grid;
+        public VectorData Vertices;
         private int[] _vertexPermutation;
+        private Vector _maxLeafSize;
+        private int _maxDepth;
 
 
-        public Octree(GeneralUnstructurdGrid grid, int minElements = 100, int maxDepth = -1)
+        public Octree(VectorData data, int minElements = 100, int maxDepth = -1)
         {
-            if (minElements < 4)
-                throw new NotImplementedException("Way too fine.");
+            //if (minElements < 4)
+            //    throw new NotImplementedException("Way too fine.");
 
-            Grid = grid;
-            _vertexPermutation = Enumerable.Range(0, Grid.Vertices.Length).ToArray();
+            Vertices = data;
+            _vertexPermutation = Enumerable.Range(0, Vertices.Length).ToArray();
 
-            grid.Vertices.ExtractMinMax();
+            Vertices.ExtractMinMax();
             _nodes = new List<Node>(20000);
             _nodes.Add(new Node(0, 0, _vertexPermutation.Length, Minimum, Maximum));
+
 
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
             _root.SplitRecursively(this, minElements, maxDepth);
 
+            // Use max depth for "lattice distance" computation.
+            if (maxDepth > 0)
+            {
+                Debug.Assert(maxDepth >= _maxDepth);
+                _maxDepth = maxDepth;
+            }
+
+            // This is important, as neighbor queries rely on it.
+            _maxLeafSize = Vertices.Extent / (1 << _maxDepth);
+
             watch.Stop();
             Console.WriteLine("Octree buildup took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
         }
 
+        #region FileReadWrite
         public Octree(string filename)
         {
             using (FileStream fs = File.Open(@filename, FileMode.Open))
@@ -121,6 +135,7 @@ namespace FlowSharp
                 }
             }
         }
+        #endregion FileReadWrite
 
         /// <summary>
         /// Stab the octree. Returns the lowest node containing the position. Maximal level can be set.
@@ -134,7 +149,7 @@ namespace FlowSharp
             Debug.Assert(pos.Length == Minimum.Length);
             //cellExtent = null;
 
-            if (!(pos <= Maximum) || !(pos > Minimum))
+            if (!(pos <= Maximum) || !(pos >= Minimum))
             {
                 leafNode = null;
                 return new CellData();
@@ -145,24 +160,37 @@ namespace FlowSharp
             return leafNode.GetData(this);
         }
 
-        public List<CellData> FindNeighborNodes(Node leafNode)
+        public List<CellData> FindNeighborNodes(VectorRef pos, Node leaf)
         {
             List<CellData> neighbors = new List<CellData>(6);
-            Vector extent = leafNode.MaxPos - leafNode.MinPos;
+
+            // Get "sub cell" - the leaf node we would be in.
+            //Vector midPos = Minimum + ((Index)((pos - Minimum) / _maxLeafSize)) * _maxLeafSize;
+            //midPos += _maxLeafSize * 0.5f;
+            //Sign[] comp = VectorRef.Compare(pos, midPos);
+
+            Vector refPos = (pos - Minimum) / _maxLeafSize;
+            refPos = refPos - (Vector)((Index)refPos);
+            Sign[] comp = VectorRef.Compare(refPos, new Vector(0.5f, 3));
 
             Node stabbed;
 
-            for (int dim = 0; dim < 3; ++dim)
+            // Go through all dimensions. We only need to got into one direction in each dimension, the corners of a cube.
+            foreach (GridIndex offsetGI in new GridIndex(new Index(2, 3)))
             {
-                for (int sign = -1; sign <= 1; sign += 2)
-                {
-                    Vector stab = new Vector(leafNode.MidPos);
-                    stab[dim] += extent[dim] * sign;
+                // Continue if we are at the center.
+                Index offset = offsetGI;
+                if (offset.Max() == 0)
+                    continue;
 
-                    CellData data = StabCell(stab, out stabbed/*, leafNode.Level*/);
-                    if (data != null)
-                        neighbors.Add(data);
-                }
+                // Assemble stabbing position. New stab should be performanter/more failsafe than walking the tree up and down.
+                Vector stab = new Vector(pos);
+                for (int n = 0; n < 3; ++n)
+                    stab += (int)comp[n] * offset[n] * _maxLeafSize;
+
+                CellData data = StabCell(stab, out stabbed/*, leafNode.Level*/);
+                if (data != (CellData)null && data != leaf)
+                    neighbors.Add(data);
             }
 
             return neighbors;
@@ -236,6 +264,8 @@ namespace FlowSharp
 
             public void SplitRecursively(Octree tree, int minElements = 100, int maxDepth = -1)
             {
+                tree._maxDepth = Math.Max(Level, tree._maxDepth);
+
                 int numDims = tree.VectorLength;
                 MidPos = MinPos + (MaxPos - MinPos) * 0.5f;
 
@@ -244,7 +274,7 @@ namespace FlowSharp
 
                 if (Level == maxDepth || MaxIdx - MinIdx <= minElements)
                 {
-                    if (++NUM_LEAFS % 10000 == 0)
+                    if (++NUM_LEAFS % 50000 == 0)
                         Console.WriteLine("Leaves: " + NUM_LEAFS);
 
                     return;
@@ -319,13 +349,13 @@ namespace FlowSharp
 
             private static int SortSubPermuationByDimension(Octree tree, int minIdx, int maxIdx, int dim)
             {
-                Array.Sort<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, Comparer<int>.Create((x, y) => tree.Grid.Vertices[x][dim].CompareTo(tree.Grid.Vertices[y][dim])));
+                Array.Sort<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, Comparer<int>.Create((x, y) => tree.Vertices[x][dim].CompareTo(tree.Vertices[y][dim])));
                 return (int)(minIdx + (maxIdx - minIdx) * 0.5f);
             }
 
             private static int GetCut(Octree tree, int minIdx, int maxIdx, Vector middle, int dim)
             {
-                int cutIdx = Array.BinarySearch<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, -42, Comparer<int>.Create((x, y) => tree.Grid.Vertices[x][dim].CompareTo(middle[dim])));
+                int cutIdx = Array.BinarySearch<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, -42, Comparer<int>.Create((x, y) => tree.Vertices[x][dim].CompareTo(middle[dim])));
                 int ret = cutIdx >= 0 ? cutIdx : ~cutIdx;
                 return ret;
             }
@@ -446,6 +476,26 @@ namespace FlowSharp
             }
 
             public int Length { get { return _maxIdx - _minIdx; } }
+
+            public static bool operator == (CellData a, CellData b)
+            {
+                return a?._minIdx == b?._minIdx && a?._maxIdx == b?._maxIdx;
+            }
+
+            public static bool operator !=(CellData a, CellData b)
+            {
+                return !(a == b);
+            }
+
+            public static bool operator ==(CellData a, Node b)
+            {
+                return a?._minIdx == b?.MinIdx && a?._maxIdx == b?.MaxIdx;
+            }
+
+            public static bool operator !=(CellData a, Node b)
+            {
+                return !(a == b);
+            }
 
             public IEnumerator<int> GetEnumerator()
             {

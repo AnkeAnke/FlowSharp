@@ -17,7 +17,7 @@ namespace FlowSharp
         /// <summary>
         /// THe length of each vector returned.
         /// </summary>
-        public abstract int NumVectorDimensions { get; protected set; }
+        public abstract int VectorLength { get; protected set; }
         /// <summary>
         /// Number of vectors stored.
         /// </summary>
@@ -124,10 +124,10 @@ namespace FlowSharp
         public VectorDataArray(DataType[] data)
         {
 #if DEBUG
-            int vecLength = data[0].NumVectorDimensions;
+            int vecLength = data[0].VectorLength;
             int length = data[0].Length;
             foreach (DataType buff in data)
-                Debug.Assert(buff.Length == length && buff.NumVectorDimensions == vecLength, "Different dimensions in given data blocks.");
+                Debug.Assert(buff.Length == length && buff.VectorLength == vecLength, "Different dimensions in given data blocks.");
 #endif
             MinValue = data[0].MinValue;
             MaxValue = data[0].MaxValue;
@@ -164,7 +164,7 @@ namespace FlowSharp
 
         public override int Length { get { return _data.Length * _data[0].Length; } }
 
-        public override int NumVectorDimensions { get { return _data[0].NumVectorDimensions; } protected set { } }
+        public override int VectorLength { get { return _data[0].VectorLength; } protected set { } }
 
         public override void ChangeEndian()
         {
@@ -230,7 +230,7 @@ namespace FlowSharp
 
         public override int Length { get { return _data.Length; } }
 
-        public override int NumVectorDimensions { get { return _data.NumVectorDimensions + 1; } protected set { } }
+        public override int VectorLength { get { return _data.VectorLength + 1; } protected set { } }
 
         public override void ChangeEndian()
         {
@@ -257,7 +257,7 @@ namespace FlowSharp
     class VectorList : VectorData
     {
         private Vector[] _data;
-        public override int NumVectorDimensions { get { return _data[0].Length; } protected set { } }
+        public override int VectorLength { get { return _data[0].Length; } protected set { } }
         public override int Length { get { return _data.Length; } }
         public override VectorRef this[int index]
         {
@@ -268,7 +268,7 @@ namespace FlowSharp
             }
             set
             {
-                Debug.Assert(value.Length == NumVectorDimensions, "Wrong dimensions.");
+                Debug.Assert(value.Length == VectorLength, "Wrong dimensions.");
                 Debug.Assert(index >= 0 && index < Length, "Index out of range. " + index + " not in [0," + Length + ']');
                 _data[index] = new Vector(value);
             }
@@ -296,7 +296,7 @@ namespace FlowSharp
 
         public override float[] GetChannel(int index)
         {
-            Debug.Assert(index >= 0 && index < NumVectorDimensions);
+            Debug.Assert(index >= 0 && index < VectorLength);
             float[] data = new float[Length];
             for (int e = 0; e < Length; ++e)
                 data[e] = _data[e][index];
@@ -307,15 +307,15 @@ namespace FlowSharp
     class VectorBuffer : VectorData
     {
         public float[] Data { get; private set; }
-        public override int NumVectorDimensions { get; protected set; }
-        public override int Length { get { return Data.Length / NumVectorDimensions; } }
+        public override int VectorLength { get; protected set; }
+        public override int Length { get { return Data.Length / VectorLength; } }
 
         public override VectorRef this[int index]
         {
             get
             {
                 Debug.Assert(index >= 0 && index < Length, "Index out of range. " + index + " not in [0," + Length + ']');
-                return new VectorBufferElement(this, index*NumVectorDimensions);
+                return new VectorBufferElement(this, index*VectorLength);
                 //Vector ret = new Vector(VectorLength);
                 //for (int l = 0; l < VectorLength; ++l)
                 //    ret[l] = Data[index * VectorLength + l];
@@ -323,10 +323,10 @@ namespace FlowSharp
             }
             set
             {
-                Debug.Assert(value.Length == NumVectorDimensions, "Wrong dimensions.");
+                Debug.Assert(value.Length == VectorLength, "Wrong dimensions.");
                 Debug.Assert(index >= 0 && index < Length, "Index out of range. " + index + " not in [0," + Length + ']');
-                for (int l = 0; l < NumVectorDimensions; ++l)
-                    Data[index * NumVectorDimensions + l] = value[l];
+                for (int l = 0; l < VectorLength; ++l)
+                    Data[index * VectorLength + l] = value[l];
             }
         }
 
@@ -334,14 +334,14 @@ namespace FlowSharp
         public VectorBuffer(int numElements, int vectorLength) { SetSize(numElements, vectorLength); }
         public override void SetSize(int numElements, int vectorLength)
         {
-            NumVectorDimensions = vectorLength;
-            Data = new float[NumVectorDimensions * numElements]; 
+            VectorLength = vectorLength;
+            Data = new float[VectorLength * numElements]; 
         }
         public VectorBuffer(float[] data, int vectorLength)
         {
             Debug.Assert(data.Length % vectorLength == 0);
             Data = data;
-            NumVectorDimensions = vectorLength;
+            VectorLength = vectorLength;
         }
 
         public VectorBuffer(byte[] data, int vectorLength)
@@ -349,43 +349,43 @@ namespace FlowSharp
             Debug.Assert(data.Length % sizeof(float) == 0 && (data.Length/ sizeof(float)) % vectorLength == 0);
             Data = new float[data.Length / sizeof(float)];
             Buffer.BlockCopy(data, 0, Data, 0, data.Length);
-            NumVectorDimensions = vectorLength;
+            VectorLength = vectorLength;
         }
 
         public VectorBuffer(Vector[] data, int vectorLength = -1)
         {
-            NumVectorDimensions = vectorLength > 0 ? vectorLength : data[0].Length;
-            Data = new float[data.Length * NumVectorDimensions];
+            VectorLength = vectorLength > 0 ? vectorLength : data[0].Length;
+            Data = new float[data.Length * VectorLength];
             for (int i = 0; i < data.Length; ++i)
             {
-                Debug.Assert(data[i].Length == NumVectorDimensions);
-                Buffer.BlockCopy(data[i].Data, 0, Data, i * NumVectorDimensions, NumVectorDimensions * sizeof(float));
+                Debug.Assert(data[i].Length == VectorLength);
+                Buffer.BlockCopy(data[i].Data, 0, Data, i * VectorLength, VectorLength * sizeof(float));
             }
         }
 
         public VectorBuffer(VectorData data)
         {
-            NumVectorDimensions = data.NumVectorDimensions;
-            Data = new float[data.Length * NumVectorDimensions];
+            VectorLength = data.VectorLength;
+            Data = new float[data.Length * VectorLength];
             for (int i = 0; i < data.Length; ++i)
             {
-                for (int v = 0; v < NumVectorDimensions; ++v)
-                    Data[i * NumVectorDimensions + v] = data[i][v];
+                for (int v = 0; v < VectorLength; ++v)
+                    Data[i * VectorLength + v] = data[i][v];
             }
         }
 
         public VectorBuffer(VectorData[] data)
         {
-            NumVectorDimensions = data[0].NumVectorDimensions;
+            VectorLength = data[0].VectorLength;
             int innerLength = data[0].Length;
-            Data = new float[data.Length * innerLength * NumVectorDimensions];
+            Data = new float[data.Length * innerLength * VectorLength];
             for (int d = 0; d < data.Length; ++d)
             {
                 Debug.Assert(innerLength == data[d].Length);
                 for (int i = 0; i < innerLength; ++i)
-                    for (int v = 0; v < NumVectorDimensions; ++v)
-                        Data[d * data.Length * NumVectorDimensions +
-                             i * NumVectorDimensions + 
+                    for (int v = 0; v < VectorLength; ++v)
+                        Data[d * data.Length * VectorLength +
+                             i * VectorLength + 
                              v] = data[d][i][v];
 
             }
@@ -396,10 +396,10 @@ namespace FlowSharp
             Debug.Assert(Length == size.Product(), "Size and number of elements in buffer do not match.");
             Debug.Assert(posInLastDimension >= 0 && posInLastDimension < size.T, "Index out of given range.");
             int newNumElements = size.Product() / size.T;
-            float[] newData = new float[newNumElements * NumVectorDimensions];
+            float[] newData = new float[newNumElements * VectorLength];
 
             Array.Copy(Data, newNumElements * posInLastDimension, newData, 0, newNumElements);
-            return new VectorBuffer(newData, NumVectorDimensions);
+            return new VectorBuffer(newData, VectorLength);
         }
 
         public override void ChangeEndian()
@@ -409,10 +409,10 @@ namespace FlowSharp
 
         public override float[] GetChannel(int index)
         {
-            Debug.Assert(index >= 0 && index < NumVectorDimensions);
+            Debug.Assert(index >= 0 && index < VectorLength);
             float[] data = new float[Length];
             for (int e = 0; e < Length; ++e)
-                data[e] = Data[e * NumVectorDimensions + index];
+                data[e] = Data[e * VectorLength + index];
             return data;
         }
 
@@ -421,7 +421,7 @@ namespace FlowSharp
             private VectorBuffer _parent;
             private int _offset;
 
-            public override int Length {  get { return _parent.NumVectorDimensions; } }
+            public override int Length {  get { return _parent.VectorLength; } }
 
             public override float this[int index]
             {
@@ -459,7 +459,7 @@ namespace FlowSharp
         /// <summary>
         /// Number of slices.
         /// </summary>
-        public override int NumVectorDimensions { get { return _data.Length; } protected set { } }
+        public override int VectorLength { get { return _data.Length; } protected set { } }
         /// <summary>
         /// Size of first slice.
         /// </summary>
@@ -477,9 +477,9 @@ namespace FlowSharp
             }
             set
             {
-                Debug.Assert(value.Length == NumVectorDimensions, "Wrong dimensions.");
+                Debug.Assert(value.Length == VectorLength, "Wrong dimensions.");
                 Debug.Assert(index >= 0 && index < Length, "Index out of range. " + index + " not in [0," + Length + ']');
-                for (int dim = 0; dim < NumVectorDimensions; ++dim)
+                for (int dim = 0; dim < VectorLength; ++dim)
                     _data[dim][index] = value[dim];
             }
         }
@@ -502,7 +502,7 @@ namespace FlowSharp
             Debug.Assert(Length == size.Product(), "Size and number of elements in buffer do not match.");
             Debug.Assert(posInLastDimension >= 0 && posInLastDimension < size.T, "Index out of given range.");
 
-            float[][] slices = new float[NumVectorDimensions][];
+            float[][] slices = new float[VectorLength][];
             int newNumElements = size.Product() / size.T;
             for (int i = 0; i < slices.Length; ++i)
             {
@@ -529,7 +529,7 @@ namespace FlowSharp
             private VectorChannels _parent;
             private int _index;
 
-            public override int Length { get { return _parent.NumVectorDimensions; } }
+            public override int Length { get { return _parent.VectorLength; } }
 
             public override float this[int index]
             {
