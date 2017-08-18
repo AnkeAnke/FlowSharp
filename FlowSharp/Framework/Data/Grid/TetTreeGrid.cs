@@ -139,7 +139,7 @@ namespace FlowSharp
             Vertices = vertices;
             Vertices.ExtractMinMax();
 
-            Debug.Assert(vertices.Length > 0 && indices.Length > 4, "No data given.");
+            Debug.Assert(vertices.Length > 0 && indices.Length > 0, "No data given.");
             Debug.Assert(indices.IndexLength == 4, "Not tets.");
             int dim = vertices[0].Length;
 
@@ -150,9 +150,8 @@ namespace FlowSharp
 
             _cellCenters = new VectorBuffer(Cells.Length, Vertices.VectorLength);
             for (int c = 0; c < Cells.Length; ++c)
-            {
                 _cellCenters[c] = (Vertices[Cells[c][0]] + Vertices[Cells[c][1]] + Vertices[Cells[c][2]] + Vertices[Cells[c][3]]) * 0.25f;
-            }
+
             _cellCenters.MinValue = new Vector(Vertices.MinValue);
             _cellCenters.MaxValue = new Vector(Vertices.MaxValue);
 
@@ -169,6 +168,7 @@ namespace FlowSharp
 
             Index howOftenDoesCellSizeFitThere = (Index)(_cellCenters.Extent / CellSizeReference * 0.5f);
             double maxLevels = Math.Log(howOftenDoesCellSizeFitThere.Max()) / Math.Log(2);
+            maxLevels = Math.Max(maxLevels, 1);
             Console.WriteLine("{0} (2^{1}) should be between {2} and {3}", howOftenDoesCellSizeFitThere.Max(), maxLevels, 1 << (int)maxLevels, 2 << (int)maxLevels);
             // Compute maximal level.
             // Setup Octree for fast access.
@@ -245,13 +245,16 @@ namespace FlowSharp
         static uint NUM_SAMPLES = 0;
         static uint NUM_UNSUCCESSFULL_SAMPLES = 0;
         static uint NUM_SAMPLE_OUTSIDE_LEAF = 0;
+        static uint NUM_SAMPLES_NO_NEW_NEIGHBORS = 0;
+        static uint NUM_SLIGHTLY_NEGATIVE = 0;
         static uint NUM_OUTSIDE = 0;
-        static bool OUTPUT_DEBUG = false;
 
         public static void ShowSampleStatistics()
         {
-            Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n{2}% \tnot found at all\n{3} outside of bounding box.", NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLES * 100, NUM_OUTSIDE);
+            Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n\t{2}% \tof those did not actually sample neighbors\n\t{3}% of them are slightly negative\n\t{4}% \t of them not found at all\n{5} outside of bounding box.", NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_SAMPLES_NO_NEW_NEIGHBORS) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_SLIGHTLY_NEGATIVE) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLE_OUTSIDE_LEAF * 100, NUM_OUTSIDE);
         }
+
+        public static float MAX_NEGATIVE_BARY = 0.002f;
 
         private int FindCell(VectorRef pos, out VectorRef bary)
         {
@@ -272,7 +275,8 @@ namespace FlowSharp
                 return -1;
             }
 
-            int tet = FindInNode(vertices, pos, out bary);
+            int bestNegativeTet = -1;
+            int tet = FindInNode(vertices, pos, MAX_NEGATIVE_BARY, out bary, out bestNegativeTet);
 
             if (tet >= 0)
                 return tet;
@@ -281,94 +285,115 @@ namespace FlowSharp
 
             //// Well, test the neighbor cells on the same tree level.
             var moreVertices = Tree.FindNeighborNodes(pos, leaf);
-            tet = FindInNode(moreVertices, pos, out bary);
+            int bestNegativeNeighborTet = -1;
+            VectorRef neighborBary = new Vector(-1,4);
+
+            if (moreVertices.Count > 0)
+                tet = FindInNode(moreVertices, pos, MAX_NEGATIVE_BARY, out neighborBary, out bestNegativeNeighborTet);
+            else
+                NUM_SAMPLES_NO_NEW_NEIGHBORS++;
             if (tet >= 0)
                 return tet;
+
+            //if (bestNegativeTet >= 0 || bestNegativeNeighborTet >= 0)
+            //{
+            //    NUM_SLIGHTLY_NEGATIVE++;
+            //    if (neighborBary.AbsSumNegatives() < bary.AbsSumNegatives())
+            //    {
+            //        bary = neighborBary;
+            //        Debug.Assert(bary.AbsSumNegatives() < MAX_NEGATIVE_BARY);
+            //        return bestNegativeTet;
+            //    }
+
+            //    Debug.Assert(bary.AbsSumNegatives() < MAX_NEGATIVE_BARY);
+            //    return bestNegativeNeighborTet;
+            //}
 
             NUM_UNSUCCESSFULL_SAMPLES++;
             return -1;
         }
 
-        private int FindInNode(CellData tets, VectorRef pos, out VectorRef bary)
+        private int FindInNode(CellData tets, VectorRef pos, float maxNegativeBary, out VectorRef bary, out int negativeTet)
         {
             // Squared distance maximal 3 times as high as a random tet edge length.
 //            float distEps = CellSizeReference * CellSizeReference * 9;
 
             bary = null;
 
-            //Console.WriteLine("First attempt:\n{0} vertices\n{1} tets\n", tets.Length, tets.Count);
-
-
-            //int[] sortedTets = tets.ToArray();
-            //float[] dists = new float[sortedTets.Length];
-            //for (int t = 0; t < sortedTets.Length; ++t)
-            //    dists[t] = (Vertices[Cells[t][0]] + Vertices[Cells[t][1]] + Vertices[Cells[t][2]] + Vertices[Cells[t][3]] - pos * 4).LengthSquared();
-            //Array.Sort(dists, sortedTets); //(x,y) => (Vertices[Cells[x][0]]- pos).LengthSquared().CompareTo( (Vertices[Cells[y][0]]-pos).LengthSquared() )); // Rough estimate.
+            Vector bestNegBary = null;
+            negativeTet = -1;
+            float bestBaryDist = 1;
 
             // Test whether inside.
-            int numOutsideRadius = 0;
             foreach (int tet in tets)
             {
                 //if ((_cellCenters[tet] - pos).LengthSquared() > distEps)
                 //    continue;
 
                 bary = ToBaryCoord(tet, pos);
-                if (bary.IsPositive())
+
+                if (bary != null && bary.IsPositive())
                 {
-                    //Console.WriteLine("Found after {0} tries.\n=============", numTries);
                     return tet;
                 }
+                //float baryDiff = bary.AbsSumNegatives();
+
+                //if (baryDiff < bestBaryDist)
+                //{
+                //    bestBaryDist = baryDiff;
+                //    bestNegBary = new Vector(bary);
+                //    negativeTet = tet;
+                //}
+
             }
-            //Console.WriteLine("No result after after {0} tries.\n=============", numTries);
+
+            //if (bestBaryDist < maxNegativeBary)
+            //{
+            //    bary = bestNegBary;
+            //}
             return -1;
         }
-        private int FindInNode(List<CellData> data, VectorRef pos, out VectorRef bary)
+        private int FindInNode(List<CellData> data, VectorRef pos, float maxNegativeBary, out VectorRef bary, out int negativeTet)
         {
             // Squared distance maximal 3 times as high as a random tet edge length.
             float distEps = CellSizeReference * CellSizeReference * 9;
-            bary = null;
-            //HashSet<int> tets = new HashSet<int>();
-            //int numVerts = 0;
 
-            // Collect all tet indices.
-            //foreach (CellData data in vertices)
-            //{
-            //    numVerts += data.Length;
-            //    foreach (int vert in data)
-            //    {
-            //        tets.UnionWith(_cellsPerVertex[vert]);
-            //    }
-            //}
-
-            //Console.WriteLine("Second attempt:\n{0} vertices\n{1} tets\n", numVerts, tets.Count);
-
-            //int[] sortedTets = tets.ToArray();
-            //float[] dists = new float[sortedTets.Length];
-            //for (int t = 0; t < sortedTets.Length; ++t)
-            //    dists[t] = (Vertices[Cells[t][0]] + Vertices[Cells[t][1]] + Vertices[Cells[t][2]] + Vertices[Cells[t][3]] - pos * 4).LengthSquared();
-            //Array.Sort(dists, sortedTets); //(x,y) => (Vertices[Cells[x][0]]- pos).LengthSquared().CompareTo( (Vertices[Cells[y][0]]-pos).LengthSquared() )); // Rough estimate.
+            bary = new Vector(-1, 4);
+            Vector bestNegBary = null;
+            negativeTet = -1;
+            float bestBaryDist = 1;
 
             // Test whether inside.
-            //int numTries = 0;
             foreach (CellData tets in data)
                 foreach (int tet in tets)
                 {
-//                    if ((_cellCenters[tet] - pos).LengthSquared() > distEps)
-//                        continue;
+                    if ((_cellCenters[tet] - pos).LengthSquared() > distEps)
+                        continue;
 
-                    //numTries++;
                     bary = ToBaryCoord(tet, pos);
                     if (bary.IsPositive())
                     {
-                        //Console.WriteLine("Found after {0} tries.\n=============", numTries);
                         return tet;
                     }
+
+                    float baryDiff = bary.AbsSumNegatives();
+
+                    if (baryDiff < bestBaryDist)
+                    {
+                        bestBaryDist = baryDiff;
+                        bestNegBary = new Vector(bary);
+                        negativeTet = tet;
+                    }
                 }
-            //Console.WriteLine("No result after after {0} tries.\n=============", numTries);
+
+            if (bestBaryDist < maxNegativeBary)
+            {
+                bary = bestNegBary;
+            }
             return -1;
         }
 
-        public Vector ToBaryCoord(int cell, VectorRef worldPos)
+        public Vector OldToBaryCoord(int cell, VectorRef worldPos)
         {
             Debug.Assert(worldPos.Length == Vertices.VectorLength);
             SquareMatrix tet = new SquareMatrix(3);
@@ -383,6 +408,37 @@ namespace FlowSharp
 
             return result;
         }
+
+        public Vector ToBaryCoord(int cell, VectorRef worldPos)
+        {
+            Debug.Assert(worldPos.Length == Vertices.VectorLength);
+            SquareMatrix tet = new SquareMatrix(4);
+            for (int i = 0; i < 4; ++i)
+            {
+                tet[i] = VectorRef.ToUnsteady(Vertices[Cells[cell][i]]);
+            }
+
+            float d0 = tet.Determinant();
+
+            Vector bary = new Vector(-42, 4);
+
+            // Go over all corner points and exchange them with the sample position.
+            // If sign of determinant is the same as of the original, cube, the point is on the same side.
+            for (int i = 0; i < 4; ++i)
+            {
+                SquareMatrix mi = new SquareMatrix(tet);
+                mi[i] = VectorRef.ToUnsteady(worldPos);
+                bary[i] = mi.Determinant() / d0;
+                if (bary[i] <= 0)
+                    return null;
+            }
+            float barySum = bary.Sum();
+            float eps = 0.01f;
+            if (barySum < 1.0f - eps || barySum > 1.0f + eps)
+                Console.WriteLine("Sum over {0} = {1}\nMatrix {2}\nPosition {3}\nDeterminant {4}", bary, barySum, tet, worldPos, d0);
+            return bary;
+        }
+
 
         /// <summary>
         /// Binary search for the last point inside the domain.
@@ -464,8 +520,12 @@ namespace FlowSharp
                         }
                     }
 
-            Console.WriteLine("Sttistics before:");
+            Console.WriteLine("Sampling done.\nStatistics before:\n==================");
             ShowSampleStatistics();
+
+            Util.FloodFill(notFound, new Index(0, 3));
+
+            Console.WriteLine("Flood Fill Done\n===============");
 
             foreach (GridIndex offsetGI in new GridIndex(new Index(vertsPerSide, 3)))
             {
@@ -473,39 +533,43 @@ namespace FlowSharp
                 if (!notFound[idx[0], idx[1], idx[2]])
                     continue;
 
-                bool addPoint = true;
-                for (int dim = 0; dim < 3; ++dim)
-                    for (int sign = -1; sign <= 1; sign += 2)
-                    {
-                        Index offsetIdx = new Index(idx);
-                        offsetIdx[dim] += sign;
-                        if (offsetIdx[dim] < 0 || offsetIdx[dim] >= vertsPerSide)
-                            continue;
-                        // Neighbor is also "outside"? Assume we are really outside.
-                        if (notFound[offsetIdx[0], offsetIdx[1], offsetIdx[2]])
-                        {
-                            addPoint = false;
-                            break;
-                        }
-                    }
+                //bool addPoint = true;
+                //for (int dim = 0; dim < 3; ++dim)
+                //    for (int sign = -1; sign <= 1; sign += 2)
+                //    {
+                //        Index offsetIdx = new Index(idx);
+                //        offsetIdx[dim] += sign;
+                //        if (offsetIdx[dim] < 0 || offsetIdx[dim] >= vertsPerSide)
+                //            continue;
+                //        // Neighbor is also "outside"? Assume we are really outside.
+                //        if (notFound[offsetIdx[0], offsetIdx[1], offsetIdx[2]])
+                //        {
+                //            addPoint = false;
+                //            break;
+                //        }
+                //    }
 
-                if (!addPoint)
-                    continue;
+                //if (!addPoint)
+                //    continue;
 
                 Vector pos = Vertices.MinValue +
                     new Vector(new float[] {
                               ((float)idx[0]) / vertsPerSide * extent[0],
                               ((float)idx[1]) / vertsPerSide * extent[1],
                               ((float)idx[2]) / vertsPerSide * extent[2] });
-                
-                Vector sample = Sample(data, pos);
-                ShowSampleStatistics();
+
+                //Tree.OUTPUT_DEBUG = false;
+                //if (verts.Count == 10)
+                //    Tree.OUTPUT_DEBUG = true;
+
+//Vector sample = Sample(data, pos);
+//ShowSampleStatistics();
                 float color = ((float)idx[2]) / vertsPerSide; // ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
-                verts.Add(new Point((Vector3)pos) { Radius = 0.02f, Color = new Vector3(color) });
+                verts.Add(new Point((Vector3)pos) { Radius = 0.01f, Color = new Vector3(color) });
             }
 
             watch.Stop();
-            Console.WriteLine("Grid stabbing with {0} samples took {1}m {2}s", vertsPerSide * vertsPerSide * vertsPerSide, (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+            Console.WriteLine("Grid stabbing with {0} unsuccessfull samples took {1}m {2}s", verts.Count, (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
 
             return new PointSet<Point>(verts.ToArray());
         }
@@ -519,20 +583,6 @@ namespace FlowSharp
             }
 
             return new PointSet<Point>(verts);
-        }
-
-        private Vector ToBaryCoord(int celLidx, Vector worldPos)
-        {
-            Matrix tet = new Matrix();
-            for (int c = 0; c < 4; ++c)
-            {
-                tet.set_Columns(c, (Vector4)Vertices[Cells[celLidx][c]]);
-            }
-
-            tet.Invert();
-            Vector4 result = Vector4.Transform((Vector4)worldPos, tet);
-            return new Vector(result);
-
         }
         #endregion DebugRendering
     }

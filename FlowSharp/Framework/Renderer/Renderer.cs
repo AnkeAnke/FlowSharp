@@ -96,11 +96,11 @@ namespace FlowSharp
                 var desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Solid };
                 Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
 
-                SetupCuda();
-                AlgorithmCuda.Initialize(ContextCuda, Device);
-                FlowMapUncertain.Initialize();
-                CutDiffusion.Initialize();
-                LocalDiffusion.Initialize();
+//              SetupCuda();
+//              AlgorithmCuda.Initialize(ContextCuda, Device);
+//              FlowMapUncertain.Initialize();
+//              CutDiffusion.Initialize();
+//              LocalDiffusion.Initialize();
             }
             catch (Exception e)
             {

@@ -435,7 +435,7 @@ namespace FlowSharp
             try
             {
                 // Update slider ranges.
-                float? start = _mapper.GetMin(DataMapper.Setting.Element.WindowStart);
+                float? start =  _mapper.GetMin(DataMapper.Setting.Element.WindowStart);
                 float? length = _mapper.GetMax(DataMapper.Setting.Element.WindowStart);
                 if (start != null && length != null)
                 {

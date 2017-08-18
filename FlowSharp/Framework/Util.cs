@@ -55,9 +55,40 @@ namespace FlowSharp
             return raw;
         }
 
-        public static Index GetSize(object[,,] data)
+        public static Index GetSize<T>(T[,,] data)
         {
             return new Index(new int[] { data.GetLength(0), data.GetLength(1), data.GetLength(2) });
+        }
+
+        public static void FloodFill(bool[,,] data, Index start)
+        {
+            HashSet<Index> todo = new HashSet<Index>();
+            todo.Add(start);
+            bool predicate = data[start[0], start[1], start[2]];
+            Index size = GetSize(data);
+
+
+            while (todo.Count > 0)
+            {
+                // Work on the stack.
+                Index pos = todo.First();
+                todo.Remove(pos);
+
+                // Possibly add neighbors.
+                for (int dim = 0; dim < 3; ++dim)
+                    for (int sign = -1; sign <= 1; sign += 2)
+                    {
+                        Index neigh = new Index(pos);
+                        neigh[dim] += sign;
+                        if (neigh[dim] < 0 || neigh[dim] >= size[dim])
+                            continue;
+                        if (data[neigh[0], neigh[1], neigh[2]] == predicate)
+                        {
+                            todo.Add(neigh);
+                            data[neigh[0], neigh[1], neigh[2]] = !predicate;
+                        }
+                    }
+            }
         }
     }
 }

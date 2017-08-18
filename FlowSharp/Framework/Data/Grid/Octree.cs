@@ -19,21 +19,37 @@ namespace FlowSharp
 
         public VectorData Vertices;
         private int[] _vertexPermutation;
-        private Vector _maxLeafSize;
+        private Vector _maxLeafSize { get { return Vertices.Extent / (1 << _maxDepth); } }
         private int _maxDepth;
+        private int _gridSize { get { return 1 << _maxDepth; } }
 
+
+        public bool OUTPUT_DEBUG = false;
+
+
+        private Vector ToGridPosition(VectorRef pos)
+        {
+            return (pos - Minimum) * (1 << _maxDepth) / (Maximum - Minimum);
+        }
+
+        private Vector ToWorldPosition(Vector pos)
+        {
+            return pos * _maxLeafSize + Minimum;
+        }
 
         public Octree(VectorData data, int minElements = 100, int maxDepth = -1)
         {
-            //if (minElements < 4)
-            //    throw new NotImplementedException("Way too fine.");
+            if (maxDepth < 1)
+                throw new NotImplementedException("Nope. Sorry.");
+
+            _maxDepth = maxDepth;
 
             Vertices = data;
             _vertexPermutation = Enumerable.Range(0, Vertices.Length).ToArray();
 
             Vertices.ExtractMinMax();
             _nodes = new List<Node>(20000);
-            _nodes.Add(new Node(0, 0, _vertexPermutation.Length, Minimum, Maximum));
+            _nodes.Add(new Node(0, 0, _vertexPermutation.Length, new Vector(0,3), new Vector(_gridSize, 3)));
 
 
             Stopwatch watch = new Stopwatch();
@@ -42,99 +58,99 @@ namespace FlowSharp
             _root.SplitRecursively(this, minElements, maxDepth);
 
             // Use max depth for "lattice distance" computation.
-            if (maxDepth > 0)
-            {
-                Debug.Assert(maxDepth >= _maxDepth);
-                _maxDepth = maxDepth;
-            }
+            //if (maxDepth > 0)
+            //{
+            //    Debug.Assert(maxDepth >= _maxDepth);
+            //    _maxDepth = maxDepth;
+            //}
 
             // This is important, as neighbor queries rely on it.
-            _maxLeafSize = Vertices.Extent / (1 << _maxDepth);
+//            _maxLeafSize = Vertices.Extent / (1 << _maxDepth);
 
             watch.Stop();
             Console.WriteLine("Octree buildup took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
         }
 
         #region FileReadWrite
-        public Octree(string filename)
-        {
-            using (FileStream fs = File.Open(@filename, FileMode.Open))
-            {
-                using (BinaryReader reader = new BinaryReader(fs))
-                {
-                    // Read Permutations.
-                    int numPerms = reader.ReadInt32();
-                    _vertexPermutation = new int[numPerms];
-                    byte[] perms = reader.ReadBytes(numPerms * sizeof(int));
-                    Buffer.BlockCopy(perms, 0, _vertexPermutation, 0, numPerms * sizeof(int));
+        //public Octree(string filename)
+        //{
+        //    using (FileStream fs = File.Open(@filename, FileMode.Open))
+        //    {
+        //        using (BinaryReader reader = new BinaryReader(fs))
+        //        {
+        //            // Read Permutations.
+        //            int numPerms = reader.ReadInt32();
+        //            _vertexPermutation = new int[numPerms];
+        //            byte[] perms = reader.ReadBytes(numPerms * sizeof(int));
+        //            Buffer.BlockCopy(perms, 0, _vertexPermutation, 0, numPerms * sizeof(int));
 
-                    // Load Nodes.
-                    int numNodes = reader.ReadInt32();
-                    _nodes = new List<Node>(numNodes);
+        //            // Load Nodes.
+        //            int numNodes = reader.ReadInt32();
+        //            _nodes = new List<Node>(numNodes);
 
-                    // Read nodes iteratively.
-                    for (int n = 0; n < numNodes; ++n)
-                    {
-                        Node node = new Node();
-                        // Reading children. Reading 8 (-1) means Children == null.
-                        for (int c = 0; c < 8; ++c)
-                            node.Children[c] = reader.ReadInt32();
+        //            // Read nodes iteratively.
+        //            for (int n = 0; n < numNodes; ++n)
+        //            {
+        //                Node node = new Node();
+        //                // Reading children. Reading 8 (-1) means Children == null.
+        //                for (int c = 0; c < 8; ++c)
+        //                    node.Children[c] = reader.ReadInt32();
 
-                        // Write int values.
-                        node.MinIdx = reader.ReadInt32();
-                        node.MaxIdx = reader.ReadInt32();
-                        node.Level  = reader.ReadInt32();
+        //                // Write int values.
+        //                node.MinIdx = reader.ReadInt32();
+        //                node.MaxIdx = reader.ReadInt32();
+        //                node.Level  = reader.ReadInt32();
 
-                        // Read vectors component-wise.
-                        node.MinPos = new Vector(3);
-                        for (int m = 0; m < 3; ++m)
-                            node.MinPos[m] = reader.ReadSingle();
+        //                // Read vectors component-wise.
+        //                node.MinPos = new Vector(3);
+        //                for (int m = 0; m < 3; ++m)
+        //                    node.MinPos[m] = reader.ReadSingle();
 
-                        node.MaxPos = new Vector(3);
-                        for (int m = 0; m < 3; ++m)
-                            node.MaxPos[m] = reader.ReadSingle();
+        //                node.MaxPos = new Vector(3);
+        //                for (int m = 0; m < 3; ++m)
+        //                    node.MaxPos[m] = reader.ReadSingle();
 
-                        node.MidPos = node.MinPos + (node.MaxPos - node.MinPos) * 0.5f;
-                    }
-                }
-            }
-        }
+        //                node.MidPos = node.MinPos + (node.MaxPos - node.MinPos) * 0.5f;
+        //            }
+        //        }
+        //    }
+        //}
 
-        public void WriteToFile(string filename)
-        {
-            using (FileStream fs = File.Open(@filename, FileMode.Create))
-            {
-                using (BinaryWriter writer = new BinaryWriter(fs))
-                {
-                    // Write Permutations.
-                    writer.Write(_vertexPermutation.Length);
-                    byte[] perms = new byte[_vertexPermutation.Length * sizeof(int)];
-                    Buffer.BlockCopy(_vertexPermutation, 0, perms, 0, _vertexPermutation.Length);
-                    writer.Write(perms);
+        //public void WriteToFile(string filename)
+        //{
+        //    using (FileStream fs = File.Open(@filename, FileMode.Create))
+        //    {
+        //        using (BinaryWriter writer = new BinaryWriter(fs))
+        //        {
+        //            // Write Permutations.
+        //            writer.Write(_vertexPermutation.Length);
+        //            byte[] perms = new byte[_vertexPermutation.Length * sizeof(int)];
+        //            Buffer.BlockCopy(_vertexPermutation, 0, perms, 0, _vertexPermutation.Length);
+        //            writer.Write(perms);
 
-                    // Write Nodes.
-                    writer.Write(_nodes.Count);
-                    foreach (Node node in _nodes)
-                    {
-                        // Writing children. Write 8 (-1) so each block is the same length.
-                        for (int c = 0; c < 8; ++c)
-                            writer.Write(node.Children?[c] ?? -1);
+        //            // Write Nodes.
+        //            writer.Write(_nodes.Count);
+        //            foreach (Node node in _nodes)
+        //            {
+        //                // Writing children. Write 8 (-1) so each block is the same length.
+        //                for (int c = 0; c < 8; ++c)
+        //                    writer.Write(node.Children?[c] ?? -1);
 
-                        // Write int values.
-                        writer.Write(node.MinIdx);
-                        writer.Write(node.MaxIdx);
-                        writer.Write(node.Level);
+        //                // Write int values.
+        //                writer.Write(node.MinIdx);
+        //                writer.Write(node.MaxIdx);
+        //                writer.Write(node.Level);
 
-                        // Write vectors component-wise.
-                        foreach (float f in node.MinPos.Data)
-                            writer.Write(f);
+        //                // Write vectors component-wise.
+        //                foreach (float f in node.MinPos.Data)
+        //                    writer.Write(f);
 
-                        foreach (float f in node.MaxPos.Data)
-                            writer.Write(f);
-                    }
-                }
-            }
-        }
+        //                foreach (float f in node.MaxPos.Data)
+        //                    writer.Write(f);
+        //            }
+        //        }
+        //    }
+        //}
         #endregion FileReadWrite
 
         /// <summary>
@@ -144,18 +160,30 @@ namespace FlowSharp
         /// <param name="leafNode">Output node.</param>
         /// <param name="maxLevel">Maximal traversal depth. Negative means no condition.</param>
         /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
-        public CellData StabCell(VectorRef pos, out Node leafNode, int maxLevel = -1)
+        public CellData StabCell(VectorRef pos, out Node leafNode)
         {
             Debug.Assert(pos.Length == Minimum.Length);
+            return StabCellGridPos(ToGridPosition(pos), out leafNode);
+        }
+
+        /// <summary>
+        /// Stab the octree. Returns the lowest node containing the position. Maximal level can be set.
+        /// </summary>
+        /// <param name="pos">Sample position.</param>
+        /// <param name="leafNode">Output node.</param>
+        /// <param name="maxLevel">Maximal traversal depth. Negative means no condition.</param>
+        /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
+        private CellData StabCellGridPos(VectorRef gridPos, out Node leafNode)
+        {
             //cellExtent = null;
 
-            if (!(pos <= Maximum) || !(pos >= Minimum))
+            if (!(gridPos < new Vector(_gridSize, 3)) || !gridPos.IsPositive())
             {
                 leafNode = null;
                 return new CellData();
             }
 
-            leafNode = _root.Stab(this, pos, maxLevel);
+            leafNode = _root.Stab(this, gridPos);
 
             return leafNode.GetData(this);
         }
@@ -169,8 +197,8 @@ namespace FlowSharp
             //midPos += _maxLeafSize * 0.5f;
             //Sign[] comp = VectorRef.Compare(pos, midPos);
 
-            Vector refPos = (pos - Minimum) / _maxLeafSize;
-            refPos = refPos - (Vector)((Index)refPos);
+            Vector gridPos = ToGridPosition(pos);
+            Vector refPos = gridPos - (Vector)((Index)gridPos);
             Sign[] comp = VectorRef.Compare(refPos, new Vector(0.5f, 3));
 
             Node stabbed;
@@ -184,12 +212,16 @@ namespace FlowSharp
                     continue;
 
                 // Assemble stabbing position. New stab should be performanter/more failsafe than walking the tree up and down.
-                Vector stab = new Vector(pos);
+                Vector stab = new Vector(gridPos);
                 for (int n = 0; n < 3; ++n)
-                    stab += (int)comp[n] * offset[n] * _maxLeafSize;
+                    stab += (int)comp[n] * offset[n];
 
-                CellData data = StabCell(stab, out stabbed/*, leafNode.Level*/);
-                if (data != (CellData)null && data != leaf)
+                // If it's inside the node found, no need to stab again.
+                if (leaf.IsGridPosInside(stab))
+                    continue;
+
+                CellData data = StabCellGridPos(stab, out stabbed/*, leafNode.Level*/);
+                if (data?.Length != null)
                     neighbors.Add(data);
             }
 
@@ -208,8 +240,8 @@ namespace FlowSharp
 
             for (int l = 0; l < leafs.Count; ++l)
             {
-                verts[l * 2] = leafs[l].MinPos;
-                verts[l * 2 + 1] = leafs[l].MaxPos;
+                verts[l * 2] =     ToWorldPosition(leafs[l].MinPos);
+                verts[l * 2 + 1] = ToWorldPosition(leafs[l].MaxPos);
 
                 inds[l] = new Index(new int[] { l * 2, l * 2 + 1 });
             }
@@ -240,7 +272,7 @@ namespace FlowSharp
 
                 MinPos = min;
                 MaxPos = max;
-                MidPos = MinPos + (MaxPos - MinPos) * 0.5f;
+//%                MidPos = MinPos + (MaxPos - MinPos) * 0.5f;
 
                 Children = null;
             }
@@ -253,7 +285,7 @@ namespace FlowSharp
                 MaxIdx = maxIdx;
 
                 Children = null;
-                MinPos = MidPos = MaxPos = null;
+                MinPos = MaxPos = null;
             }
 
             public bool IsLeaf { get { return Children == null; } }
@@ -264,16 +296,17 @@ namespace FlowSharp
 
             public void SplitRecursively(Octree tree, int minElements = 100, int maxDepth = -1)
             {
-                tree._maxDepth = Math.Max(Level, tree._maxDepth);
+                //tree._maxDepth = Math.Max(Level, tree._maxDepth);
 
                 int numDims = tree.VectorLength;
-                MidPos = MinPos + (MaxPos - MinPos) * 0.5f;
+                MidPos = (MaxPos + MinPos) * 0.5f;
 
                 if (++NUM_NODES % 50000 == 0)
                     Console.WriteLine("Nodes: " + NUM_NODES);
 
                 if (Level == maxDepth || MaxIdx - MinIdx <= minElements)
                 {
+                    // Console.WriteLine("Level {0}({1}), {2}({3}) Elements", Level, maxDepth, MaxIdx - MinIdx, minElements);
                     if (++NUM_LEAFS % 50000 == 0)
                         Console.WriteLine("Leaves: " + NUM_LEAFS);
 
@@ -350,26 +383,37 @@ namespace FlowSharp
             private static int SortSubPermuationByDimension(Octree tree, int minIdx, int maxIdx, int dim)
             {
                 Array.Sort<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, Comparer<int>.Create((x, y) => tree.Vertices[x][dim].CompareTo(tree.Vertices[y][dim])));
-                return (int)(minIdx + (maxIdx - minIdx) * 0.5f);
+                return (int)((minIdx + maxIdx) * 0.5f);
             }
 
             private static int GetCut(Octree tree, int minIdx, int maxIdx, Vector middle, int dim)
             {
-                int cutIdx = Array.BinarySearch<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, -42, Comparer<int>.Create((x, y) => tree.Vertices[x][dim].CompareTo(middle[dim])));
+                Vector worldCut = tree.ToWorldPosition(middle);
+                int cutIdx = Array.BinarySearch<int>(tree._vertexPermutation, minIdx, maxIdx - minIdx, -42, Comparer<int>.Create((x, y) => tree.Vertices[x][dim].CompareTo(worldCut[dim])));
                 int ret = cutIdx >= 0 ? cutIdx : ~cutIdx;
                 return ret;
             }
 
-            public Node Stab(Octree tree, VectorRef pos, int maxLevel = -1) //Vector cellExtent)
+            public Node Stab(Octree tree, VectorRef pos) //Vector cellExtent)
             {
-                if (IsLeaf || Level == maxLevel)
+
+                if (IsLeaf)
                 {
-                    //cellExtent = MaxPos - MinPos;
+                    //if (tree.OUTPUT_DEBUG)
+                    //    Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length??0, MaxIdx-MinIdx);
                     return this;
                 }
 
                 Sign[] comp = VectorRef.Compare(pos, MidPos);
-                return tree._nodes[Children[IndexBySigns(comp)]].Stab(tree, pos, maxLevel); //, out cellExtent);
+                Node child = tree._nodes[Children[IndexBySigns(comp)]];
+                //if (child.IsEmpty)
+                //    return this;
+                return child.Stab(tree, pos);
+            }
+
+            public bool IsGridPosInside(VectorRef vec)
+            {
+                return vec >= MinPos && vec < MaxPos;
             }
 
             //public struct Leaf

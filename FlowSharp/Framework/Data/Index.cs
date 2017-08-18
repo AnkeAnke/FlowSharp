@@ -136,6 +136,15 @@ namespace FlowSharp
             return prod;
         }
 
+        public static Index operator /(Index a, int b)
+        {
+            Index prod = new Index(a);
+            for (int dim = 0; dim < a.Length; ++dim)
+                prod[dim] /= b;
+
+            return prod;
+        }
+
         public static Index operator *(int a, Index b)
         {
             return b * a;

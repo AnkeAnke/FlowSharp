@@ -26,8 +26,23 @@ namespace FlowSharp
 
         public float m00 { get { return this[0][0]; } set { this[0][0] = value; } }
         public float m10 { get { return this[1][0]; } set { this[1][0] = value; } }
+        public float m20 { get { return this[2][0]; } set { this[2][0] = value; } }
+        public float m30 { get { return this[3][0]; } set { this[3][0] = value; } }
+
         public float m01 { get { return this[0][1]; } set { this[0][1] = value; } }
         public float m11 { get { return this[1][1]; } set { this[1][1] = value; } }
+        public float m21 { get { return this[2][1]; } set { this[2][1] = value; } }
+        public float m31 { get { return this[3][1]; } set { this[3][1] = value; } }
+
+        public float m02 { get { return this[0][2]; } set { this[0][2] = value; } }
+        public float m12 { get { return this[1][2]; } set { this[1][2] = value; } }
+        public float m22 { get { return this[2][2]; } set { this[2][2] = value; } }
+        public float m32 { get { return this[3][2]; } set { this[3][2] = value; } }
+
+        public float m03 { get { return this[0][3]; } set { this[0][3] = value; } }
+        public float m13 { get { return this[1][3]; } set { this[1][3] = value; } }
+        public float m23 { get { return this[2][3]; } set { this[2][3] = value; } }
+        public float m33 { get { return this[3][3]; } set { this[3][3] = value; } }
 
         public SquareMatrix(SquareMatrix m)
         {
@@ -101,21 +116,51 @@ namespace FlowSharp
 
         public float Determinant()
         {
-            SquareMatrix tmp;
-            return Lagrange(out tmp);
+            return Lagrange();
         }
 
-        private float Lagrange(out SquareMatrix clipped)
+        private float Lagrange()
         {
+            double det = 0;
             if (Length == 2)
             {
-                clipped = null;
                 return this[0][0] * this[1][1] - this[0][1] * this[1][0];
             }
-            else
+
+            if (Length == 4)
             {
-                throw new NotImplementedException();
+                det += (double)m00 *
+                    ( (double)m11 * ((double)m22 * (double)m33 - (double)m23 * (double)m32)
+                    - (double)m12 * ((double)m21 * (double)m33 - (double)m23 * (double)m31)
+                    + (double)m13 * ((double)m21 * (double)m32 - (double)m22 * (double)m31));
+                det -= (double)m01 *
+                    ( (double)m10 * ((double)m22 * (double)m33 - (double)m23 * (double)m32)
+                    - (double)m12 * ((double)m20 * (double)m33 - (double)m23 * (double)m30)
+                    + (double)m13 * ((double)m20 * (double)m32 - (double)m22 * (double)m30));
+                det += (double)m02 *
+                    ( (double)m10 * ((double)m21 * (double)m33 - (double)m23 * (double)m31)
+                    - (double)m11 * ((double)m20 * (double)m33 - (double)m23 * (double)m30)
+                    + (double)m13 * ((double)m20 * (double)m31 - (double)m21 * (double)m30));
+                det -= (double)m03 *
+                    ( (double)m10 * ((double)m21 * (double)m32 - (double)m22 * (double)m31)
+                    - (double)m11 * ((double)m20 * (double)m32 - (double)m22 * (double)m30)
+                    + (double)m12 * ((double)m20 * (double)m31 - (double)m21 * (double)m30));
+                return (float)det;
             }
+
+            // Recursion over one column.
+            for (int d = 0; d < Length; ++d)
+            {
+                SquareMatrix sub = new SquareMatrix(Length - 1);
+                foreach (GridIndex i in new GridIndex(new Index(Length-1, 2)))
+                {
+                    Index idx = i;
+                    sub[idx[0]][idx[1]] = this[idx[0]+1][idx[1] < d ? idx[1] : idx[1] - 1];
+                }
+
+                det += sub.Lagrange() * this[0][d];
+            }
+            return (float)det;
         }
 
         public float EuclideanNormSquared()
@@ -296,6 +341,22 @@ namespace FlowSharp
                 prod[y] = Vector.Dot(a.Row(y), b);
             }
             return prod;
+        }
+
+        public override string ToString()
+        {
+            string str = "[ ";
+            for (int u = 0; u < Length; ++u)
+            {
+                for (int v = 0; v < Length; ++v)
+                {
+                    str += this[u][v];
+                    str += ' ';
+                }
+                str += " ;";
+            }
+            str += "]";
+            return str;
         }
     }
 }

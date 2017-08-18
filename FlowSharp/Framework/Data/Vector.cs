@@ -470,6 +470,14 @@ namespace FlowSharp
             return min;
         }
 
+        public float AbsSumNegatives()
+        {
+            float sum = 0;
+            for (int dim = 0; dim < Length; ++dim)
+                sum += Math.Min(0, this[dim]);
+            return -sum;
+        }
+
         public override string ToString()
         {
             string res = "[" + this[0];
