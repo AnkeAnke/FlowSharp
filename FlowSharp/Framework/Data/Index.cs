@@ -260,6 +260,19 @@ namespace FlowSharp
             return prod;
         }
 
+        public int LengthSquared()
+        {
+            int sum = 0;
+            for (int dim = 0; dim < Length; ++dim)
+                sum += Data[dim] * Data[dim];
+            return sum;
+        }
+
+        public float EuclideanLength()
+        {
+            return (float)Math.Sqrt(LengthSquared());
+        }
+
         public bool IsPositive()
         {
             foreach (int value in _data)

@@ -16,33 +16,37 @@ namespace FlowSharp
         public int VectorLength { get { return Minimum.Length; } }
         private Node _root { get { return _nodes[0]; } }
         private List<Node> _nodes;
+        public CellData AllCells { get { return _root.GetData(this); } }
 
         public VectorData Vertices;
         private int[] _vertexPermutation;
-        private Vector _maxLeafSize { get { return Vertices.Extent / (1 << _maxDepth); } }
+        public Vector MaxLeafSize { get { return Vertices.Extent / (1 << _maxDepth); } }
+        public float MaxCellDistance { get; private set; }
         private int _maxDepth;
         private int _gridSize { get { return 1 << _maxDepth; } }
+        
 
 
         public bool OUTPUT_DEBUG = false;
 
 
-        private Vector ToGridPosition(VectorRef pos)
+        public Vector ToGridPosition(VectorRef pos)
         {
-            return (pos - Minimum) * (1 << _maxDepth) / (Maximum - Minimum);
+            return (pos - Minimum) / (Maximum - Minimum) * (1 << _maxDepth);
         }
 
-        private Vector ToWorldPosition(Vector pos)
+        public Vector ToWorldPosition(VectorRef pos)
         {
-            return pos * _maxLeafSize + Minimum;
+            return pos * MaxLeafSize + Minimum;
         }
 
-        public Octree(VectorData data, int minElements = 100, int maxDepth = -1)
+        public Octree(VectorData data, int maxVertices, int maxDepth, float maxCellDistance)
         {
             if (maxDepth < 1)
                 throw new NotImplementedException("Nope. Sorry.");
 
             _maxDepth = maxDepth;
+            MaxCellDistance = maxCellDistance;
 
             Vertices = data;
             _vertexPermutation = Enumerable.Range(0, Vertices.Length).ToArray();
@@ -55,8 +59,10 @@ namespace FlowSharp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            _root.SplitRecursively(this, minElements, maxDepth);
+            _root.SplitRecursively(this, maxVertices, maxDepth);
 
+            float maxRadius = (1 << _maxDepth) / maxCellDistance;
+            Console.WriteLine("Max {0} Vertices per Cell\nMax {1} Levels deep (Restrained to {3})\nMax {2} Cells from Cell Center", maxVertices, _maxDepth, maxRadius, maxDepth);
             // Use max depth for "lattice distance" computation.
             //if (maxDepth > 0)
             //{
@@ -65,7 +71,7 @@ namespace FlowSharp
             //}
 
             // This is important, as neighbor queries rely on it.
-//            _maxLeafSize = Vertices.Extent / (1 << _maxDepth);
+            //            _maxLeafSize = Vertices.Extent / (1 << _maxDepth);
 
             watch.Stop();
             Console.WriteLine("Octree buildup took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
@@ -160,7 +166,7 @@ namespace FlowSharp
         /// <param name="leafNode">Output node.</param>
         /// <param name="maxLevel">Maximal traversal depth. Negative means no condition.</param>
         /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
-        public CellData StabCell(VectorRef pos, out Node leafNode)
+        public Node StabCell(VectorRef pos, out Node leafNode)
         {
             Debug.Assert(pos.Length == Minimum.Length);
             return StabCellGridPos(ToGridPosition(pos), out leafNode);
@@ -173,59 +179,78 @@ namespace FlowSharp
         /// <param name="leafNode">Output node.</param>
         /// <param name="maxLevel">Maximal traversal depth. Negative means no condition.</param>
         /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
-        private CellData StabCellGridPos(VectorRef gridPos, out Node leafNode)
+        private Node StabCellGridPos(VectorRef gridPos, out Node leafNode)
         {
             //cellExtent = null;
 
             if (!(gridPos < new Vector(_gridSize, 3)) || !gridPos.IsPositive())
             {
                 leafNode = null;
-                return new CellData();
+                return null;
             }
 
             leafNode = _root.Stab(this, gridPos);
 
-            return leafNode.GetData(this);
+            return leafNode;
         }
 
-        public List<CellData> FindNeighborNodes(VectorRef pos, Node leaf)
+        public int FindNeighborNodes(TetTreeGrid grid, VectorRef pos, Node leaf, out VectorRef bary)
         {
             List<CellData> neighbors = new List<CellData>(6);
 
-            // Get "sub cell" - the leaf node we would be in.
-            //Vector midPos = Minimum + ((Index)((pos - Minimum) / _maxLeafSize)) * _maxLeafSize;
-            //midPos += _maxLeafSize * 0.5f;
-            //Sign[] comp = VectorRef.Compare(pos, midPos);
-
             Vector gridPos = ToGridPosition(pos);
-            Vector refPos = gridPos - (Vector)((Index)gridPos);
-            Sign[] comp = VectorRef.Compare(refPos, new Vector(0.5f, 3));
 
+            bary = null;
             Node stabbed;
+            Node range;
 
-            // Go through all dimensions. We only need to got into one direction in each dimension, the corners of a cube.
-            foreach (GridIndex offsetGI in new GridIndex(new Index(2, 3)))
+            // How many cells can we go maximally before there is definitely nothing there.
+            // 1.73... = sqrt(3)
+            int maxCellSum = (int)Math.Ceiling(MaxCellDistance * 1.732050807568877);
+            float maxEuclideanDistSquared = MaxCellDistance * MaxCellDistance;
+
+            // From close to inner cell (1), we move outwards.
+            for (int dist = 1; dist <= maxCellSum; ++dist)
             {
-                // Continue if we are at the center.
-                Index offset = offsetGI;
-                if (offset.Max() == 0)
-                    continue;
+                for (int x = 0; x <= dist; ++x)
+                    for (int y = 0; y <= dist - x; ++y)
+                    {
+                        int z = dist - x - y;
+                        Index offset = new Index(new int[] { x, y, dist - x - y });
 
-                // Assemble stabbing position. New stab should be performanter/more failsafe than walking the tree up and down.
-                Vector stab = new Vector(gridPos);
-                for (int n = 0; n < 3; ++n)
-                    stab += (int)comp[n] * offset[n];
+                        // As we grow in a <> shape, we can discard some cells early.
+                        if (offset.LengthSquared() > maxEuclideanDistSquared)
+                            continue;
 
-                // If it's inside the node found, no need to stab again.
-                if (leaf.IsGridPosInside(stab))
-                    continue;
+                        // Test in both directions.
+                        for (int signX = -1; signX <= 1; signX += 2)
+                            for (int signY = -1; signY <= 1; signY += 2)
+                                for (int signZ = -1; signZ <= 1; signZ += 2)
+                                {
+                                    // Check: is it redundant to stab again?
+                                    Index sign = new Index(new int[] { signX, signY, signZ });
+                                    Index offsetVec = offset * sign;
+                                    Vector stab = gridPos + (Vector)offsetVec;
+                                    //Console.WriteLine("Stab pos: {0}\n\tOffset {1}", stab, offset * sign);
+                                    //if (offsetVec[0] == 1 && offsetVec[1] == -1 && offsetVec[2] == -2)
+                                    //    Console.WriteLine("Here here! Position " + stab);
+                                    if (leaf.IsGridPosInside(stab))
+                                        continue;
 
-                CellData data = StabCellGridPos(stab, out stabbed/*, leafNode.Level*/);
-                if (data?.Length != null)
-                    neighbors.Add(data);
+                                    // New stabbing query.
+                                    range = StabCellGridPos(stab, out stabbed);
+                                    //if (offsetVec[0] == 1 && offsetVec[1] == -1 && offsetVec[2] == -2)
+                                    //    Console.WriteLine("\tIndex Range [{0},{1}]\n\tGrid Range [{2},{3}]", range.MinIdx, range.MaxIdx, range.MinPos, range.MaxPos);
+                                    if (range == null)
+                                        continue;
+                                    int tet = grid.FindInNode(range.GetData(this), pos, out bary);
+                                    if (tet >= 0)
+                                        return tet;
+                                }
+                    }
             }
 
-            return neighbors;
+            return -1;
         }
 
         public UnstructuredGeometry LeafGeometry()
@@ -247,6 +272,14 @@ namespace FlowSharp
             }
 
             return new UnstructuredGeometry(verts, inds);
+        }
+
+        public int GetTetPermutationPosition(int tet)
+        {
+            for (int i = 0; i < _vertexPermutation.Length; ++i)
+                if (_vertexPermutation[i] == tet)
+                    return i;
+            return -1;
         }
 
         public class Node
@@ -396,11 +429,11 @@ namespace FlowSharp
 
             public Node Stab(Octree tree, VectorRef pos) //Vector cellExtent)
             {
-
+                // Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length ?? 0, MaxIdx - MinIdx);
                 if (IsLeaf)
                 {
                     //if (tree.OUTPUT_DEBUG)
-                    //    Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length??0, MaxIdx-MinIdx);
+                     //   Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length??0, MaxIdx-MinIdx);
                     return this;
                 }
 
@@ -495,35 +528,35 @@ namespace FlowSharp
 
         public class CellData : IEnumerable<int>
         {
-            protected int _minIdx;
-            protected int _maxIdx;
+            public int MinIdx { get; protected set; }
+            public int MaxIdx { get; protected set; }
             protected Octree _tree;
 
             public CellData(Node node, Octree tree)
             {
-                _minIdx = node.MinIdx;
-                _maxIdx = node.MaxIdx;
+                MinIdx = node.MinIdx;
+                MaxIdx = node.MaxIdx;
                 _tree = tree;
             }
             public CellData(CellData copy)
             {
-                _minIdx = copy._minIdx;
-                _maxIdx = copy._maxIdx;
+                MinIdx = copy.MinIdx;
+                MaxIdx = copy.MaxIdx;
                 _tree = copy._tree;
             }
 
             public CellData()
             {
-                _minIdx = 0;
-                _maxIdx = 0;
+                MinIdx = 0;
+                MaxIdx = 0;
                 _tree = null;
             }
 
-            public int Length { get { return _maxIdx - _minIdx; } }
+            public int Length { get { return MaxIdx - MinIdx; } }
 
             public static bool operator == (CellData a, CellData b)
             {
-                return a?._minIdx == b?._minIdx && a?._maxIdx == b?._maxIdx;
+                return a?.MinIdx == b?.MinIdx && a?.MaxIdx == b?.MaxIdx;
             }
 
             public static bool operator !=(CellData a, CellData b)
@@ -533,7 +566,7 @@ namespace FlowSharp
 
             public static bool operator ==(CellData a, Node b)
             {
-                return a?._minIdx == b?.MinIdx && a?._maxIdx == b?.MaxIdx;
+                return a?.MinIdx == b?.MinIdx && a?.MaxIdx == b?.MaxIdx;
             }
 
             public static bool operator !=(CellData a, Node b)
@@ -579,12 +612,12 @@ namespace FlowSharp
             public bool MoveNext()
             {
                 _current++;
-                return _current < _maxIdx;
+                return _current < MaxIdx;
             }
 
             public void Reset()
             {
-                _current = _minIdx - 1;
+                _current = MinIdx - 1;
             }
         }
     }

@@ -37,10 +37,10 @@ namespace FlowSharp
 
         public TetGridMapper(Plane plane) : base()
         {
-            TetTreeGrid babyGrid = new TetTreeGrid(new UnstructuredGeometry(
-                new VectorBuffer(new float[] { 1,0,0, 3,2,0, 0,3,0, 2,2,2}, 3), 
-                new IndexArray(new int[] { 0,1,2,3 }, 4)), 10);
-            babyGrid.ToBaryCoord(0, new Vector(new float[] { 1.5f, 1.5f, 1}));
+            //TetTreeGrid babyGrid = new TetTreeGrid(new UnstructuredGeometry(
+            //    new VectorBuffer(new float[] { 1,0,0, 3,2,0, 0,3,0, 2,2,2}, 3), 
+            //    new IndexArray(new int[] { 0,1,2,3 }, 4)), 10);
+            //babyGrid.ToBaryCoord(0, new Vector(new float[] { 1.5f, 1.5f, 1}));
             
 
             Mapping = ShowSide;
@@ -49,7 +49,7 @@ namespace FlowSharp
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
 
-            _grid = new TetTreeGrid(hexGrid, 100);
+            _grid = new TetTreeGrid(hexGrid, 100, 10);
             //_grid.Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename); // Fun fact: never loaded yet.
 
             // Fit plane to data.
@@ -62,10 +62,10 @@ namespace FlowSharp
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
             _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.pressure, 0), _grid);
 
-            _points = _grid.SampleTest(_vectorField, 100);
-            _points[00].Color = Vector3.UnitX;
-            _points[10].Color = Vector3.UnitY;
-            _points[20].Color = Vector3.UnitZ;
+            _points = _grid.SampleTest(_vectorField, 5);
+            //_points[00].Color = Vector3.UnitX;
+            //_points[10].Color = Vector3.UnitY;
+            //_points[20].Color = Vector3.UnitZ;
 
             TetTreeGrid.ShowSampleStatistics();
             //VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
@@ -207,7 +207,7 @@ namespace FlowSharp
             _attribute.ExtractMinMax();
             float min = _attribute?.MinValue?[0] ?? -500f;
             float max = _attribute?.MaxValue?[0] ?? 500;
-            Console.WriteLine("Attribute min {0}\nAttribute max {1}", min, max);
+            Console.WriteLine("Attribute {2}:\n\tAttribute min {0}\n\tAttribute max {1}", min, max, element.ToString());
             switch (element)
             {
                 case Setting.Element.WindowWidth:
