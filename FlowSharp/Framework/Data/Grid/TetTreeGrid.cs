@@ -258,7 +258,9 @@ namespace FlowSharp
 
         public static void ShowSampleStatistics()
         {
-            Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n\t{2}% \tof those did not actually sample neighbors\n\t{3}% of them are slightly negative\n\t{4}% \t of them not found at all\n{5} outside of bounding box.", NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_SAMPLES_NO_NEW_NEIGHBORS) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_SLIGHTLY_NEGATIVE) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLE_OUTSIDE_LEAF * 100, NUM_OUTSIDE);
+            Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n\t{2}% \tof those did not actually sample neighbors\n\t{3}% of them are slightly negative\n\t{4}% \t of them not found at all\n{5} outside of bounding box.\nStabbing took {6}\nBary Determinants took {7}\n===============",
+                NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_SAMPLES_NO_NEW_NEIGHBORS) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_SLIGHTLY_NEGATIVE) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLE_OUTSIDE_LEAF * 100, NUM_OUTSIDE,
+                Octree.PROF_WATCH, PROF_BARY);
         }
 
         public static float MAX_NEGATIVE_BARY = 0.002f;
@@ -408,9 +410,10 @@ namespace FlowSharp
 
             return result;
         }
-
+        static Stopwatch PROF_BARY = new Stopwatch();
         public Vector ToBaryCoord(int cell, VectorRef worldPos)
         {
+            PROF_BARY.Start();
             Debug.Assert(worldPos.Length == Vertices.VectorLength);
             SquareMatrix tet = new SquareMatrix(4);
             for (int i = 0; i < 4; ++i)
@@ -432,11 +435,15 @@ namespace FlowSharp
                 mi[i] = VectorRef.ToUnsteady(worldPos);
                 bary[i] = mi.Determinant() / d0;
                 if (bary[i] <= 0)
+                {
+                    PROF_BARY.Stop();
                     return null;
+                }
             }
             float barySum = bary.Sum();
-            float eps = 0.01f;
+            //float eps = 0.01f;
             //Console.WriteLine("===========\nPosition {0}\nBarycentric Coordinate {1}", worldPos, bary);
+            PROF_BARY.Stop();
             return bary;
         }
 
@@ -524,9 +531,9 @@ namespace FlowSharp
                 Console.WriteLine("Test Case Works T_T");
             Console.WriteLine("Test case took {0}m {1}s {2}", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds, watch.Elapsed.Milliseconds);
             // \DEBUGGGGGGGGGGGGGGGGGGGG
-
+            ShowSampleStatistics();
             // Default-false.
-            bool[,,] notFound = new bool[vertsPerSide, vertsPerSide, vertsPerSide];
+            //bool[,,] notFound = new bool[vertsPerSide, vertsPerSide, vertsPerSide];
             int numNotFound = 0;
 
             for (int z = 0; z < vertsPerSide; ++z)
@@ -543,7 +550,7 @@ namespace FlowSharp
                         Vector sample = Sample(data, pos);
                         if (sample == null)
                         {
-                            notFound[x, y, z] = true;
+                            //notFound[x, y, z] = true;
                             numNotFound++;
                         }
                         else
@@ -554,6 +561,7 @@ namespace FlowSharp
                         Console.WriteLine("{0} / {1} sampled", x + vertsPerSide * y + z * vertsPerSide * vertsPerSide, vertsPerSide * vertsPerSide * vertsPerSide);
                     }
                 Console.WriteLine("{0}% Sampling Complete", (z * 100) / vertsPerSide);
+                ShowSampleStatistics();
             }
 
             Console.WriteLine("{0} Samples not found\n===========", numNotFound);

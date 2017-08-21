@@ -172,6 +172,7 @@ namespace FlowSharp
             return StabCellGridPos(ToGridPosition(pos), out leafNode);
         }
 
+        public static Stopwatch PROF_WATCH = new Stopwatch();
         /// <summary>
         /// Stab the octree. Returns the lowest node containing the position. Maximal level can be set.
         /// </summary>
@@ -189,7 +190,9 @@ namespace FlowSharp
                 return null;
             }
 
+            PROF_WATCH.Start();
             leafNode = _root.Stab(this, gridPos);
+            PROF_WATCH.Stop();
 
             return leafNode;
         }
