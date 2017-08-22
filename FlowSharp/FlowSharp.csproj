@@ -136,6 +136,7 @@
     <Compile Include="Framework\Renderer\HexGridMapper.cs" />
     <Compile Include="Framework\Renderer\HexTetGridMapper.cs" />
     <Compile Include="Framework\Renderer\PathlineLengthMapper.cs" />
+    <Compile Include="Framework\Vector3Extensions.cs" />
     <Compile Include="Loader\BinaryFile.cs" />
     <Compile Include="Loader\GeometryWriter.cs" />
     <Compile Include="Loader\LoaderEnsight.cs" />

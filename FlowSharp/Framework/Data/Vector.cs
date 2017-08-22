@@ -507,6 +507,11 @@ namespace FlowSharp
             return ret;
         }
 
+        public static Vector ToUnsteady(Vector3 v)
+        {
+            return new Vector(new float[] { v.X, v.Y, v.Z, 1 });
+        }
+
         public static Vector ToSteady(Vector v)
         {
             Debug.Assert(v.Length > 1 && v.T == 1, "Not an unsteady vector.");

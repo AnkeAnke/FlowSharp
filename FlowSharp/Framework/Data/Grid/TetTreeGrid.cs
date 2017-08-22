@@ -235,7 +235,9 @@ namespace FlowSharp
         /// <param name="weights"></param>
         public override Index FindAdjacentIndices(VectorRef pos, out VectorRef weights)
         {
-            int cell = FindCell(pos, out weights);
+            Vector4 weightsTmp;
+            int cell = FindCell((Vector3)pos, out weightsTmp);
+            weights = new Vector(weightsTmp);
             //Debug.Assert(cell >= 0, "Not in the grid.");
             return cell >= 0 ? new Index(Cells[cell]) : null;
         }
@@ -260,31 +262,31 @@ namespace FlowSharp
         {
             Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n\t{2}% \tof those did not actually sample neighbors\n\t{3}% of them are slightly negative\n\t{4}% \t of them not found at all\n{5} outside of bounding box.\nStabbing took {6}\nBary Determinants took {7}\n===============",
                 NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_SAMPLES_NO_NEW_NEIGHBORS) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_SLIGHTLY_NEGATIVE) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLE_OUTSIDE_LEAF * 100, NUM_OUTSIDE,
-                Octree.PROF_WATCH, PROF_BARY);
+                Octree.PROF_WATCH.Elapsed, PROF_BARY.Elapsed);
         }
 
         public static float MAX_NEGATIVE_BARY = 0.002f;
 
-        private int FindCell(VectorRef pos, out VectorRef bary)
+        private int FindCell(Vector3 pos, out Vector4 bary)
         {
             // Stab the tree.
             // Search through all cells that have a vertex in the stabbed leaf.
             Node leaf;
-            var vertices = Tree.StabCell(pos, out leaf);
+            bool worked = Tree.StabCell(pos, out leaf);
             NUM_SAMPLES++;
 
+            bary = Vector4.Zero;
             //if (NUM_SAMPLES % 10 == 0)
             //    Console.WriteLine(NUM_SAMPLES);
 
             // Outside the octrees bounding box?
-            if (leaf == null)
+            if (worked)
             {
-                bary = null;
                 NUM_OUTSIDE++;
                 return -1;
             }
 
-            int tet = FindInNode(vertices.GetData(Tree), pos, out bary);
+            int tet = FindInNode(leaf.GetData(Tree), pos, out bary);
 
             if (tet >= 0)
                 return tet;
@@ -315,26 +317,24 @@ namespace FlowSharp
             return -1;
         }
 
-        public int FindInNode(CellData tets, VectorRef pos,/* float maxNegativeBary,*/ out VectorRef bary/*, out int negativeTet*/)
+        public int FindInNode(CellData tets, Vector3 pos,/* float maxNegativeBary,*/ out Vector4 bary/*, out int negativeTet*/)
         {
             // Squared distance maximal 3 times as high as a random tet edge length.
-//            float distEps = CellSizeReference * CellSizeReference * 9;
-
-            bary = null;
+            //            float distEps = CellSizeReference * CellSizeReference * 9;
 
             //Vector bestNegBary = null;
             //negativeTet = -1;
             //float bestBaryDist = 1;
-
+            bary = Vector4.Zero;
             // Test whether inside.
             foreach (int tet in tets)
             {
                 //if ((_cellCenters[tet] - pos).LengthSquared() > distEps)
                 //    continue;
 
-                bary = ToBaryCoord(tet, pos);
+                bool baryGood = ToBaryCoord(tet, pos, out bary);
 
-                if (bary != null && bary.IsPositive())
+                if (baryGood)
                 {
                     return tet;
                 }
@@ -355,45 +355,45 @@ namespace FlowSharp
             //}
             return -1;
         }
-        private int FindInNode(List<CellData> data, VectorRef pos,/* float maxNegativeBary, */out VectorRef bary/*, out int negativeTet*/)
-        {
-            // Squared distance maximal 3 times as high as a random tet edge length.
-            float distEps = CellSizeReference * CellSizeReference * 9;
-            bary = null;
-            //bary = new Vector(-1, 4);
-            //Vector bestNegBary = null;
-            //negativeTet = -1;
-            //float bestBaryDist = 1;
+        //private int FindInNode(List<CellData> data, Vector3 pos,/* float maxNegativeBary, */out VectorRef bary/*, out int negativeTet*/)
+        //{
+        //    // Squared distance maximal 3 times as high as a random tet edge length.
+        //    float distEps = CellSizeReference * CellSizeReference * 9;
+        //    bary = null;
+        //    //bary = new Vector(-1, 4);
+        //    //Vector bestNegBary = null;
+        //    //negativeTet = -1;
+        //    //float bestBaryDist = 1;
 
-            // Test whether inside.
-            foreach (CellData tets in data)
-                foreach (int tet in tets)
-                {
-                    if ((_cellCenters[tet] - pos).LengthSquared() > distEps)
-                        continue;
+        //    // Test whether inside.
+        //    foreach (CellData tets in data)
+        //        foreach (int tet in tets)
+        //        {
+        //            if ((_cellCenters[tet] - pos).LengthSquared() > distEps)
+        //                continue;
 
-                    bary = ToBaryCoord(tet, pos);
-                    if (bary.IsPositive())
-                    {
-                        return tet;
-                    }
+        //            bary = ToBaryCoord(tet, pos);
+        //            if (bary.IsPositive())
+        //            {
+        //                return tet;
+        //            }
 
-                    //float baryDiff = bary.AbsSumNegatives();
+        //            //float baryDiff = bary.AbsSumNegatives();
 
-                    //if (baryDiff < bestBaryDist)
-                    //{
-                    //    bestBaryDist = baryDiff;
-                    //    bestNegBary = new Vector(bary);
-                    //    negativeTet = tet;
-                    //}
-                }
+        //            //if (baryDiff < bestBaryDist)
+        //            //{
+        //            //    bestBaryDist = baryDiff;
+        //            //    bestNegBary = new Vector(bary);
+        //            //    negativeTet = tet;
+        //            //}
+        //        }
 
-            //if (bestBaryDist < maxNegativeBary)
-            //{
-            //    bary = bestNegBary;
-            //}
-            return -1;
-        }
+        //    //if (bestBaryDist < maxNegativeBary)
+        //    //{
+        //    //    bary = bestNegBary;
+        //    //}
+        //    return -1;
+        //}
 
         public Vector OldToBaryCoord(int cell, VectorRef worldPos)
         {
@@ -411,10 +411,9 @@ namespace FlowSharp
             return result;
         }
         static Stopwatch PROF_BARY = new Stopwatch();
-        public Vector ToBaryCoord(int cell, VectorRef worldPos)
+        public bool ToBaryCoord(int cell, Vector3 worldPos, out Vector4 bary)
         {
             PROF_BARY.Start();
-            Debug.Assert(worldPos.Length == Vertices.VectorLength);
             SquareMatrix tet = new SquareMatrix(4);
             for (int i = 0; i < 4; ++i)
             {
@@ -422,10 +421,8 @@ namespace FlowSharp
             }
 
             //Console.WriteLine("===========\nTetrahedron matrix {0}", tet);
-
+            bary = Vector4.Zero;
             float d0 = tet.Determinant();
-
-            Vector bary = new Vector(-42, 4);
 
             // Go over all corner points and exchange them with the sample position.
             // If sign of determinant is the same as of the original, cube, the point is on the same side.
@@ -437,14 +434,14 @@ namespace FlowSharp
                 if (bary[i] <= 0)
                 {
                     PROF_BARY.Stop();
-                    return null;
+                    return false;
                 }
             }
             float barySum = bary.Sum();
             //float eps = 0.01f;
             //Console.WriteLine("===========\nPosition {0}\nBarycentric Coordinate {1}", worldPos, bary);
             PROF_BARY.Stop();
-            return bary;
+            return true;
         }
 
 
@@ -456,27 +453,28 @@ namespace FlowSharp
         /// <returns></returns>
         public override Vector CutToBorder(VectorField field, VectorRef pos, VectorRef outsidePos)
         {
-            float eps = CellSizeReference / 1000;
-            Vector dir = outsidePos - pos;
-            float dirLength = dir.LengthEuclidean();
-            float dirPercentage = 0.5f;
-            float step = 0.25f;
+            //float eps = CellSizeReference / 1000;
+            //Vector dir = outsidePos - pos;
+            //float dirLength = dir.LengthEuclidean();
+            //float dirPercentage = 0.5f;
+            //float step = 0.25f;
 
-            VectorRef outBary;
-            int lastWorkingCell = -1;
+            //VectorRef outBary;
+            //int lastWorkingCell = -1;
 
-            while (dirLength * step > eps)
-            {
-                int cell = lastWorkingCell;
-                Vector samplePos = pos + dir * dirPercentage;
-                if (cell < 0 || !ToBaryCoord(cell, samplePos).IsPositive())
-                    cell = FindCell(samplePos, out outBary);
-                lastWorkingCell = (cell >= 0) ? cell : lastWorkingCell;
-                dirPercentage += (cell >= 0) ? step : -step;
-                step *= 0.5f;
-            }
+            //while (dirLength * step > eps)
+            //{
+            //    int cell = lastWorkingCell;
+            //    Vector samplePos = pos + dir * dirPercentage;
+            //    if (cell < 0 || !ToBaryCoord(cell, samplePos, out bary))
+            //        cell = FindCell(samplePos, out outBary);
+            //    lastWorkingCell = (cell >= 0) ? cell : lastWorkingCell;
+            //    dirPercentage += (cell >= 0) ? step : -step;
+            //    step *= 0.5f;
+            //}
 
-            return pos + dir * dirPercentage;
+            //return pos + dir * dirPercentage;
+            return null;
         }
 
         #region DebugRendering
@@ -512,24 +510,26 @@ namespace FlowSharp
             int realTet = 1739065;
             int permIndex = Tree.GetTetPermutationPosition(realTet);
             VectorRef tetPos = Tree.Vertices[realTet];
-            Console.WriteLine("============\nTet Permutation Index {0}\nTet Position {1}\nTet Position in Grid Coords {2}\n============", permIndex, tetPos, Tree.ToGridPosition(tetPos));
+            Console.WriteLine("============\nTet Permutation Index {0}\nTet Position {1}\nTet Position in Grid Coords {2}\n============", permIndex, tetPos, Tree.ToGridPosition((Vector3)tetPos));
             Vector posT = Vertices.MinValue +
                             new Vector(new float[] {
                                        ((float)79) / vertsPerSide * extent[0],
                                        ((float)22) / vertsPerSide * extent[1],
                                        ((float)11) / vertsPerSide * extent[2] });
-            Console.WriteLine( "\n===========\nPosition {0}, in Grid {1}", posT, Tree.ToGridPosition(posT));
+            Console.WriteLine( "\n===========\nPosition {0}, in Grid {1}", posT, Tree.ToGridPosition((Vector3)posT));
 
-            Vector tmpDist = Tree.ToGridPosition(posT) - Tree.ToGridPosition(tetPos);
+            Vector3 tmpDist = Tree.ToGridPosition((Vector3)posT) - Tree.ToGridPosition((Vector3)tetPos);
             Console.WriteLine("Position minus Tet Center Position: {0}\n\tIn Grid Positions: {1}\n\tIndeed, {0} in Grid Distance is {2}",
-                              posT - tetPos, tmpDist, tmpDist * Tree.MaxLeafSize);
+                              posT - tetPos, tmpDist, tmpDist.Multiply(Tree.MaxLeafSize));
 
             //Vector baryT = ToBaryCoord(realTet, posT);
             //Console.WriteLine("===========\nBary Position {0}", baryT);
             Vector sampleT = Sample(data, posT);
             if (sampleT != null)
                 Console.WriteLine("Test Case Works T_T");
-            Console.WriteLine("Test case took {0}m {1}s {2}", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds, watch.Elapsed.Milliseconds);
+            else
+                Console.WriteLine("=======\n=======Test Case Fail\n=======\n=======");
+            Console.WriteLine("Test case took {0}m {1}s {2}ms", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds, watch.Elapsed.Milliseconds);
             // \DEBUGGGGGGGGGGGGGGGGGGGG
             ShowSampleStatistics();
             // Default-false.

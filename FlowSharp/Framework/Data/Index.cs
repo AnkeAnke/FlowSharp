@@ -158,6 +158,12 @@ namespace FlowSharp
             return result;
         }
 
+        public static explicit operator SlimDX.Vector3(Index vec)  // explicit byte to digit conversion operator
+        {
+            Debug.Assert(vec.Length >= 3);
+            return new SlimDX.Vector3(vec[0], vec[1], vec[2]);
+        }
+
         public static explicit operator int(Index i)
         {
             Debug.Assert(i.Length == 1, "Can only cast 1D index to scalar, given index is " + i.Length + "D.");
