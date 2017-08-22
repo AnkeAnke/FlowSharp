@@ -49,7 +49,7 @@ namespace FlowSharp
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
 
-            _grid = new TetTreeGrid(hexGrid, 100, 10);
+            
             //_grid.Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename); // Fun fact: never loaded yet.
 
             // Fit plane to data.
@@ -60,9 +60,14 @@ namespace FlowSharp
             //_tmpTest = _grid.BorderGeometry();
             // Load some attribute.
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
-            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.pressure, 0), _grid);
 
-            _points = _grid.SampleTest(_vectorField, 5);
+            //for (int level = 5; level <= 15; level += 2)
+            //{
+                _grid = new TetTreeGrid(hexGrid, 10, 10);
+                if (_vectorField == null)
+                    _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.pressure, 0), _grid);
+                _points = _grid.SampleTest(_vectorField, 5);
+            //}
             //_points[00].Color = Vector3.UnitX;
             //_points[10].Color = Vector3.UnitY;
             //_points[20].Color = Vector3.UnitZ;
@@ -207,6 +212,8 @@ namespace FlowSharp
             _attribute.ExtractMinMax();
             float min = _attribute?.MinValue?[0] ?? -500f;
             float max = _attribute?.MaxValue?[0] ?? 500;
+            if (max == min)
+                max = min + 0.001f;
             Console.WriteLine("Attribute {2}:\n\tAttribute min {0}\n\tAttribute max {1}", min, max, element.ToString());
             switch (element)
             {

@@ -14,6 +14,7 @@ namespace FlowSharp
     {
         public Vector3 Minimum { get { return (Vector3)Vertices.MinValue; } }
         public Vector3 Maximum { get { return (Vector3)Vertices.MaxValue; } }
+        public Vector3 Extent { get { return (Vector3)Vertices.Extent; } }
         public int VectorLength { get { return 3; } }
         private Node _root { get { return _nodes[0]; } }
         private List<Node> _nodes;
@@ -60,22 +61,18 @@ namespace FlowSharp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            _root.SplitRecursively(this, maxVertices, maxDepth);
+            Split(maxVertices);
 
             float maxRadius = (1 << _maxDepth) / maxCellDistance;
             Console.WriteLine("Max {0} Vertices per Cell\nMax {1} Levels deep (Restrained to {3})\nMax {2} Cells from Cell Center", maxVertices, _maxDepth, maxRadius, maxDepth);
-            // Use max depth for "lattice distance" computation.
-            //if (maxDepth > 0)
-            //{
-            //    Debug.Assert(maxDepth >= _maxDepth);
-            //    _maxDepth = maxDepth;
-            //}
-
-            // This is important, as neighbor queries rely on it.
-            //            _maxLeafSize = Vertices.Extent / (1 << _maxDepth);
 
             watch.Stop();
             Console.WriteLine("Octree buildup took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+        }
+
+        private void Split(int maxVertices)
+        {
+            _root.SplitRecursively(this, maxVertices, _maxDepth);
         }
 
         #region FileReadWrite
@@ -167,12 +164,12 @@ namespace FlowSharp
         /// <param name="leafNode">Output node.</param>
         /// <param name="maxLevel">Maximal traversal depth. Negative means no condition.</param>
         /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
-        public Node StabCell(Vector3 pos, out Node leafNode)
+        public bool StabCell(Vector3 pos, out Node leafNode)
         {
             return StabCellGridPos(ToGridPosition(pos), out leafNode);
         }
 
-        public static Stopwatch PROF_WATCH = new Stopwatch();
+        // public static Stopwatch PROF_WATCH = new Stopwatch();
         /// <summary>
         /// Stab the octree. Returns the lowest node containing the position. Maximal level can be set.
         /// </summary>
@@ -180,21 +177,29 @@ namespace FlowSharp
         /// <param name="leafNode">Output node.</param>
         /// <param name="maxLevel">Maximal traversal depth. Negative means no condition.</param>
         /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
-        private Node StabCellGridPos(Vector3 gridPos, out Node leafNode)
+        private bool StabCellGridPos(Vector3 gridPos, out Node leafNode)
         {
             //cellExtent = null;
 
             if (!(gridPos.IsLess(_gridSize)) || !gridPos.IsPositive())
             {
                 leafNode = null;
-                return null;
+                return false;
+            }
+            leafNode = _root;
+            //PROF_WATCH.Start();
+            //leafNode = _root.Stab(this, gridPos);
+            //PROF_WATCH.Stop();
+            for (int l = 0; l <= _maxDepth; ++l)
+            {
+                if (leafNode.IsLeaf)
+                    return true;
+
+                int comp = Vector3Extensions.CompareForIndex(gridPos, leafNode.MidPos);
+                leafNode =  _nodes[leafNode.Children[comp]];
             }
 
-            PROF_WATCH.Start();
-            leafNode = _root.Stab(this, gridPos);
-            PROF_WATCH.Stop();
-
-            return leafNode;
+            return false;
         }
 
         public int FindNeighborNodes(TetTreeGrid grid, Vector3 pos, Node leaf, out Vector4 bary)
@@ -202,9 +207,7 @@ namespace FlowSharp
             List<CellData> neighbors = new List<CellData>(6);
 
             Vector3 gridPos = ToGridPosition(pos);
-
-            
-            Node stabbed;
+           
             Node range;
 
             // How many cells can we go maximally before there is definitely nothing there.
@@ -241,10 +244,10 @@ namespace FlowSharp
                                         continue;
 
                                     // New stabbing query.
-                                    range = StabCellGridPos(stab, out stabbed);
+                                    bool worked = StabCellGridPos(stab, out range);
                                     //if (offsetVec[0] == 1 && offsetVec[1] == -1 && offsetVec[2] == -2)
                                     //    Console.WriteLine("\tIndex Range [{0},{1}]\n\tGrid Range [{2},{3}]", range.MinIdx, range.MaxIdx, range.MinPos, range.MaxPos);
-                                    if (range == null)
+                                    if (!worked)
                                         continue;
                                     int tet = grid.FindInNode(range.GetData(this), pos, out bary);
                                     if (tet >= 0)
@@ -429,22 +432,20 @@ namespace FlowSharp
                 return ret;
             }
 
-            public Node Stab(Octree tree, Vector3 pos) //Vector cellExtent)
-            {
-                // Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length ?? 0, MaxIdx - MinIdx);
-                if (IsLeaf)
-                {
-                    //if (tree.OUTPUT_DEBUG)
-                     //   Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length??0, MaxIdx-MinIdx);
-                    return this;
-                }
+            //public Node Stab(Octree tree, Vector3 pos) //Vector cellExtent)
+            //{
+            //    // Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length ?? 0, MaxIdx - MinIdx);
+            //    if (IsLeaf)
+            //    {
+            //        return this;
+            //    }
 
-                Sign[] comp = Vector3Extensions.Compare(pos, MidPos);
-                Node child = tree._nodes[Children[IndexBySigns(comp)]];
-                //if (child.IsEmpty)
-                //    return this;
-                return child.Stab(tree, pos);
-            }
+            //    //Sign[] comp = Vector3Extensions.Compare(pos, MidPos);
+            //    //Node child = tree._nodes[Children[IndexBySigns(comp)]];
+            //    int comp = Vector3Extensions.CompareForIndex(pos, MidPos);
+
+            //    return tree._nodes[Children[comp]].Stab(tree, pos);
+            //}
 
             public bool IsGridPosInside(Vector3 vec)
             {
@@ -482,17 +483,17 @@ namespace FlowSharp
                 return new CellData(this, tree);
             }
 
-            private int IndexBySigns(Sign[] signs)
-            {
-                int idx = 0;
-                int factor = 1;
-                for (int s = 0; s < signs.Length; ++s)
-                {
-                    idx += signs[s] ? factor : 0;
-                    factor *= 2;
-                }
-                return idx;
-            }
+            //private int IndexBySigns(Sign[] signs)
+            //{
+            //    int idx = 0;
+            //    int factor = 1;
+            //    for (int s = 0; s < signs.Length; ++s)
+            //    {
+            //        idx += signs[s] ? factor : 0;
+            //        factor *= 2;
+            //    }
+            //    return idx;
+            //}
 
             private Sign[] SignsByIndex(int idx, int numDimensions)
             {

@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SlimDX;
 using static FlowSharp.Octree;
+using System.Collections.Concurrent;
 
 namespace FlowSharp
 {
@@ -182,7 +183,7 @@ namespace FlowSharp
             
 
             watch.Stop();
-            Console.WriteLine("Grid buildup took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+            Console.WriteLine("===== Grid buildup with {1} Levels took {0}", watch.Elapsed, maxDepth);
         }
 
         public Index[] GetAllSides()
@@ -260,9 +261,9 @@ namespace FlowSharp
 
         public static void ShowSampleStatistics()
         {
-            Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n\t{2}% \tof those did not actually sample neighbors\n\t{3}% of them are slightly negative\n\t{4}% \t of them not found at all\n{5} outside of bounding box.\nStabbing took {6}\nBary Determinants took {7}\n===============",
-                NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_SAMPLES_NO_NEW_NEIGHBORS) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_SLIGHTLY_NEGATIVE) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLE_OUTSIDE_LEAF * 100, NUM_OUTSIDE,
-                Octree.PROF_WATCH.Elapsed, PROF_BARY.Elapsed);
+            Console.WriteLine("{0} \tsamples.\n{1}% \tsampled neighbor nodes.\n\t{2}% \tof those did not actually sample neighbors\n\t{3}% of them are slightly negative\n\t{4}% \t of them not found at all\n{5} outside of bounding box.\n===============",
+                NUM_SAMPLES, ((float)NUM_SAMPLE_OUTSIDE_LEAF) / NUM_SAMPLES * 100, ((float)NUM_SAMPLES_NO_NEW_NEIGHBORS) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_SLIGHTLY_NEGATIVE) / NUM_SAMPLE_OUTSIDE_LEAF * 100, ((float)NUM_UNSUCCESSFULL_SAMPLES) / NUM_SAMPLE_OUTSIDE_LEAF * 100, NUM_OUTSIDE
+                /*Octree.PROF_WATCH.Elapsed, PROF_BARY.Elapsed*/);
         }
 
         public static float MAX_NEGATIVE_BARY = 0.002f;
@@ -280,7 +281,7 @@ namespace FlowSharp
             //    Console.WriteLine(NUM_SAMPLES);
 
             // Outside the octrees bounding box?
-            if (worked)
+            if (!worked)
             {
                 NUM_OUTSIDE++;
                 return -1;
@@ -410,14 +411,15 @@ namespace FlowSharp
 
             return result;
         }
-        static Stopwatch PROF_BARY = new Stopwatch();
+        //static Stopwatch PROF_BARY = new Stopwatch();
         public bool ToBaryCoord(int cell, Vector3 worldPos, out Vector4 bary)
         {
-            PROF_BARY.Start();
-            SquareMatrix tet = new SquareMatrix(4);
+            //PROF_BARY.Start();
+            Matrix tet = new Matrix();
             for (int i = 0; i < 4; ++i)
             {
-                tet[i] = VectorRef.ToUnsteady(Vertices[Cells[cell][i]]);
+                //tet[i] = VectorRef.ToUnsteady(Vertices[Cells[cell][i]]);
+                tet.set_Columns(i, new Vector4(Vertices[Cells[cell][i]][0], Vertices[Cells[cell][i]][1], Vertices[Cells[cell][i]][2], 1));
             }
 
             //Console.WriteLine("===========\nTetrahedron matrix {0}", tet);
@@ -428,19 +430,19 @@ namespace FlowSharp
             // If sign of determinant is the same as of the original, cube, the point is on the same side.
             for (int i = 0; i < 4; ++i)
             {
-                SquareMatrix mi = new SquareMatrix(tet);
-                mi[i] = VectorRef.ToUnsteady(worldPos);
+                Matrix mi = tet;
+                mi.set_Columns(i, new Vector4((Vector3)worldPos, 1));
                 bary[i] = mi.Determinant() / d0;
                 if (bary[i] <= 0)
                 {
-                    PROF_BARY.Stop();
+                    //PROF_BARY.Stop();
                     return false;
                 }
             }
             float barySum = bary.Sum();
             //float eps = 0.01f;
             //Console.WriteLine("===========\nPosition {0}\nBarycentric Coordinate {1}", worldPos, bary);
-            PROF_BARY.Stop();
+            //PROF_BARY.Stop();
             return true;
         }
 
@@ -495,6 +497,24 @@ namespace FlowSharp
         //    return new LineSet(lines);
         //}
 
+        private void SamplePosition(VectorField data, int posIdx, int samplesPerSide, ConcurrentBag<Point> verts)
+        {
+            Vector pos = Vertices.MinValue +
+                            new Vector(new float[] {
+                                       (float)(posIdx % samplesPerSide) / samplesPerSide * Tree.Extent[0],
+                                       (float)((posIdx / samplesPerSide) % samplesPerSide) / samplesPerSide * Tree.Extent[1],
+                                       (float)(posIdx / samplesPerSide / samplesPerSide) / samplesPerSide * Tree.Extent[2] });
+
+            Vector sample = Sample(data, pos);
+            if (sample != null)
+            {
+                float color = ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
+                verts.Add( new Point((Vector3)pos) { Radius = 0.01f, Color = new Vector3(color) });
+            }
+
+            Console.WriteLine("Sample {0} / {1}", posIdx, samplesPerSide * samplesPerSide * samplesPerSide);
+        }
+
         public PointSet<Point> SampleTest(VectorField data, int vertsPerSide = 100)
         {
             data.Data.ExtractMinMax();
@@ -502,71 +522,74 @@ namespace FlowSharp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            List<Point> verts = new List<Point>(vertsPerSide * vertsPerSide * vertsPerSide / 5);
+            ConcurrentBag<Point> verts = new ConcurrentBag<Point>();
             Vector extent = Vertices.MaxValue - Vertices.MinValue;
 
-            // DEBUGGGGGGGGGGGGGGGGGGGG
-            // 1739065 : {[79, 22, 11]}
-            int realTet = 1739065;
-            int permIndex = Tree.GetTetPermutationPosition(realTet);
-            VectorRef tetPos = Tree.Vertices[realTet];
-            Console.WriteLine("============\nTet Permutation Index {0}\nTet Position {1}\nTet Position in Grid Coords {2}\n============", permIndex, tetPos, Tree.ToGridPosition((Vector3)tetPos));
-            Vector posT = Vertices.MinValue +
-                            new Vector(new float[] {
-                                       ((float)79) / vertsPerSide * extent[0],
-                                       ((float)22) / vertsPerSide * extent[1],
-                                       ((float)11) / vertsPerSide * extent[2] });
-            Console.WriteLine( "\n===========\nPosition {0}, in Grid {1}", posT, Tree.ToGridPosition((Vector3)posT));
+            //// DEBUGGGGGGGGGGGGGGGGGGGG
+            //// 1739065 : {[79, 22, 11]}
+            //int realTet = 1739065;
+            //int permIndex = Tree.GetTetPermutationPosition(realTet);
+            //VectorRef tetPos = Tree.Vertices[realTet];
+            //Console.WriteLine("============\nTet Permutation Index {0}\nTet Position {1}\nTet Position in Grid Coords {2}\n============", permIndex, tetPos, Tree.ToGridPosition((Vector3)tetPos));
+            //Vector posT = Vertices.MinValue +
+            //                new Vector(new float[] {
+            //                           ((float)79) / vertsPerSide * extent[0],
+            //                           ((float)22) / vertsPerSide * extent[1],
+            //                           ((float)11) / vertsPerSide * extent[2] });
+            //Console.WriteLine( "\n===========\nPosition {0}, in Grid {1}", posT, Tree.ToGridPosition((Vector3)posT));
 
-            Vector3 tmpDist = Tree.ToGridPosition((Vector3)posT) - Tree.ToGridPosition((Vector3)tetPos);
-            Console.WriteLine("Position minus Tet Center Position: {0}\n\tIn Grid Positions: {1}\n\tIndeed, {0} in Grid Distance is {2}",
-                              posT - tetPos, tmpDist, tmpDist.Multiply(Tree.MaxLeafSize));
+            //Vector3 tmpDist = Tree.ToGridPosition((Vector3)posT) - Tree.ToGridPosition((Vector3)tetPos);
+            //Console.WriteLine("Position minus Tet Center Position: {0}\n\tIn Grid Positions: {1}\n\tIndeed, {0} in Grid Distance is {2}",
+            //                  posT - tetPos, tmpDist, tmpDist.Multiply(Tree.MaxLeafSize));
 
-            //Vector baryT = ToBaryCoord(realTet, posT);
-            //Console.WriteLine("===========\nBary Position {0}", baryT);
-            Vector sampleT = Sample(data, posT);
-            if (sampleT != null)
-                Console.WriteLine("Test Case Works T_T");
-            else
-                Console.WriteLine("=======\n=======Test Case Fail\n=======\n=======");
-            Console.WriteLine("Test case took {0}m {1}s {2}ms", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds, watch.Elapsed.Milliseconds);
-            // \DEBUGGGGGGGGGGGGGGGGGGGG
-            ShowSampleStatistics();
+            ////Vector baryT = ToBaryCoord(realTet, posT);
+            ////Console.WriteLine("===========\nBary Position {0}", baryT);
+            //Vector sampleT = Sample(data, posT);
+            //if (sampleT != null)
+            //    Console.WriteLine("Test Case Works T_T");
+            //else
+            //    Console.WriteLine("=======\n=======Test Case Fail\n=======\n=======");
+            //Console.WriteLine("Test case took {0}m {1}s {2}ms", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds, watch.Elapsed.Milliseconds);
+            //// \DEBUGGGGGGGGGGGGGGGGGGGG
+            //ShowSampleStatistics();
             // Default-false.
             //bool[,,] notFound = new bool[vertsPerSide, vertsPerSide, vertsPerSide];
             int numNotFound = 0;
 
-            for (int z = 0; z < vertsPerSide; ++z)
-            {
-                for (int y = 0; y < vertsPerSide; ++y)
-                        for (int x = 0; x < vertsPerSide; ++x)
-                        {
-                        Vector pos = Vertices.MinValue +
-                            new Vector(new float[] {
-                                       ((float)x) / vertsPerSide * extent[0],
-                                       ((float)y) / vertsPerSide * extent[1],
-                                       ((float)z) / vertsPerSide * extent[2] });
+            Parallel.For(0, vertsPerSide * vertsPerSide * vertsPerSide, s => { SamplePosition(data, s, vertsPerSide, verts); });
+            //for (int s = 0; s < vertsPerSide * vertsPerSide * vertsPerSide; ++s)
+            //{
+            //    SamplePosition(data, s, vertsPerSide, verts);
+            //}
+            //for (int z = 0; z < vertsPerSide; ++z)
+            
+            //    for (int y = 0; y < vertsPerSide; ++y)
+            //    { 
+            //            for (int x = 0; x < vertsPerSide; ++x)
+            //            {
+            //            Vector pos = Vertices.MinValue +
+            //                new Vector(new float[] {
+            //                           ((float)x) / vertsPerSide * extent[0],
+            //                           ((float)y) / vertsPerSide * extent[1],
+            //                           ((float)z) / vertsPerSide * extent[2] });
 
-                        Vector sample = Sample(data, pos);
-                        if (sample == null)
-                        {
-                            //notFound[x, y, z] = true;
-                            numNotFound++;
-                        }
-                        else
-                        {
-                            float color = ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
-                            verts.Add(new Point((Vector3)pos) { Radius = 0.01f, Color = new Vector3(color) });
-                        }
-                        Console.WriteLine("{0} / {1} sampled", x + vertsPerSide * y + z * vertsPerSide * vertsPerSide, vertsPerSide * vertsPerSide * vertsPerSide);
-                    }
-                Console.WriteLine("{0}% Sampling Complete", (z * 100) / vertsPerSide);
-                ShowSampleStatistics();
-            }
-
-            Console.WriteLine("{0} Samples not found\n===========", numNotFound);
-            Console.WriteLine("Sampling done.\nStatistics before:\n==================");
-            ShowSampleStatistics();
+            //            Vector sample = Sample(data, pos);
+            //            if (sample == null)
+            //            {
+            //                //notFound[x, y, z] = true;
+            //                numNotFound++;
+            //            }
+            //            else
+            //            {
+            //                float color = ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
+            //                verts.Add(new Point((Vector3)pos) { Radius = 0.01f, Color = new Vector3(color) });
+            //            }
+            //        }
+            //        Console.WriteLine("{0}% Sampling Complete", (z * 100) / vertsPerSide);
+            //        //ShowSampleStatistics();
+            //    }
+            
+            
             //try
             //{
             //    //'System.IndexOutOfRangeException' in FlowSharp.exe
@@ -594,7 +617,8 @@ namespace FlowSharp
             //}
 
             watch.Stop();
-            Console.WriteLine("Grid stabbing with {0} unsuccessfull samples took {1}m {2}s", verts.Count, (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+            Console.WriteLine("===== Grid stabbing with {0} unsuccessfull samples took {1}", verts.Count, watch.Elapsed);
+            ShowSampleStatistics();
 
             return new PointSet<Point>(verts.ToArray());
         }
