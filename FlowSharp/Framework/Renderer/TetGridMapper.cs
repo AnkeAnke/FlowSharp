@@ -61,13 +61,14 @@ namespace FlowSharp
             // Load some attribute.
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
 
-            //for (int level = 5; level <= 15; level += 2)
-            //{
-                _grid = new TetTreeGrid(hexGrid, 10, 10);
+            //for (int level = 9; level <= 16; level += 2)
+            {
+                _grid = new TetTreeGrid(hexGrid, 1, 10);
+                //_grid.Tree.WriteToFile();
                 if (_vectorField == null)
                     _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.pressure, 0), _grid);
                 _points = _grid.SampleTest(_vectorField, 5);
-            //}
+            }
             //_points[00].Color = Vector3.UnitX;
             //_points[10].Color = Vector3.UnitY;
             //_points[20].Color = Vector3.UnitZ;
@@ -214,7 +215,7 @@ namespace FlowSharp
             float max = _attribute?.MaxValue?[0] ?? 500;
             if (max == min)
                 max = min + 0.001f;
-            Console.WriteLine("Attribute {2}:\n\tAttribute min {0}\n\tAttribute max {1}", min, max, element.ToString());
+            //Console.WriteLine("Attribute {2}:\n\tAttribute min {0}\n\tAttribute max {1}", min, max, element.ToString());
             switch (element)
             {
                 case Setting.Element.WindowWidth:

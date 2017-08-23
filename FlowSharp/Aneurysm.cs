@@ -22,7 +22,7 @@ namespace FlowSharp
         public string VtuFolderFilename;
         public string VtuDataFilename;
 
-        public string OctreeFilename;
+        public string OctreeFolderFilename;
 
         public int NumSteps = 200;
 
@@ -183,6 +183,11 @@ namespace FlowSharp
         public string VtuCompleteFilename(int timestep, GeometryPart geom)
         {
             return VtuFolderFilename + timestep + '/' + VtuDataFilename + timestep + '_' + (((int)geom)-1) + "_0.vtu";
+        }
+
+        public string OctreeFilename(int maxVerts, int maxLevels)
+        {
+            return OctreeFolderFilename + "tree_vert" + maxVerts + "_lvl" + maxLevels + ".octree";
         }
 
         private Aneurysm()

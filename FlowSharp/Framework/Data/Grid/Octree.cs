@@ -24,7 +24,7 @@ namespace FlowSharp
         private int[] _vertexPermutation;
         public Vector3 MaxLeafSize { get { return (Vector3)Vertices.Extent / (1 << _maxDepth); } }
         public float MaxCellDistance { get; private set; }
-        private int _maxDepth;
+        private int _maxDepth, _maxVerts;
         private int _gridSize { get { return 1 << _maxDepth; } }
         
 
@@ -48,6 +48,7 @@ namespace FlowSharp
                 throw new NotImplementedException("Nope. Sorry.");
 
             _maxDepth = maxDepth;
+            _maxVerts = maxVertices;
             MaxCellDistance = maxCellDistance;
 
             Vertices = data;
@@ -67,7 +68,7 @@ namespace FlowSharp
             Console.WriteLine("Max {0} Vertices per Cell\nMax {1} Levels deep (Restrained to {3})\nMax {2} Cells from Cell Center", maxVertices, _maxDepth, maxRadius, maxDepth);
 
             watch.Stop();
-            Console.WriteLine("Octree buildup took {0}m {1}s", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+            Console.WriteLine($"Octree buildup took {watch.Elapsed}");
         }
 
         private void Split(int maxVertices)
@@ -76,85 +77,107 @@ namespace FlowSharp
         }
 
         #region FileReadWrite
-        //public Octree(string filename)
-        //{
-        //    using (FileStream fs = File.Open(@filename, FileMode.Open))
-        //    {
-        //        using (BinaryReader reader = new BinaryReader(fs))
-        //        {
-        //            // Read Permutations.
-        //            int numPerms = reader.ReadInt32();
-        //            _vertexPermutation = new int[numPerms];
-        //            byte[] perms = reader.ReadBytes(numPerms * sizeof(int));
-        //            Buffer.BlockCopy(perms, 0, _vertexPermutation, 0, numPerms * sizeof(int));
+        public static Octree ReadOctree(int maxVerts, int maxDepth, float maxCellDistance)
+        {
+            string filename = Aneurysm.Singleton.OctreeFilename(maxVerts, maxDepth);
+            Console.WriteLine(filename);
+            if (!File.Exists(@filename))
+                return null;
+            var tree =  new Octree(filename);
+            tree._maxDepth = maxDepth;
+            tree._maxVerts = maxVerts;
+            tree.MaxCellDistance = maxCellDistance;
+            return tree;
+        }
 
-        //            // Load Nodes.
-        //            int numNodes = reader.ReadInt32();
-        //            _nodes = new List<Node>(numNodes);
+        private Octree(string filename)
+        { 
+            using (FileStream fs = File.Open(@filename, FileMode.Open))
+            {
+                using (BinaryReader reader = new BinaryReader(fs))
+                {
+                    // Read Permutations.
+                    int numPerms = reader.ReadInt32();
+                    _vertexPermutation = new int[numPerms];
+                    byte[] perms = reader.ReadBytes(numPerms * sizeof(int));
+                    Buffer.BlockCopy(perms, 0, _vertexPermutation, 0, numPerms * sizeof(int));
 
-        //            // Read nodes iteratively.
-        //            for (int n = 0; n < numNodes; ++n)
-        //            {
-        //                Node node = new Node();
-        //                // Reading children. Reading 8 (-1) means Children == null.
-        //                for (int c = 0; c < 8; ++c)
-        //                    node.Children[c] = reader.ReadInt32();
+                    // Load Nodes.
+                    int numNodes = reader.ReadInt32();
+                    _nodes = new List<Node>(numNodes);
+                    for (int n = 0; n < numNodes; ++n)
+                        _nodes.Add(new Node());
 
-        //                // Write int values.
-        //                node.MinIdx = reader.ReadInt32();
-        //                node.MaxIdx = reader.ReadInt32();
-        //                node.Level  = reader.ReadInt32();
+                    // Read nodes iteratively.
+                    for (int n = 0; n < numNodes; ++n)
+                    {
+                        // Reading children. Reading 8 (-1) means Children == null.
+                        for (int c = 0; c < 8; ++c)
+                        {
+                            _nodes[n].Children[c] = reader.ReadInt32();
+                            //Console.WriteLine("Child " + node.Children[c]);
+                        }
+                        if (_nodes[n].Children[0] == -1)
+                            _nodes[n].Children = null;
 
-        //                // Read vectors component-wise.
-        //                node.MinPos = new Vector(3);
-        //                for (int m = 0; m < 3; ++m)
-        //                    node.MinPos[m] = reader.ReadSingle();
+                        // Write int values.
+                        _nodes[n].MinIdx = reader.ReadInt32();
+                        _nodes[n].MaxIdx = reader.ReadInt32();
+                        _nodes[n].Level = reader.ReadInt32();
 
-        //                node.MaxPos = new Vector(3);
-        //                for (int m = 0; m < 3; ++m)
-        //                    node.MaxPos[m] = reader.ReadSingle();
+                        // Read vectors component-wise.
+                        //node.MinPos = Vector3.Zero;
+                        for (int m = 0; m < 3; ++m)
+                            _nodes[n].MinPos[m] = reader.ReadSingle();
 
-        //                node.MidPos = node.MinPos + (node.MaxPos - node.MinPos) * 0.5f;
-        //            }
-        //        }
-        //    }
-        //}
+                       // node.MaxPos = Vector3.Zero;
+                        for (int m = 0; m < 3; ++m)
+                            _nodes[n].MaxPos[m] = reader.ReadSingle();
 
-        //public void WriteToFile(string filename)
-        //{
-        //    using (FileStream fs = File.Open(@filename, FileMode.Create))
-        //    {
-        //        using (BinaryWriter writer = new BinaryWriter(fs))
-        //        {
-        //            // Write Permutations.
-        //            writer.Write(_vertexPermutation.Length);
-        //            byte[] perms = new byte[_vertexPermutation.Length * sizeof(int)];
-        //            Buffer.BlockCopy(_vertexPermutation, 0, perms, 0, _vertexPermutation.Length);
-        //            writer.Write(perms);
+                        _nodes[n].MidPos = (_nodes[n].MinPos + _nodes[n].MaxPos) * 0.5f;
+                    }
+                }
+            }
+        }
 
-        //            // Write Nodes.
-        //            writer.Write(_nodes.Count);
-        //            foreach (Node node in _nodes)
-        //            {
-        //                // Writing children. Write 8 (-1) so each block is the same length.
-        //                for (int c = 0; c < 8; ++c)
-        //                    writer.Write(node.Children?[c] ?? -1);
+        public void WriteToFile()
+        {
+            string filename = Aneurysm.Singleton.OctreeFilename(_maxVerts, _maxDepth);
+            using (FileStream fs = File.Open(@filename, FileMode.Create))
+            {
+                using (BinaryWriter writer = new BinaryWriter(fs))
+                {
+                    // Write Permutations.
+                    writer.Write(_vertexPermutation.Length);
+                    byte[] perms = new byte[_vertexPermutation.Length * sizeof(int)];
+                    Buffer.BlockCopy(_vertexPermutation, 0, perms, 0, _vertexPermutation.Length * sizeof(int));
+                    writer.Write(perms);
 
-        //                // Write int values.
-        //                writer.Write(node.MinIdx);
-        //                writer.Write(node.MaxIdx);
-        //                writer.Write(node.Level);
+                    // Write Nodes.
+                    writer.Write(_nodes.Count);
+                    foreach (Node node in _nodes)
+                    {
+                        // Writing children. Write 8 (-1) so each block is the same length.
+                        for (int c = 0; c < 8; ++c)
+                            writer.Write(node.Children?[c] ?? -1);
 
-        //                // Write vectors component-wise.
-        //                foreach (float f in node.MinPos.Data)
-        //                    writer.Write(f);
+                        // Write int values.
+                        writer.Write(node.MinIdx);
+                        writer.Write(node.MaxIdx);
+                        writer.Write(node.Level);
 
-        //                foreach (float f in node.MaxPos.Data)
-        //                    writer.Write(f);
-        //            }
-        //        }
-        //    }
-        //}
+                        // Write vectors component-wise.
+                        writer.Write(node.MinPos.X);
+                        writer.Write(node.MinPos.Y);
+                        writer.Write(node.MinPos.Z);
+
+                        writer.Write(node.MaxPos.X);
+                        writer.Write(node.MaxPos.Y);
+                        writer.Write(node.MaxPos.Z);
+                    }
+                }
+            }
+        }
         #endregion FileReadWrite
 
         /// <summary>
@@ -179,23 +202,33 @@ namespace FlowSharp
         /// <returns>Node containing the position. Null if outside of octree bounding box.</returns>
         private bool StabCellGridPos(Vector3 gridPos, out Node leafNode)
         {
+            //Console.WriteLine($"= Position {gridPos} =");
             //cellExtent = null;
-
             if (!(gridPos.IsLess(_gridSize)) || !gridPos.IsPositive())
             {
                 leafNode = null;
                 return false;
             }
+            
             leafNode = _root;
             //PROF_WATCH.Start();
             //leafNode = _root.Stab(this, gridPos);
             //PROF_WATCH.Stop();
             for (int l = 0; l <= _maxDepth; ++l)
             {
+                //Console.WriteLine(leafNode);
+
                 if (leafNode.IsLeaf)
                     return true;
 
                 int comp = Vector3Extensions.CompareForIndex(gridPos, leafNode.MidPos);
+                //if (l != 0 || comp != 0)
+                //{
+                //    Console.WriteLine("MidPos " + leafNode.MidPos);
+                //    Console.WriteLine("Children[0] {0}", leafNode.Children?[0] ?? -42);
+                //    Console.WriteLine("Going to Children[{0}] = {1}", comp, leafNode.Children[comp]);
+                //}
+                //Console.WriteLine($"=== Going to {leafNode.Children[comp]} ===");
                 leafNode =  _nodes[leafNode.Children[comp]];
             }
 
@@ -240,7 +273,8 @@ namespace FlowSharp
                                     //Console.WriteLine("Stab pos: {0}\n\tOffset {1}", stab, offset * sign);
                                     //if (offsetVec[0] == 1 && offsetVec[1] == -1 && offsetVec[2] == -2)
                                     //    Console.WriteLine("Here here! Position " + stab);
-                                    if (leaf.IsGridPosInside(stab))
+
+                                    if (!(stab.IsLess(_gridSize)) || !stab.IsPositive())
                                         continue;
 
                                     // New stabbing query.
@@ -523,6 +557,11 @@ namespace FlowSharp
                 if (obj as Node == null)
                     return false;
                 return obj as Node == this;
+            }
+
+            public override string ToString()
+            {
+                return $"Indices in [{MinIdx}, {MaxIdx})\nPositions in [{MinPos}, {MaxPos})\nLevel {Level}\n{(Children == null? "Leaf":$"Children [{Children[0]}, {Children[1]}, {Children[2]}, {Children[3]}, {Children[4]}, {Children[5]}, {Children[6]}, {Children[7]}]")}";
             }
         }
 

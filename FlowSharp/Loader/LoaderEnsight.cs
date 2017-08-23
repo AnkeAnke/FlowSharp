@@ -81,7 +81,7 @@ namespace FlowSharp
                         int l7_part_num = reader.ReadInt32();
                         string l8_desc = ReadBlock(reader);
 
-                        Console.WriteLine(l8_desc + ", part nr. " + l7_part_num);
+                        // Console.WriteLine(l8_desc + ", part nr. " + l7_part_num);
                         string l9_cord = ReadBlock(reader);
                         Debug.Assert(l9_cord.Equals("coordinates"), "Expected \'coordinates\' identifier.");
 
