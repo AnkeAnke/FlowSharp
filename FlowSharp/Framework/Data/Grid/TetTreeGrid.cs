@@ -134,7 +134,7 @@ namespace FlowSharp
             watch.Start();
 
             // For Dimensionality.
-            Size = new Index(4);
+            Size = new Index(3);
             Cells = indices;
             //            Cells = new Tet[indices.Length * 5];
             Vertices = vertices;
@@ -472,28 +472,28 @@ namespace FlowSharp
         /// <returns></returns>
         public override Vector CutToBorder(VectorField field, VectorRef pos, VectorRef outsidePos)
         {
-            //float eps = CellSizeReference / 1000;
-            //Vector dir = outsidePos - pos;
-            //float dirLength = dir.LengthEuclidean();
-            //float dirPercentage = 0.5f;
-            //float step = 0.25f;
+            float eps = CellSizeReference / 4;
+            Vector dir = outsidePos - pos;
+            float dirLength = dir.LengthEuclidean();
+            float dirPercentage = 0.5f;
+            float step = 0.25f;
 
-            //VectorRef outBary;
-            //int lastWorkingCell = -1;
+            Vector4 bary;
+            int lastWorkingCell = -1;
 
-            //while (dirLength * step > eps)
-            //{
-            //    int cell = lastWorkingCell;
-            //    Vector samplePos = pos + dir * dirPercentage;
-            //    if (cell < 0 || !ToBaryCoord(cell, samplePos, out bary))
-            //        cell = FindCell(samplePos, out outBary);
-            //    lastWorkingCell = (cell >= 0) ? cell : lastWorkingCell;
-            //    dirPercentage += (cell >= 0) ? step : -step;
-            //    step *= 0.5f;
-            //}
+            while (dirLength * step > eps)
+            {
+                int cell = lastWorkingCell;
+                Vector3 samplePos = (Vector3)(pos + dir * dirPercentage);
 
-            //return pos + dir * dirPercentage;
-            return null;
+                if (cell < 0 || !ToBaryCoord(cell, samplePos, out bary))
+                    cell = FindCell(samplePos, out bary);
+                lastWorkingCell = (cell >= 0) ? cell : lastWorkingCell;
+                dirPercentage += (cell >= 0) ? step : -step;
+                step *= 0.5f;
+            }
+
+            return pos + dir * dirPercentage;
         }
 
         #region DebugRendering
@@ -525,6 +525,7 @@ namespace FlowSharp
             Vector sample = Sample(data, pos);
             if (sample != null)
             {
+                Console.WriteLine($"Successfull Position at {pos}");
                 // Console.WriteLine($"Sample {posIdx} is inside");
                 float color = ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
                 verts.Add( new Point((Vector3)pos) { Radius = 0.01f, Color = new Vector3(color) });
@@ -552,7 +553,7 @@ namespace FlowSharp
 
             watch.Stop();
             Console.WriteLine("===== Grid stabbing with {0} successfull samples took\n========= {1}", verts.Count, watch.Elapsed);
-            ShowSampleStatistics();
+            //ShowSampleStatistics();
 
             return new PointSet<Point>(verts.ToArray());
         }

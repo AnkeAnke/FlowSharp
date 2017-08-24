@@ -46,7 +46,7 @@ namespace FlowSharp
         protected List<Renderable> _renderables;
 
         public Camera Camera { get; set; }
-
+        public bool Wireframe = false;
         //protected TimeSpan _lastTime;
 
         protected Renderer() { }
@@ -144,9 +144,30 @@ namespace FlowSharp
 
         public void Render()
         {
-            foreach (Renderable obj in _renderables)
-                if(obj.Active)
-                    obj.Render(Device);
+            if (!Wireframe)
+            {
+                foreach (Renderable obj in _renderables)
+                    if (obj.Active)
+                        obj.Render(Device);
+            }
+            else
+            {
+                // Everything not a mesh: solid.
+                foreach (Renderable obj in _renderables)
+                    if (obj.Active && (obj as Mesh) == null)
+                        obj.Render(Device);
+
+                var desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Wireframe };
+                Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
+
+                // Every mesh: wireframe.
+                foreach (Renderable obj in _renderables)
+                    if (obj.Active && (obj as Mesh) != null)
+                        obj.Render(Device);
+
+                desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Solid };
+                Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
+            }
         }
 
         public void Update(TimeSpan timeSpan)
@@ -187,5 +208,11 @@ namespace FlowSharp
         {
             _renderables.Remove(obj);
         }
+
+        //public void SetSolid()
+        //{
+        //    var desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Solid };
+        //    Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
+        //}
     }
 }

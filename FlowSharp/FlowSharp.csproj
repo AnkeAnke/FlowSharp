@@ -110,6 +110,10 @@
     <Compile Include="Framework\Data\Grid\TetTreeGrid.cs" />
     <Compile Include="Framework\Data\Grid\TetNeighborGrid.cs" />
     <Compile Include="Framework\Data\Grid\UnstructuredGrid.cs" />
+    <Compile Include="Framework\Data\Integrator\Integrator.cs" />
+    <Compile Include="Framework\Data\Integrator\IntegratorEuler.cs" />
+    <Compile Include="Framework\Data\Integrator\IntegratorPredictorCorrector.cs" />
+    <Compile Include="Framework\Data\Integrator\IntegratorRK4.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
     <Compile Include="Framework\Data\IndexArray.cs" />
     <Compile Include="Framework\Data\VectorData.cs" />

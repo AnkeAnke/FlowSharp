@@ -54,7 +54,7 @@ namespace FlowSharp
 
             // Fit plane to data.
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, hexGrid.Vertices);
-            BasePlane.PointSize = 1f;
+            BasePlane.PointSize = 0.1f;
 
 
             //_tmpTest = _grid.BorderGeometry();
@@ -66,7 +66,7 @@ namespace FlowSharp
                 _grid = new TetTreeGrid(hexGrid, 1, 10);
                 //_grid.Tree.WriteToFile();
                 if (_vectorField == null)
-                    _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.pressure, 0), _grid);
+                    _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
                 _points = _grid.SampleTest(_vectorField, 5);
             }
             //_points[00].Color = Vector3.UnitX;
@@ -74,9 +74,10 @@ namespace FlowSharp
             //_points[20].Color = Vector3.UnitZ;
 
             TetTreeGrid.ShowSampleStatistics();
-            //VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
-            //integrator.StepSize = _grid.CellSizeReference / 2;
-            //_streamlines = integrator.Integrate(_points)[0];
+            VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
+            integrator.StepSize = _grid.CellSizeReference / 2;
+            _streamlines = integrator.Integrate(_points)[0];
+            _streamlines.Thickness *= 0.5f;
             //_points = _streamlines.GetAllEndPoints().ToBasicSet();
 
             //_tree = new KDTree(geomLoader.Grid, 100);
@@ -122,11 +123,14 @@ namespace FlowSharp
                 //_test = new Mesh(BasePlane, _grid.Vertices, _tmpTest);
             }
 
-            //if (_lastSetting == null ||
-            //    _streamBall == null)
-            //{
-            //    _streamBall = new LineBall(BasePlane, _streamlines);
-            //}
+            if (_streamlines != null && 
+                (_lastSetting == null ||
+                _streamBall == null))
+            {
+                _streamBall = new LineBall(BasePlane, _streamlines);
+            }
+            if (_streamBall != null)
+                wire.Add(_streamBall);
 
 
             if (_lastSetting == null ||
@@ -152,7 +156,8 @@ namespace FlowSharp
 
             if (_test != null)
                 wire.Add(_test);
-//            wire.Add(_streamBall);
+
+
 
             if (_points != null && (_vertices == null || updateCubes))
             {

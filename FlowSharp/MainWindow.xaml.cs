@@ -496,5 +496,10 @@ namespace FlowSharp
             else
                 Renderer.Singleton.Camera.SetPerspective();
         }
+
+        private void WireframeChanged(object sender, RoutedEventArgs e)
+        {
+            Renderer.Singleton.Wireframe = wireframe.IsChecked ?? false;
+        }
     }
 }
