@@ -9,9 +9,31 @@ namespace FlowSharp
     class VectorFieldInertial : VectorField
     {
         public float Inertia;
-        public override Vector Sample(Vector position, Vector lastDirection = null)
+
+        public VectorFieldInertial(VectorField field, float inertia = 0.01f) : base(field.Data, field.Grid)
         {
-            return base.Sample(position, lastDirection) + lastDirection * Inertia;
+            Inertia = inertia;
+        }
+
+        public VectorFieldInertial(VectorData data, FieldGrid grid, float inertia = 0.01f) : base(data, grid)
+        {
+            Inertia = inertia;
+        }
+
+        protected VectorFieldInertial(float inertia = 0.01f)
+        {
+            Inertia = inertia;
+        }
+
+        public VectorFieldInertial(ScalarField[] scalars, float inertia = 0.01f) : base(scalars)
+        {
+            Inertia = inertia;
+        }
+
+        public override Vector Sample(Vector position, Vector lastDirection)
+        {
+            Vector s = base.Sample(position, lastDirection);
+            return s != null? s + lastDirection * Inertia : s;
         }
     }
 }

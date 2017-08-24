@@ -86,16 +86,16 @@ namespace FlowSharp
             _streamlines.Last().Color = Vector3.UnitX;
 
             // RK 4
-            integrator = new VectorField.IntegratorRK4(_vectorField);
-            integrator.StepSize = _grid.CellSizeReference / 4;
-            _streamlines.Add( integrator.Integrate(_points)[0]);
-            _streamlines.Last().Color = Vector3.UnitY;
+            //integrator = new VectorField.IntegratorRK4(_vectorField);
+            //integrator.StepSize = _grid.CellSizeReference / 4;
+            //_streamlines.Add( integrator.Integrate(_points)[0]);
+            //_streamlines.Last().Color = Vector3.UnitY;
 
             // TODO: Inertial
-            //integrator = new VectorField.IntegratorEuler(_vectorField);
-            //integrator.StepSize = _grid.CellSizeReference / 2;
-            //_streamlines.Add( integrator.Integrate(_points)[0] );
-            //_streamlines.Last().Color = Vector3.UnitZ;
+            integrator = new VectorField.IntegratorRK4(new VectorFieldInertial(_vectorField, 0.5f));
+            integrator.StepSize = _grid.CellSizeReference / 2;
+            _streamlines.Add( integrator.Integrate(_points)[0] );
+            _streamlines.Last().Color = Vector3.UnitZ;
 
             watch.Stop();
             Console.WriteLine($"Integrating {_points.Length} points took {watch.Elapsed}. ");

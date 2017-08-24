@@ -112,7 +112,6 @@
     <Compile Include="Framework\Data\Grid\UnstructuredGrid.cs" />
     <Compile Include="Framework\Data\Integrator\Integrator.cs" />
     <Compile Include="Framework\Data\Integrator\IntegratorEuler.cs" />
-    <Compile Include="Framework\Data\Integrator\IntegratorInertial.cs" />
     <Compile Include="Framework\Data\Integrator\IntegratorPredictorCorrector.cs" />
     <Compile Include="Framework\Data\Integrator\IntegratorRK4.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
