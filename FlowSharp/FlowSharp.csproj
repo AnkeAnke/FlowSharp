@@ -112,12 +112,14 @@
     <Compile Include="Framework\Data\Grid\UnstructuredGrid.cs" />
     <Compile Include="Framework\Data\Integrator\Integrator.cs" />
     <Compile Include="Framework\Data\Integrator\IntegratorEuler.cs" />
+    <Compile Include="Framework\Data\Integrator\IntegratorInertial.cs" />
     <Compile Include="Framework\Data\Integrator\IntegratorPredictorCorrector.cs" />
     <Compile Include="Framework\Data\Integrator\IntegratorRK4.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
     <Compile Include="Framework\Data\IndexArray.cs" />
     <Compile Include="Framework\Data\VectorData.cs" />
     <Compile Include="Framework\Data\VectorFieldBlock.cs" />
+    <Compile Include="Framework\Data\VectorFieldInertial.cs" />
     <Compile Include="Framework\Data\VectorFieldScalars.cs" />
     <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
     <Compile Include="Framework\Renderer\CUDAMappers.cs" />

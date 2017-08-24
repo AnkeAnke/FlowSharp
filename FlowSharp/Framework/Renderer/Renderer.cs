@@ -157,7 +157,7 @@ namespace FlowSharp
                     if (obj.Active && (obj as Mesh) == null)
                         obj.Render(Device);
 
-                var desc = new RasterizerStateDescription { CullMode = CullMode.None, FillMode = FillMode.Wireframe };
+                var desc = new RasterizerStateDescription { CullMode = CullMode.Front, FillMode = FillMode.Wireframe };
                 Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
 
                 // Every mesh: wireframe.

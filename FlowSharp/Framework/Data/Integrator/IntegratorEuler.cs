@@ -17,12 +17,12 @@ namespace FlowSharp
                 Field = field;
             }
             int counter = 0;
-            public override Status Step(Vector point, Vector sample, out Vector next, out Vector nextSample, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector next, out Vector nextSample, out float stepLength)
             {
                 ++counter;
-                next = new Vector(point);
+                next = new Vector(pos);
                 stepLength = 0;
-                nextSample = sample;
+                nextSample = null;
 
                 if (!ScaleAndCheckVector(sample, out sample))
                     return Status.CP;
@@ -32,9 +32,7 @@ namespace FlowSharp
 
                 next += sample;
                 stepLength += sample.LengthEuclidean();
-
-                //Console.WriteLine($"===2 Point {point}, sample {sample}, next {next}");
-                return CheckPosition(next, out nextSample);
+                return Status.OK;
             }
 
             public override bool StepBorder(Vector position, Vector dir, out Vector nextPos, out float stepLength)

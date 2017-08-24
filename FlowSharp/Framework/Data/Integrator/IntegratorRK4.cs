@@ -15,13 +15,12 @@ namespace FlowSharp
             public IntegratorRK4(VectorField field) : base(field)
             { }
 
-            public override Status Step(Vector pos, Vector sample, out Vector nextPos, out Vector nextSample, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)
             {
                 nextPos = new Vector(pos);
                 stepLength = 0;
                 Status status;
                 Vector v0, v1, v2, v3;
-                nextSample = 
 
                 // v0
                 v0 = new Vector(sample);
@@ -30,7 +29,7 @@ namespace FlowSharp
                     nextSample = v0;
                     return Status.CP;
                 }
-                status = CheckPosition(pos + v0 / 2, out v1);
+                status = CheckPosition(pos + v0 / 2, inertial, out v1);
                 if (status != Status.OK)
                 {
                     nextSample = v1;
@@ -43,7 +42,7 @@ namespace FlowSharp
                     nextSample = v1;
                     return Status.CP;
                 }
-                status = CheckPosition(pos + v1 / 2, out v2);
+                status = CheckPosition(pos + v1 / 2, inertial, out v2);
                 if (status != Status.OK)
                 {
                     nextSample = v2;
@@ -56,7 +55,7 @@ namespace FlowSharp
                     nextSample = v2;
                     return Status.CP;
                 }
-                status = CheckPosition(pos + v2, out v3);
+                status = CheckPosition(pos + v2, inertial, out v3);
                 if (status != Status.OK)
                 {
                     nextSample = v3;
@@ -74,7 +73,7 @@ namespace FlowSharp
                 nextPos += dir;
                 stepLength = dir.LengthEuclidean();
 
-                return CheckPosition(nextPos, out nextSample);
+                return CheckPosition(nextPos, inertial, out nextSample);
             }
         }
 
@@ -97,7 +96,7 @@ namespace FlowSharp
                 return ((Vec3)(dir * Force)).ToVec(pos.Length);
             }
 
-            public override Status Step(Vector pos, Vector sample, out Vector nextPos, out Vector nextSample, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)
             {
                 nextPos = new Vector(pos);
                 stepLength = 0;
@@ -112,7 +111,7 @@ namespace FlowSharp
                     nextSample = v0;
                     return Status.CP;
                 }
-                status = CheckPosition(pos + v0 / 2, out v1);
+                status = CheckPosition(pos + v0 / 2, inertial, out v1);
                 if (status != Status.OK)
                 {
                     nextSample = v1;
@@ -126,7 +125,7 @@ namespace FlowSharp
                     nextSample = v1;
                     return Status.CP;
                 }
-                status = CheckPosition(pos + v1 / 2, out v2);
+                status = CheckPosition(pos + v1 / 2, inertial, out v2);
                 if (status != Status.OK)
                 {
                     nextSample = v2;
@@ -140,7 +139,7 @@ namespace FlowSharp
                     nextSample = v2;
                     return Status.CP;
                 }
-                status = CheckPosition(pos + v2, out v3);
+                status = CheckPosition(pos + v2, inertial, out v3);
                 if (status != Status.OK)
                 {
                     nextSample = v3;
@@ -160,7 +159,7 @@ namespace FlowSharp
                 stepLength = dir.LengthEuclidean();
                 nextSample = v3;
 
-                return CheckPosition(nextPos, out sample);
+                return CheckPosition(nextPos, inertial, out sample);
             }
         }
     }

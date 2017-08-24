@@ -25,26 +25,26 @@ namespace FlowSharp
                 Field = Predictor.Field;
             }
 
-            public override Status Step(Vector pos, Vector sample, out Vector nextPos, out Vector nextSample, out float stepLength)
+            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)
             {
                 // One predictor step.
-                Status status = Predictor.Step(pos, sample, out nextPos, out nextSample, out stepLength);
+                Status status = Predictor.Step(pos, sample, inertial, out nextPos, out nextSample, out stepLength);
                 if (status != Status.OK)
                     return status;
                 // Now, step until the corrector reaches a critical point.
                 Vector point;
                 Vector next = nextPos;
-                if (CheckPosition(next, out sample) != Status.OK)
+                if (CheckPosition(next, inertial, out sample) != Status.OK)
                 {
                     StepBorder(pos, sample, out nextPos, out stepLength);
-                    return CheckPosition(nextPos, out sample);
+                    return CheckPosition(nextPos, inertial, out sample);
                 }
                 int step = -1;
                 do
                 {
                     step++;
                     point = next;
-                    status = Corrector.Step(point, sample, out next, out nextSample, out stepLength);
+                    status = Corrector.Step(point, sample, inertial, out next, out nextSample, out stepLength);
                 } while (status == Status.OK && step < Corrector.MaxNumSteps);
 
                 if (status == Status.CP)

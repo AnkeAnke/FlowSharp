@@ -26,8 +26,8 @@ namespace FlowSharp
         VectorData _attribute;
 
         VectorField _vectorField;
-        LineSet _streamlines;
-        LineBall _streamBall;
+        List<LineSet> _streamlines;
+        List<LineBall> _streamBall;
 
         TetTreeGrid _grid;
         //KDTree _tree;
@@ -73,11 +73,35 @@ namespace FlowSharp
             //_points[10].Color = Vector3.UnitY;
             //_points[20].Color = Vector3.UnitZ;
 
-            TetTreeGrid.ShowSampleStatistics();
-            VectorField.IntegratorEuler integrator = new VectorField.IntegratorEuler(_vectorField);
+            // TetTreeGrid.ShowSampleStatistics();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+            _streamlines = new List<LineSet>(3);
+
+            // Euler
+            VectorField.Integrator integrator = new VectorField.IntegratorRK4(_vectorField);
             integrator.StepSize = _grid.CellSizeReference / 2;
-            _streamlines = integrator.Integrate(_points)[0];
-            _streamlines.Thickness *= 0.5f;
+            _streamlines.Add( integrator.Integrate(_points)[0] );
+            _streamlines.Last().Color = Vector3.UnitX;
+
+            // RK 4
+            integrator = new VectorField.IntegratorRK4(_vectorField);
+            integrator.StepSize = _grid.CellSizeReference / 4;
+            _streamlines.Add( integrator.Integrate(_points)[0]);
+            _streamlines.Last().Color = Vector3.UnitY;
+
+            // TODO: Inertial
+            //integrator = new VectorField.IntegratorEuler(_vectorField);
+            //integrator.StepSize = _grid.CellSizeReference / 2;
+            //_streamlines.Add( integrator.Integrate(_points)[0] );
+            //_streamlines.Last().Color = Vector3.UnitZ;
+
+            watch.Stop();
+            Console.WriteLine($"Integrating {_points.Length} points took {watch.Elapsed}. ");
+
+            foreach (LineSet points in _streamlines)
+                points.Thickness *= 0.4f;
             //_points = _streamlines.GetAllEndPoints().ToBasicSet();
 
             //_tree = new KDTree(geomLoader.Grid, 100);
@@ -127,11 +151,13 @@ namespace FlowSharp
                 (_lastSetting == null ||
                 _streamBall == null))
             {
-                _streamBall = new LineBall(BasePlane, _streamlines);
+                _streamBall = new List<LineBall>(_streamlines.Count);
+                foreach (LineSet lines in _streamlines)
+                    _streamBall.Add( new LineBall(BasePlane, lines));
             }
-            if (_streamBall != null)
-                wire.Add(_streamBall);
 
+            if (_streamBall != null)
+                wire.AddRange(_streamBall);
 
             if (_lastSetting == null ||
                 GeometryPartChanged ||

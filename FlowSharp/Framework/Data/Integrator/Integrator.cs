@@ -41,7 +41,7 @@ namespace FlowSharp
             public virtual float EpsCriticalPoint { get { return _epsCriticalPoint; } set { _epsCriticalPoint = value; } }
             public int MaxNumSteps = 2000;
 
-            public abstract Status Step(Vector pos, Vector sample, out Vector next, out Vector nextSample, out float stepLength);
+            public abstract Status Step(Vector pos, Vector sample, Vector inertial, out Vector next, out Vector nextSample, out float stepLength);
             /// <summary>
             /// Perform one step, knowing that the border is nearby.
             /// </summary>
@@ -62,9 +62,10 @@ namespace FlowSharp
 
                     Vector point;
                     Vector next = pos;
+                    Vector inertial = new Vector(0, pos.Length);
 
-                    Vector sample;
-                    line.Status = CheckPosition(next, out sample);
+                    Vector sample, nextSample;
+                    line.Status = CheckPosition(next, inertial, out nextSample);
                     if (line.Status != Status.OK)
                     {
                         return line;
@@ -75,7 +76,7 @@ namespace FlowSharp
                     do
                     {
                         step++;
-
+                        sample = nextSample;
                         // Copy last point.
                         point = new Vector(next);
 
@@ -86,15 +87,20 @@ namespace FlowSharp
                         line.Points.Add(posP);
 
                         // Make one step. The step depends on the explicit integrator.
-                        line.Status = Step(point, sample, out next, out sample, out stepLength);
+                        line.Status = Step(point, sample, inertial, out next, out nextSample, out stepLength);
+
+                        inertial = sample;
+
                         if (line.Status == Status.OK)
+                        {
                             line.LineLength += stepLength;
+                        }
                     } while (line.Status == Status.OK && step < MaxNumSteps && next.T <= timeBorder);
 
                     // If a border was hit, take a small step at the end.
                     if (line.Status == Status.BORDER)
                     {
-                        if (StepBorder(point, sample, out next, out stepLength))
+                        if (nextSample != null && StepBorder(point, nextSample, out next, out stepLength))
                         {
                             line.Points.Add((Vector3)next);
                             line.LineLength += stepLength;
@@ -206,14 +212,14 @@ namespace FlowSharp
                 }
             }
 
-            protected Status CheckPosition(Vector pos, out Vector sample)
+            protected virtual Status CheckPosition(Vector pos, Vector inertial, out Vector sample)
             {
                 sample = null;
                 if (!Field.Grid.InGrid(pos))
                     return Status.BORDER;
 
                 // Console.WriteLine($"Checking Position at {pos}");
-                sample = Field.Sample(pos);
+                sample = Field.Sample(pos, inertial);
                 if (sample == null)
                     return Status.BORDER;
 

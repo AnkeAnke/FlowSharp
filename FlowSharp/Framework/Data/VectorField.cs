@@ -1014,7 +1014,12 @@ namespace FlowSharp
             return this[gridPosition];
         }
 
-        public virtual Vector Sample(Vector position)
+        public virtual Vector Sample(Vector position, Vector lastDirection)
+        {
+            return Sample(position);
+        }
+
+        public Vector Sample(Vector position)
         {
             return Grid.Sample(this, position);
         }
