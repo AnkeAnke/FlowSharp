@@ -11,7 +11,7 @@ namespace FlowSharp
 {
     class BinaryFile
     {
-        public static void WriteFile(string filename, VectorData data, FileMode mode)
+        public static void WriteFile(string filename, VectorData data, FileMode mode = FileMode.Create)
         {
             using (FileStream fs = File.Open(@filename, mode))
             {

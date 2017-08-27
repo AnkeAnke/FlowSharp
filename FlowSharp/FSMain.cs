@@ -25,7 +25,7 @@ namespace FlowSharp
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
 
-            int rupture = 2;
+            int rupture = 1;
 
             string mainFolder = $"C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_0{rupture}/";
             Aneurysm.Singleton.EnsightFolderFilename = mainFolder;

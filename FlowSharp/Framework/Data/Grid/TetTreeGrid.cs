@@ -78,17 +78,7 @@ namespace FlowSharp
 
             // Compute maximal level.
             // Setup Octree for fast access.
-            Tree = ReadOctree(maxNumVertices, maxDepth, part, howOftenDoesCellSizeFitThere.Min());
-            if (Tree == null)
-            {
-                Tree = new Octree(_cellCenters, maxNumVertices, maxDepth, howOftenDoesCellSizeFitThere.Min());
-                Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename(maxNumVertices, maxDepth, part));
-            }
-            else
-            {
-                Tree.Vertices = _cellCenters;
-                Tree.Vertices.ExtractMinMax();
-            }
+            Tree = Octree.LoadOrComputeWrite(_cellCenters, maxNumVertices, maxDepth, part, howOftenDoesCellSizeFitThere.Min());
             
 
             watch.Stop();

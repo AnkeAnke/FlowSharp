@@ -29,6 +29,8 @@ namespace FlowSharp
         List<LineSet> _streamlines;
         List<LineBall> _streamBall;
 
+        VectorData _canvas;
+
         TetTreeGrid _grid;
         //KDTree _tree;
         Mesh _octreeLeafs;
@@ -37,20 +39,14 @@ namespace FlowSharp
 
         public TetGridMapper(Plane plane) : base()
         {
-            //TetTreeGrid babyGrid = new TetTreeGrid(new UnstructuredGeometry(
-            //    new VectorBuffer(new float[] { 1,0,0, 3,2,0, 0,3,0, 2,2,2}, 3), 
-            //    new IndexArray(new int[] { 0,1,2,3 }, 4)), 10);
-            //babyGrid.ToBaryCoord(0, new Vector(new float[] { 1.5f, 1.5f, 1}));
-            
-
             Mapping = ShowSide;
             BasePlane = plane;
 
+            // Load Geometry
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
-
-            
-            //_grid.Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename); // Fun fact: never loaded yet.
+            geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
+            var wallGrid = geomLoader.LoadGeometry();
 
             // Fit plane to data.
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, hexGrid.Vertices);
@@ -58,14 +54,13 @@ namespace FlowSharp
 
             // Load some attribute.
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
-
             _grid = new TetTreeGrid(hexGrid, Aneurysm.GeometryPart.Solid, 1, 10);
             _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
 
             // Load inlet for seeding.
             LoaderVTU inletLoader = new LoaderVTU(Aneurysm.GeometryPart.Inlet);
             var inlet = inletLoader.LoadGeometry();
-            _points = inlet.SampleRandom(30);
+            _points = inlet.SampleRandom(300);
 
             Stopwatch watch = new Stopwatch();
             watch.Start();
@@ -85,6 +80,11 @@ namespace FlowSharp
                 lines.Thickness *= 0.4f;
             _points = _streamlines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
 
+
+            Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
+            _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
+            this.SplatToAttribute(attributeTree, _canvas, _points, _grid.Tree.MaxCellDistance * 20);
+            BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename("SplatInt", Aneurysm.GeometryPart.Wall), _canvas);
             //_tree = new KDTree(geomLoader.Grid, 100);
         }
 
@@ -117,8 +117,15 @@ namespace FlowSharp
                 GeometryPartChanged ||
                 MeasureChanged)
             {
-                LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
-                _attribute = attribLoader.LoadAttribute((Aneurysm.Variable)(int)Measure, 0);
+                if (GeometryPart == Aneurysm.GeometryPart.Wall)
+                {
+                    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename("SplatInt", Aneurysm.GeometryPart.Wall), 1);
+                }
+                else
+                {
+                    LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
+                    _attribute = attribLoader.LoadAttribute((Aneurysm.Variable)(int)Measure, 0);
+                }
                 _attribute.ExtractMinMax();
                 updateCubes = true;
             }
@@ -188,6 +195,17 @@ namespace FlowSharp
             wire.AddRange(axes);
             return wire;
 
+        }
+
+        private void SplatToAttribute<P>(Octree attributeTree, VectorData canvas, PointSet<P> points, float radius) where P : Point
+        {
+            foreach (P p in points.Points)
+            {
+                List<Octree.IndexDistance> verts = attributeTree.FindWithinRadius(p.Position, radius);
+                foreach (Octree.IndexDistance v in verts)
+                    canvas[v.VertexIndex] += 1.0f - v.Distance / radius;
+            }
+            canvas.MaxValue = null;
         }
 
         public override bool IsUsed(Setting.Element element)

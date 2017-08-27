@@ -90,6 +90,23 @@ namespace FlowSharp
             return tree;
         }
 
+        public static Octree LoadOrComputeWrite(VectorData data, int maxNumVertices, int maxDepth, Aneurysm.GeometryPart part, float maxdist)
+        {
+            Octree tree = ReadOctree(maxNumVertices, maxDepth, part, maxdist);
+            if (tree == null)
+            {
+                tree = new Octree(data, maxNumVertices, maxDepth, maxdist);
+                tree.WriteToFile(Aneurysm.Singleton.OctreeFilename(maxNumVertices, maxDepth, part));
+            }
+            else
+            {
+                tree.Vertices = data;
+                tree.Vertices.ExtractMinMax();
+            }
+
+            return tree;
+        }
+
         private Octree(string filename)
         { 
             using (FileStream fs = File.Open(@filename, FileMode.Open))
@@ -290,6 +307,64 @@ namespace FlowSharp
             }
             bary = Vector4.Zero;
             return -1;
+        }
+
+        public struct IndexDistance
+        {
+            public int VertexIndex;
+            public float Distance;
+        }
+        public List<IndexDistance> FindWithinRadius(Vector3 pos, float radius)
+        {
+            Node range;
+            List<Node> nodes = new List<Node>();
+
+            Vector3 gridPos = ToGridPosition(pos);
+
+            List<IndexDistance> verts = new List<IndexDistance>();
+            
+            // How many cells can we go maximally before there is definitely nothing there.
+            // 1.73... = sqrt(3)
+            int maxCellSum = (int)Math.Ceiling(radius/MaxCellDistance * 1.732050807568877);
+            float radiusSquared = radius * radius;
+            float maxEuclideanDistSquared = radiusSquared / MaxCellDistance / MaxCellDistance;
+
+
+            GridIndex extent = new GridIndex(new Index(2*maxCellSum + 1, 3));
+            foreach (GridIndex gi in extent)
+            {
+                Index offset = (Index)extent - maxCellSum;
+
+                // As we grow in a <> shape, we can discard some cells early.
+                if (offset.LengthSquared() > maxEuclideanDistSquared)
+                    continue;
+                
+                Vector3 stab = gridPos + (Vector3)offset;
+                //Console.WriteLine("Stab pos: {0}\n\tOffset {1}", stab, offset * sign);
+                //if (offsetVec[0] == 1 && offsetVec[1] == -1 && offsetVec[2] == -2)
+                //    Console.WriteLine("Here here! Position " + stab);
+
+                if (!(stab.IsLess(_gridSize)) || !stab.IsPositive())
+                    continue;
+
+                // New stabbing query.
+                bool worked = StabCellGridPos(stab, out range);
+                if (!worked)
+                    continue;
+
+                if (nodes.Contains(range))
+                    continue;
+
+                foreach (int vert in range.GetData(this))
+                {
+                    float dist = ((Vector3)Vertices[vert] - pos).LengthSquared();
+                    if (dist < radiusSquared)
+                        verts.Add(new IndexDistance() { VertexIndex = vert, Distance = dist });
+                }
+
+
+            }
+            return verts;
         }
 
         public UnstructuredGeometry LeafGeometry()
