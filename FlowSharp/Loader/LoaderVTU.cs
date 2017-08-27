@@ -77,15 +77,10 @@ namespace FlowSharp
                                 // Read in positions float by float. 
                                 vertices = new VectorBuffer(numPoints, 3);
 
-                               // byte[] rawData = new byte[numPoints * 4 * 3];
-                                //char[] raw64Data = new char[12 + numPoints * 4 * 4];
-                                //char[] raw64Data = new char[12];
-                                // Skip the spaces this way.
-                                //reader.ReadValueChunk(raw64Data, 0, 12);
                                 rawString = reader.ReadContentAsString();
-                                //int actualSize = reader.ReadContentAsBase64(rawData, 0, rawData.Length);
-                                //reader.ReadValueChunk(raw64Data, 0, raw64Data.Length);
+
                                 rawData = Convert.FromBase64String(rawString);
+                                Console.WriteLine($"rawData: {rawData}");
                                 Int64 someNumber = BitConverter.ToInt64(rawData, 0);
 
 

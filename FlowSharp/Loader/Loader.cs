@@ -164,7 +164,6 @@ namespace FlowSharp
                 _dimOffsets[dimPos] = -1;
             }
         }
-
     }
 
     /// <summary>

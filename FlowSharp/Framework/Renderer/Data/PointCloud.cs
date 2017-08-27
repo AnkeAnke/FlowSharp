@@ -54,6 +54,8 @@ namespace FlowSharp
         /// <param name="scale"></param>
         protected void GenerateGeometry(Plane plane, PointSet<Point> points)
         {
+            if (points.Length == 0)
+                return;
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
             Vector3 zAxis = plane.ZAxis;

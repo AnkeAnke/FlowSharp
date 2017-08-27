@@ -25,13 +25,16 @@ namespace FlowSharp
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
 
-            Aneurysm.Singleton.EnsightFolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/";
-            Aneurysm.Singleton.EnsightGeoFilename = "case01_fine_mesh_unsteady2cc.geo";
+            int rupture = 2;
+
+            string mainFolder = $"C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_0{rupture}/";
+            Aneurysm.Singleton.EnsightFolderFilename = mainFolder;
+            Aneurysm.Singleton.EnsightGeoFilename = "ruptured.geo";
             Aneurysm.Singleton.SnapFileName = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Screenshots/";
-            Aneurysm.Singleton.EnsightFilename = "Rupture_01";
-            Aneurysm.Singleton.VtuFolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/vtu/tets_";
-            Aneurysm.Singleton.VtuDataFilename = "tets_";
-            Aneurysm.Singleton.OctreeFolderFilename = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_01/";
+            Aneurysm.Singleton.EnsightFilename = "wobble";
+            Aneurysm.Singleton.VtuFolderFilename = mainFolder + "vtu/tets/";
+            Aneurysm.Singleton.VtuDataFilename = "tets_0_";
+            Aneurysm.Singleton.OctreeFolderFilename = mainFolder;
             redSea = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
             //mapperTetWireframe = new HexTetGridMapper(redSea);

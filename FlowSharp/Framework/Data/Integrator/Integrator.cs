@@ -147,12 +147,13 @@ namespace FlowSharp
 
                 LineSet[] result = new LineSet[forwardAndBackward ? 2 : 1];
 
-                for (int index = 0; index < positions.Length; ++index)
+                Parallel.For(0, positions.Length, index =>
+                //for (int index = 0; index < positions.Length; ++index)
                 {
                     try
                     {
                         StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)positions.Points[index].Position).ToVec(Field.NumDimensions), maxTime);
-                        
+
                         lines[index] = new Line();
                         lines[index].Positions = streamline.Points.ToArray();
                         lines[index].Status = streamline.Status;
@@ -163,18 +164,19 @@ namespace FlowSharp
                         Console.WriteLine("Caught it in Integrate! Index " + index);
                         Console.WriteLine(e);
                     }
-                }
+                });
                 result[0] = new LineSet(lines) { Color = (Vector3)Direction };
 
                 if (forwardAndBackward)
                 {
                     Direction = !Direction;
-                    for (int index = 0; index < positions.Length; ++index)
+                    Parallel.For(0, positions.Length, index =>
+                    //for (int index = 0; index < positions.Length; ++index)
                     {
                         StreamLine<Vector3> streamline = IntegrateLineForRendering((Vec3)positions.Points[index].Position, maxTime);
                         linesReverse[index] = new Line();
                         linesReverse[index].Positions = streamline.Points.ToArray();
-                    }
+                    });
                     result[1] = new LineSet(linesReverse) { Color = (Vector3)Direction };
                     Direction = !Direction;
                 }
@@ -191,10 +193,11 @@ namespace FlowSharp
                         return;
 
                     //int validPoints = 0;
-                    for (int index = 0; index < positions.Length; ++index)
+                    Parallel.For(0, positions.Length, index =>
+                    //for (int index = 0; index < positions.Length; ++index)
                     {
                         if (positions[index].Length == 0 || ends[index] == null || (ends[index].Status != Status.BORDER && ends[index].Status != Status.TIME_BORDER && ends[index].Status != Status.OK))
-                            continue;
+                            return;
                         StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
                         positions[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
                         positions[index].Status = streamline.Status;
@@ -203,7 +206,7 @@ namespace FlowSharp
                         if ((index) % (positions.Length / 10) == 0)
                             Console.WriteLine("Further integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index * 100) / positions.Length);
                         //validPoints++;
-                    }
+                    });
                     //return new LineSet(lines) { Color = (Vector3)Direction };
                 }
                 catch (Exception e)

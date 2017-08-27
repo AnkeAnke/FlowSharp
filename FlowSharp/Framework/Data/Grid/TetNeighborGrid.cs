@@ -464,6 +464,11 @@ namespace FlowSharp
             throw new NotImplementedException();
         }
 
+        public PointSet<Point> SampleAll()
+        {
+            throw new NotImplementedException();
+        }
+
         //public PointSet<Point> GetCellCenters()
         //{
         //    Point[] verts = new Point[Indices.Length];

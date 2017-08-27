@@ -348,6 +348,11 @@ namespace FlowSharp
 
             return pos + dir * dirPercentage;
         }
+
+        public PointSet<Point> SampleAll()
+        {
+            throw new NotImplementedException();
+        }
         #endregion DebugRendering
     }
 

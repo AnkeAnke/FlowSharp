@@ -22,113 +22,12 @@ namespace FlowSharp
         public Octree Tree;
         public float CellSizeReference { get; protected set; }
 
-        /// <summary>
-        /// Assemble all inidices to a buffer. Do this here for general Tet grids.
-        /// </summary>
-        /// <returns></returns>
-        public Tuple<VectorData, IndexArray> AssembleIndexList()
-        {
-            //Index[] cells = new Index[Cells.Length];
-            //for (int c = 0; c < Cells.Length; ++c)
-            //        cells[c] = Cells[c].VertexIndices;
-            //return cells;
-            IndexArray tris = new IndexArray(Cells.Length, 4);
-            for (int c = 0; c < Cells.Length; c++)
-            {
-                for (int s = 0; s < 4; ++s)
-                {
-                    tris[c * 4 + s] = new Index(3);
-                    int count = 0;
-                    for (int i = 0; i < 4; ++i)
-                        if (i != s)
-                            tris[c * 4 + s][count++] = Cells[c][i];
-                }
-            }
-
-            return new Tuple<VectorData, IndexArray>(Vertices, tris);
-        }
-
-        public IndexArray BorderGeometry()
-        {
-            // ========== Setup Vertex to Side List ========== \\
-            // Assemble all sides at assigned vertices. Delete them later.
-            List<Index>[] sidesPerVertex = new List<Index>[Vertices.Length];
-            for (int v = 0; v < Vertices.Length; ++v)
-                sidesPerVertex[v] = new List<Index>();
-
-            for (int c = 0; c < Cells.Length; ++c)
-            {
-
-                if (c % (Cells.Length / 100) == 0)
-                    Console.WriteLine("Buildup done for {0}% cells.", c / (Cells.Length / 100));
-                // Save at all connected vertices.
-                for (int s = 0; s < 4; ++s)
-                {
-                    // Remove s'ths index to get a side.
-                    Index side = new Index(Cells[c]);
-                    side[s] = side[3];
-                    side = side.ToIntX(3);
-
-                    // Sort indices to make comparable.
-                    Array.Sort(side.Data);
-
-                    // Add to all connected vertex side lists.
-                    //for (int v = 0; v < 3; ++v)
-                        sidesPerVertex[side[0]].Add(side);
-                }
-            }
-
-            List<Index> remainingSides = new List<Index>();
-
-            // ========== Remove All Sides that Appear Multiple Times ========== \\
-            for (int v = 0; v < Vertices.Length; ++v)
-            {
-                var sides = sidesPerVertex[v].ToArray();
-                Array.Sort(sides, Index.Compare);
-
-                if (v % (Vertices.Length / 100) == 0)
-                    Console.WriteLine("Finished sorting through {0}% triangles.\n\t{1} border triangles found.", v / (Vertices.Length / 100), remainingSides.Count);
-                // sidesPerVertex[v] = sides.ToList();
-
-                for (int s = sides.Length - 1; s >= 0; s--)
-                {
-                    if (s > 0 && sides[s] == sides[s-1])
-                    {
-                        //sidesPerVertex[v].RemoveRange(s - 1, 2);
-                        s--;
-                    }
-                    else
-                    {
-                        remainingSides.Add(sides[s]);
-
-                        //bool exists = sidesPerVertex[sides[s][1]].Remove(sides[s]);
-                        //Debug.Assert(exists);
-                        //exists = sidesPerVertex[sides[s][2]].Remove(sides[s]);
-                        //Debug.Assert(exists);
-                    }
-                    
-
-                    //// Not the first side that should have seen this side. Should be deleted then.
-                    //if (side[0] != v)
-                    //    continue;
-
-                    //if (sidesPerVertex[side[1]].Remove(side))
-                    //{
-                    //    bool test = sidesPerVertex[side[2]].Remove(side);
-                    //    Debug.Assert(test, "Side should be contained ")
-                    //}
-                }
-            }
-
-            return new IndexArray(remainingSides.ToArray(), 3);
-        }
-
-        public TetTreeGrid(UnstructuredGeometry geom, int maxNumVertices = 100, int maxLevel = 10, Vector origin = null, float? timeOrigin = null) : this(geom.Vertices, geom.Primitives, maxNumVertices, maxLevel, origin, timeOrigin) { }
+        public TetTreeGrid(UnstructuredGeometry geom, Aneurysm.GeometryPart part, int maxNumVertices = 100, int maxLevel = 10, Vector origin = null, float? timeOrigin = null) : this(geom.Vertices, geom.Primitives, part, maxNumVertices, maxLevel, origin, timeOrigin) { }
 
         /// <summary>
         /// Create a new tetraeder grid descriptor.
         /// </summary>
-        public TetTreeGrid(VectorData vertices, IndexArray indices, int maxNumVertices = 10, int maxDepth = 10, Vector origin = null, float? timeOrigin = null)
+        public TetTreeGrid(VectorData vertices, IndexArray indices, Aneurysm.GeometryPart part, int maxNumVertices = 10, int maxDepth = 10, Vector origin = null, float? timeOrigin = null)
         {
             Stopwatch watch = new Stopwatch();
             watch.Start();
@@ -179,11 +78,11 @@ namespace FlowSharp
 
             // Compute maximal level.
             // Setup Octree for fast access.
-            Tree = ReadOctree(maxNumVertices, maxDepth, howOftenDoesCellSizeFitThere.Min());
+            Tree = ReadOctree(maxNumVertices, maxDepth, part, howOftenDoesCellSizeFitThere.Min());
             if (Tree == null)
             {
                 Tree = new Octree(_cellCenters, maxNumVertices, maxDepth, howOftenDoesCellSizeFitThere.Min());
-                Tree.WriteToFile();
+                Tree.WriteToFile(Aneurysm.Singleton.OctreeFilename(maxNumVertices, maxDepth, part));
             }
             else
             {
@@ -498,21 +397,120 @@ namespace FlowSharp
 
         #region DebugRendering
 
-        //public LineSet GetWireframe()
-        //{
-        //    Line[] lines = new Line[Indices.Length];
+        /// <summary>
+        /// Assemble all inidices to a buffer. Do this here for general Tet grids.
+        /// </summary>
+        /// <returns></returns>
+        public Tuple<VectorData, IndexArray> AssembleIndexList()
+        {
+            //Index[] cells = new Index[Cells.Length];
+            //for (int c = 0; c < Cells.Length; ++c)
+            //        cells[c] = Cells[c].VertexIndices;
+            //return cells;
+            IndexArray tris = new IndexArray(Cells.Length, 4);
+            for (int c = 0; c < Cells.Length; c++)
+            {
+                for (int s = 0; s < 4; ++s)
+                {
+                    tris[c * 4 + s] = new Index(3);
+                    int count = 0;
+                    for (int i = 0; i < 4; ++i)
+                        if (i != s)
+                            tris[c * 4 + s][count++] = Cells[c][i];
+                }
+            }
 
-        //    for (int l = 0; l < Indices.Length; ++l)
-        //    {
-        //        lines[l] = new Line(NumCorners);
-        //        for (int v = 0; v < NumCorners; ++v)
-        //        {
-        //            lines[l].Positions[v] = (SlimDX.Vector3) Vertices[Indices[l][v]];
-        //        }
-        //    }
+            return new Tuple<VectorData, IndexArray>(Vertices, tris);
+        }
 
-        //    return new LineSet(lines);
-        //}
+        public PointSet<Point> SampleAll()
+        {
+            Point[] midpoints = new Point[Cells.Length];
+            for (int p = 0; p < midpoints.Length; ++p)
+            {
+                Vector3 pos = Vector3.Zero;
+                foreach (int i in Cells[p].Data)
+                    pos += (Vector3)Vertices[i];
+                midpoints[p] = new Point(pos / Cells.IndexLength);
+            }
+
+            return new PointSet<Point>(midpoints);
+        }
+
+        public IndexArray BorderGeometry()
+        {
+            // ========== Setup Vertex to Side List ========== \\
+            // Assemble all sides at assigned vertices. Delete them later.
+            List<Index>[] sidesPerVertex = new List<Index>[Vertices.Length];
+            for (int v = 0; v < Vertices.Length; ++v)
+                sidesPerVertex[v] = new List<Index>();
+
+            for (int c = 0; c < Cells.Length; ++c)
+            {
+
+                if (c % (Cells.Length / 100) == 0)
+                    Console.WriteLine("Buildup done for {0}% cells.", c / (Cells.Length / 100));
+                // Save at all connected vertices.
+                for (int s = 0; s < 4; ++s)
+                {
+                    // Remove s'ths index to get a side.
+                    Index side = new Index(Cells[c]);
+                    side[s] = side[3];
+                    side = side.ToIntX(3);
+
+                    // Sort indices to make comparable.
+                    Array.Sort(side.Data);
+
+                    // Add to all connected vertex side lists.
+                    //for (int v = 0; v < 3; ++v)
+                    sidesPerVertex[side[0]].Add(side);
+                }
+            }
+
+            List<Index> remainingSides = new List<Index>();
+
+            // ========== Remove All Sides that Appear Multiple Times ========== \\
+            for (int v = 0; v < Vertices.Length; ++v)
+            {
+                var sides = sidesPerVertex[v].ToArray();
+                Array.Sort(sides, Index.Compare);
+
+                if (v % (Vertices.Length / 100) == 0)
+                    Console.WriteLine("Finished sorting through {0}% triangles.\n\t{1} border triangles found.", v / (Vertices.Length / 100), remainingSides.Count);
+                // sidesPerVertex[v] = sides.ToList();
+
+                for (int s = sides.Length - 1; s >= 0; s--)
+                {
+                    if (s > 0 && sides[s] == sides[s - 1])
+                    {
+                        //sidesPerVertex[v].RemoveRange(s - 1, 2);
+                        s--;
+                    }
+                    else
+                    {
+                        remainingSides.Add(sides[s]);
+
+                        //bool exists = sidesPerVertex[sides[s][1]].Remove(sides[s]);
+                        //Debug.Assert(exists);
+                        //exists = sidesPerVertex[sides[s][2]].Remove(sides[s]);
+                        //Debug.Assert(exists);
+                    }
+
+
+                    //// Not the first side that should have seen this side. Should be deleted then.
+                    //if (side[0] != v)
+                    //    continue;
+
+                    //if (sidesPerVertex[side[1]].Remove(side))
+                    //{
+                    //    bool test = sidesPerVertex[side[2]].Remove(side);
+                    //    Debug.Assert(test, "Side should be contained ")
+                    //}
+                }
+            }
+
+            return new IndexArray(remainingSides.ToArray(), 3);
+        }
 
         private void SamplePosition(VectorField data, int posIdx, int samplesPerSide, ConcurrentBag<Point> verts)
         {
@@ -525,9 +523,9 @@ namespace FlowSharp
             Vector sample = Sample(data, pos);
             if (sample != null)
             {
-                Console.WriteLine($"Successfull Position at {pos}");
+                //Console.WriteLine($"Successfull Position at {pos}");
                 // Console.WriteLine($"Sample {posIdx} is inside");
-                float color = ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
+                float color = (float)posIdx / (samplesPerSide * samplesPerSide * samplesPerSide); // ((sample - data.Data.MinValue) / (data.Data.MaxValue - data.Data.MinValue))[0];
                 verts.Add( new Point((Vector3)pos) { Radius = 0.01f, Color = new Vector3(color) });
             }
 
@@ -548,7 +546,7 @@ namespace FlowSharp
             int numNotFound = 0;
 
             Parallel.For(0, vertsPerSide * vertsPerSide * vertsPerSide, s => { SamplePosition(data, s, vertsPerSide, verts); });
-            //for(int s = 0; s < vertsPerSide * vertsPerSide * vertsPerSide; ++s)
+            //for (int s = 0; s < vertsPerSide * vertsPerSide * vertsPerSide; ++s)
             //    SamplePosition(data, s, vertsPerSide, verts);
 
             watch.Stop();

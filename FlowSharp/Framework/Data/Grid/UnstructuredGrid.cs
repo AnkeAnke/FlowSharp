@@ -14,6 +14,8 @@ namespace FlowSharp
         int NumCells { get; }
         Tuple<VectorData, IndexArray> AssembleIndexList();
         PointSet<Point> GetVertices();
+        //PointSet<Point> SampleRandom(int numSamples);
+        //PointSet<Point> SampleAll();
     }
 
     class UnstructuredGeometry : GeneralUnstructurdGrid
@@ -102,6 +104,7 @@ namespace FlowSharp
             }
 
             Debug.Assert(false, "Each primitive consists of " + Primitives.IndexLength + " vertices, don't know what to do.");
+            throw new NotImplementedException("Only able to do triangles (3), tetrahedrons (4) and cubes (2 extrema)");
             return null;
         }
 
@@ -114,6 +117,42 @@ namespace FlowSharp
             }
 
             return new PointSet<Point>(verts);
+        }
+
+        static Random RandomSampler = new Random(1337);
+        public PointSet<Point> SampleRandom(int numSamples)
+        {
+            Point[] positions = new Point[numSamples];
+            for (int sample = 0; sample < numSamples; ++sample)
+            {
+                int tet = RandomSampler.Next(Primitives.Length);
+                Vector pos = new Vector(Vertices.VectorLength);
+                //Vector bary = new Vector(Vertices.VectorLength);
+
+                float barySum = 0;
+                for (int l = 0; l < Vertices.VectorLength; ++l)
+                {
+                    float rndFactor = (float)RandomSampler.NextDouble();
+                    pos += Vertices[Primitives[tet][l]] * rndFactor;
+                    barySum += rndFactor;
+                }
+                pos /= barySum;
+                positions[sample] = new Point((Vector3)pos);
+            }
+            return new PointSet<Point>(positions);
+        }
+        public PointSet<Point> SampleAll()
+        {
+            Point[] midpoints = new Point[Primitives.Length];
+            for (int p = 0; p < midpoints.Length; ++p)
+            {
+                Vector3 pos = Vector3.Zero;
+                foreach (int i in Primitives[p].Data)
+                    pos += (Vector3)Vertices[i];
+                midpoints[p] = new Point(pos / Primitives.IndexLength);
+            }
+
+            return new PointSet<Point>(midpoints);
         }
     }
 }

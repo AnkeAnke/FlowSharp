@@ -77,9 +77,9 @@ namespace FlowSharp
         }
 
         #region FileReadWrite
-        public static Octree ReadOctree(int maxVerts, int maxDepth, float maxCellDistance)
+        public static Octree ReadOctree(int maxVerts, int maxDepth, Aneurysm.GeometryPart part, float maxCellDistance)
         {
-            string filename = Aneurysm.Singleton.OctreeFilename(maxVerts, maxDepth);
+            string filename = Aneurysm.Singleton.OctreeFilename(maxVerts, maxDepth, part);
             Console.WriteLine(filename);
             if (!File.Exists(@filename))
                 return null;
@@ -140,9 +140,8 @@ namespace FlowSharp
             }
         }
 
-        public void WriteToFile()
+        public void WriteToFile(string filename)
         {
-            string filename = Aneurysm.Singleton.OctreeFilename(_maxVerts, _maxDepth);
             using (FileStream fs = File.Open(@filename, FileMode.Create))
             {
                 using (BinaryWriter writer = new BinaryWriter(fs))

@@ -138,7 +138,9 @@ namespace FlowSharp
                     Debug.Assert(l0_type.Equals("C Binary"), "Not the expected file type format.");
 
                     string l1_desc = ReadBlock(reader);
+                    Console.WriteLine($"l1: {l1_desc}");
                     string l2_desc = ReadBlock(reader);
+                    Console.WriteLine($"l2: {l2_desc}");
                     // Are vertex IDs given or just incremenal?
                     string l3_n_id = ReadBlock(reader);
                     bool containsVertexIDs = l3_n_id.Contains("given");
@@ -151,6 +153,7 @@ namespace FlowSharp
                         throw new NotImplementedException("Non-incremental index IDs not yet considered.");
 
                     string l5_poss_ext = ReadBlock(reader);
+                    Console.WriteLine($"l5: {l5_poss_ext}");
                     string l6_part;
                     if (l5_poss_ext.Equals("part"))
                     {
@@ -164,6 +167,7 @@ namespace FlowSharp
 
                     int l7_part_num = reader.ReadInt32();
                     string l8_desc = ReadBlock(reader);
+                    Console.WriteLine($"l8: {l8_desc}");
                     string l9_cord = ReadBlock(reader);
                     Debug.Assert(l9_cord.Equals("coordinates"), "Expected \'coordinates\' identifier.");
 
@@ -287,6 +291,29 @@ namespace FlowSharp
             }
             Console.WriteLine("Finished loading " + variable);
             return vertices;
+        }
+
+        /// <summary>
+        /// Load a stack of 30 field. This should be small enough to have memory free for other operations.
+        /// </summary>
+        /// <param name="startStep">The start step. Running continuously. 0 1 2 3 ...</param>
+        public void LoadFieldTimeBatch(Aneurysm.Variable measure, FieldGrid grid, int startStep, int numSteps, int everyNthTimestep = 1)
+        {
+            // Fields to build unsteady vector field from.
+            VectorChannels[] batch = new VectorChannels[numSteps];
+
+            int currentEndStep = Math.Min(startStep + numSteps - 1, Aneurysm.Singleton.NumSteps);
+
+            for (int field = 0; field < numSteps; field ++) //= everyNthTimestep)
+            {
+                int step = startStep + (field * everyNthTimestep);
+
+                batch[field] = LoadAttribute(measure, step);
+            }
+
+            VectorFieldUnsteady velocity = new VectorFieldUnsteady(new VectorDataUnsteady<VectorChannels>(batch), grid);
+            velocity.TimeOrigin = startStep;
+//            velocity.ScaleToGrid(new Vec2((RedSea.Singleton.TimeScale * _everyNthTimestep) / RedSea.Singleton.NumSubsteps));
         }
         //public HexGrid LoadGrid()
         //{

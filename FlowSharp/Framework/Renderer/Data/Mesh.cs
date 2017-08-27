@@ -242,7 +242,6 @@ namespace FlowSharp
         /// <param name="scale"></param>
         protected void GenerateGeometry(Plane plane, GeneralUnstructurdGrid grid, VectorData data)
         {
-
             var geom = grid.AssembleIndexList();
             var vertices = geom.Item1;
             var indices = geom.Item2;

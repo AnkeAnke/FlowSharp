@@ -163,31 +163,31 @@ namespace FlowSharp
                     } }
         private string EnsightVariableFilename(Variable variable, int slice)
         {
-            string filename = "0" + (401 + slice) + '.';
-            if ((int)variable > 0)
-                filename += "scl" + (int)variable;
-            else
+            string filename = $"ruptured ({slice+1}).";
+            if (variable == Variable.velocity)
                 filename += "vel";
+            else
+                filename += "scl" + (int)variable;
             return filename;   
         }
         public string EnsightVariableFileName(Variable variable, int slice)
         {
                 return EnsightFolderFilename + EnsightVariableFilename(variable, slice);
-                //if (_mappers[(int)_currentMapper] == null)
-                //    return "Default";
-                //string name = _currentMapper.ToString();
-                //name += '_' + _mappers[(int)_currentMapper].CurrentSetting.GetFilename();
-                //return name;
         }
 
         public string VtuCompleteFilename(int timestep, GeometryPart geom)
         {
-            return VtuFolderFilename + timestep + '/' + VtuDataFilename + timestep + '_' + (((int)geom)-1) + "_0.vtu";
+            return VtuFolderFilename + VtuDataFilename + (((int)geom)-1) + "_0.vtu";
         }
 
-        public string OctreeFilename(int maxVerts, int maxLevels)
+        public string OctreeFilename(int maxVerts, int maxLevels, GeometryPart part)
         {
-            return OctreeFolderFilename + "tree_vert" + maxVerts + "_lvl" + maxLevels + ".octree";
+            return OctreeFolderFilename + part + "_vert" + maxVerts + "_lvl" + maxLevels + ".octree";
+        }
+
+        public string CustomAttributeFilename(string custom, GeometryPart part)
+        {
+            return OctreeFolderFilename + "Attribute/" + custom + "_" + part + ".attribute";
         }
 
         private Aneurysm()

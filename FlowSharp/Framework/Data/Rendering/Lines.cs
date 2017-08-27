@@ -226,14 +226,18 @@ namespace FlowSharp
 
         public PointSet<EndPoint> GetAllEndPoints()
         {
-            EndPoint[] points = new EndPoint[Lines.Length];
-            for (int idx = 0; idx < points.Length; ++idx)
+            List<EndPoint> points = new List<EndPoint>(Lines.Length);
+            for (int idx = 0; idx < Lines.Length; ++idx)
                 if (Lines[idx].Positions.Length > 0)
-                    points[idx] = new EndPoint() { Position = Lines[idx].Positions.Last(), LengthLine = Lines[idx].LineLength, Status = Lines[idx].Status };
-                else
-                    points[idx] = null;
+                    points.Add(new EndPoint()
+                    {
+                        Position = Lines[idx].Positions.Last(),
+                        LengthLine = Lines[idx].LineLength,
+                        Status = Lines[idx].Status,
+                        Radius = Thickness * 2f
+                    });
             
-            return new PointSet<EndPoint>(points);
+            return new PointSet<EndPoint>(points.ToArray());
         }
 
         public PointSet<EndPoint> GetEndPoints(VectorField.Integrator.Status select)
