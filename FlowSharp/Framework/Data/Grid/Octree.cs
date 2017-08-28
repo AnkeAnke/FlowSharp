@@ -325,10 +325,10 @@ namespace FlowSharp
             
             // How many cells can we go maximally before there is definitely nothing there.
             // 1.73... = sqrt(3)
-            int maxCellSum = (int)Math.Ceiling(radius/MaxCellDistance * 1.732050807568877);
+            int maxCellSum = (int)Math.Ceiling(radius / MaxLeafSize.Min() * 1.732050807568877 + 1);
             float radiusSquared = radius * radius;
-            float maxEuclideanDistSquared = radiusSquared / MaxCellDistance / MaxCellDistance;
-
+            float maxEuclideanDistSquared = (radius / MaxLeafSize.Min()) + 1;
+            maxEuclideanDistSquared *= maxEuclideanDistSquared;
 
             GridIndex extent = new GridIndex(new Index(2*maxCellSum + 1, 3));
             foreach (GridIndex gi in extent)
@@ -359,7 +359,7 @@ namespace FlowSharp
                 {
                     float dist = ((Vector3)Vertices[vert] - pos).LengthSquared();
                     if (dist < radiusSquared)
-                        verts.Add(new IndexDistance() { VertexIndex = vert, Distance = dist });
+                        verts.Add(new IndexDistance() { VertexIndex = vert, Distance = (float)Math.Sqrt(dist) });
                 }
 
 

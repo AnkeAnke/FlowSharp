@@ -34,6 +34,9 @@ namespace FlowSharp
 
         public static VectorBuffer ReadFile(string filename, int vectorLength)
         {
+            if (!File.Exists(filename))
+                return null;
+
             using (FileStream fs = File.Open(@filename, FileMode.Open))
             {
                 BinaryFormatter formatter = new BinaryFormatter();

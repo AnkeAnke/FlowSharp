@@ -47,7 +47,7 @@ namespace FlowSharp
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Console.WriteLine(e.InnerException);
                 Debug.Assert(false);
             }
 
@@ -60,7 +60,7 @@ namespace FlowSharp
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Console.WriteLine(e.InnerException);
                 Debug.Assert(false);
             }
         }
@@ -472,7 +472,7 @@ namespace FlowSharp
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine(e.InnerException);
             }
         }
 

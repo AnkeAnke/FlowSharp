@@ -10,17 +10,17 @@ namespace FlowSharp
 {
     class Line
     {
-        public Vector3[] Positions;
+        public Vector4[] Positions;
         public float[] Attribute;
         public int Length { get { return Positions.Length; } }
         public VectorField.Integrator.Status Status;
         public float LineLength = 0;
 
-        public Vector3 Last { get { return Positions[Length - 1]; } }
+        public Vector4 Last { get { return Positions[Length - 1]; } }
 
-        public float DistanceToPointInZ(Vector3 position, out Vector3 zNearest)
+        public float DistanceToPointInZ(Vector4 position, out Vector4 zNearest)
         {
-            zNearest = Vector3.Zero;
+            zNearest = Vector4.Zero;
 
             if (Length < 2)
                 return float.MaxValue;
@@ -37,8 +37,8 @@ namespace FlowSharp
             if (i == Length - 1)
                 return float.MaxValue;
 
-            Vector3 p0 = Positions[i];
-            Vector3 p1 = Positions[i + 1];
+            Vector4 p0 = Positions[i];
+            Vector4 p1 = Positions[i + 1];
             float t = (position.Z - p0.Z) / (p1.Z - p0.Z);
             zNearest = (1 - t) * p0 + t * p1;
             Debug.Assert(Math.Abs(position.Z - zNearest.Z) < 0.0001f);
@@ -46,9 +46,9 @@ namespace FlowSharp
             return (position - zNearest).Length();
         }
 
-        public float DistanceToPointInZ(Vector3 position)
+        public float DistanceToPointInZ(Vector4 position)
         {
-            Vector3 tmp;
+            Vector4 tmp;
             return DistanceToPointInZ(position, out tmp);
         }
 
@@ -72,15 +72,15 @@ namespace FlowSharp
             return i;
         }
 
-        public Vector3? SampleZ(float z)
+        public Vector4? SampleZ(float z)
         {
             int i = GetLastBelowZ(z);
             if (i < 0)
                 return null;
-            Vector3 p0 = Positions[i];
-            Vector3 p1 = Positions[i + 1];
+            Vector4 p0 = Positions[i];
+            Vector4 p1 = Positions[i + 1];
             float t = (z - p0.Z) / (p1.Z - p0.Z);
-            Vector3 integrated = (1 - t) * p0 + t * p1;
+            Vector4 integrated = (1 - t) * p0 + t * p1;
             Debug.Assert(Math.Abs(z - integrated.Z) < 0.0001f);
 
             return integrated;
@@ -108,7 +108,7 @@ namespace FlowSharp
         //}
         public Line(Line cpy)
         {
-            Positions = new Vector3[cpy.Length];
+            Positions = new Vector4[cpy.Length];
             Array.Copy(cpy.Positions, Positions, cpy.Length);
             if(cpy.Attribute != null)
             {
@@ -119,12 +119,12 @@ namespace FlowSharp
             LineLength = cpy.LineLength;
         }
         public Line() { }
-        public Line(int size) { Positions = new Vector3[size]; }
-        public Vector3 this[int index] { get { return Positions[index]; } set { Positions[index] = value; } }
-        public Vector3 Value(float index)
+        public Line(int size) { Positions = new Vector4[size]; }
+        public Vector4 this[int index] { get { return Positions[index]; } set { Positions[index] = value; } }
+        public Vector4 Value(float index)
         {
-            Vector3 p0 = this[(int)index];
-            Vector3 p1 = this[(int)index + 1];
+            Vector4 p0 = this[(int)index];
+            Vector4 p1 = this[(int)index + 1];
             float t = index - (int)index;
             return (1.0f - t) * p0 + t * p1;
         }
@@ -213,43 +213,65 @@ namespace FlowSharp
             }
         }
 
-        public PointSet<EndPoint> GetValidEndPoints()
+        public PointSet<InertialPoint> GetValidEndPoints()
         {
-            EndPoint[] points = new EndPoint[Lines.Length];
+            InertialPoint[] points = new InertialPoint[Lines.Length];
             int currentWriteIdx = 0;
             for (int idx = 0; idx < points.Length; ++idx)
-                if(Lines[idx].Positions.Length > 0)
-                    points[currentWriteIdx++] = new EndPoint() { Position = Lines[idx].Positions.Last(), LengthLine = Lines[idx].LineLength, Status = Lines[idx].Status };
-            Array.Resize(ref points, currentWriteIdx);
-            return new PointSet<EndPoint>(points);
-        }
-
-        public PointSet<EndPoint> GetAllEndPoints()
-        {
-            List<EndPoint> points = new List<EndPoint>(Lines.Length);
-            for (int idx = 0; idx < Lines.Length; ++idx)
                 if (Lines[idx].Positions.Length > 0)
-                    points.Add(new EndPoint()
+                {
+                    Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
+                        Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
+                    points[currentWriteIdx++] = new InertialPoint()
                     {
                         Position = Lines[idx].Positions.Last(),
+                        Inertia = inertia,
+                        LengthLine = Lines[idx].LineLength,
+                        Status = Lines[idx].Status
+                    };
+                }
+            Array.Resize(ref points, currentWriteIdx);
+            return new PointSet<InertialPoint>(points);
+        }
+
+        public PointSet<InertialPoint> GetAllEndPoints()
+        {
+            List<InertialPoint> points = new List<InertialPoint>(Lines.Length);
+            for (int idx = 0; idx < Lines.Length; ++idx)
+                if (Lines[idx].Positions.Length > 0)
+                {
+                    Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
+                        Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
+                    points.Add(new InertialPoint()
+                    {
+                        Position = Lines[idx].Positions.Last(),
+                        Inertia = inertia,
                         LengthLine = Lines[idx].LineLength,
                         Status = Lines[idx].Status,
                         Radius = Thickness * 2f
                     });
+                }
             
-            return new PointSet<EndPoint>(points.ToArray());
+            return new PointSet<InertialPoint>(points.ToArray());
         }
 
-        public PointSet<EndPoint> GetEndPoints(VectorField.Integrator.Status select)
+        public PointSet<InertialPoint> GetEndPoints(VectorField.Integrator.Status select)
         {
-            List<EndPoint> points = new List<EndPoint>(Lines.Length);
+            List<InertialPoint> points = new List<InertialPoint>(Lines.Length);
             for (int idx = 0; idx < Lines.Length; ++idx)
             {
                 Line line = Lines[idx];
-                if(line.Length > 0 && line.Status == select)
-                    points.Add(new EndPoint() { Position = line.Positions.Last(), LengthLine = line.LineLength, Status = line.Status });
+                Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
+                        Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
+                if (line.Length > 0 && line.Status == select)
+                    points.Add(new InertialPoint()
+                    {
+                        Position = line.Positions.Last(),
+                        Inertia = inertia,
+                        LengthLine = line.LineLength,
+                        Status = line.Status });
             }
-            return new PointSet<EndPoint>(points.ToArray());
+            return new PointSet<InertialPoint>(points.ToArray());
         }
 
         public void FlattenLines(float level = 0)
@@ -273,7 +295,7 @@ namespace FlowSharp
             for (int i = 0; i < Length; i++)
             {
                 Debug.Assert(add[i][0] == this[i].Positions.Last());
-                Vector3[] longline = new Vector3[add[i].Length + this[i].Length - 1];
+                Vector4[] longline = new Vector4[add[i].Length + this[i].Length - 1];
                 Array.Copy(this[i].Positions, longline, this[i].Length);
                 Array.Copy(add[i].Positions, 1, longline, this[i].Length, add[i].Length - 1);
                 this[i].Positions = longline;

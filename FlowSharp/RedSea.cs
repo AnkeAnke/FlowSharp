@@ -154,7 +154,7 @@ namespace FlowSharp
         public static VectorField.PositionToColor[] DisplayLineFunctions = new VectorField.PositionToColor[]
         {
             null,
-            (f, x) => new Vector3(f.Sample((Vec3)x).ToVec2().LengthEuclidean() * 10)
+            (f, x) => new Vector3(f.Sample((Vec4)x).ToVec2().LengthEuclidean() * 10)
         };
 
         private static RedSea _instance;

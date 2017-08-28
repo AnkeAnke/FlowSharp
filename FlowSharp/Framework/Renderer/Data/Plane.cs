@@ -112,10 +112,10 @@ namespace FlowSharp
             PointSize = cpy.PointSize;
         }
 
-        public static Plane FitToPoints<P>(Vector3 origin, float maximalExtent, PointSet<P> points) where P : Point
+        public static Plane FitToPoints<P>(Vector4 origin, float maximalExtent, PointSet<P> points) where P : Point
         {
             // Extent.
-            Vector3 extent = points.MaxPosition - points.MinPosition;
+            Vector4 extent = points.MaxPosition - points.MinPosition;
             float maxEx = Math.Max(Math.Max(extent[0], extent[1]), extent[2]);
 
             //foreach (P p in points.Points)
@@ -123,10 +123,10 @@ namespace FlowSharp
             //    p.Position = (p.Position - minPos) / maxEx;
             //}
             float scale = maximalExtent / maxEx;
-            Vector3 scaledOrigin = origin - points.MinPosition * scale;
+            Vector4 scaledOrigin = origin - points.MinPosition * scale;
             //Vector3 newOrigin = origin - minPos;
 
-            return new Plane(scaledOrigin, Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, scale, scale * 0.01f);
+            return new Plane(Util.Convert(scaledOrigin), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, scale, scale * 0.01f);
 
 //          return new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 1);
         }
@@ -177,7 +177,11 @@ namespace FlowSharp
                 vec[a] = 1;
 
                 Line line = new Line(2);
-                result.Add(new LineBall(this, new LineSet(new Line[] { new Line() { Positions = new Vector3[] { Vector3.Zero, vec } } }) { Color = vec, Thickness = 0.01f }));
+                result.Add(new LineBall(this, new LineSet(new Line[] { new Line()
+                {
+                    Positions = new Vector4[] { Vector4.Zero, Util.Convert(vec) } } }) {
+                    Color = vec, Thickness = 0.01f
+                }));
 
                 ends[a] = new Point(vec) { Color = vec, Radius = 0.02f };
             }
@@ -198,7 +202,9 @@ namespace FlowSharp
                 vec[a] = 1;
 
                 Line line = new Line(2);
-                result.Add(new LineBall(noOffset, new LineSet(new Line[] { new Line() { Positions = new Vector3[] { Vector3.Zero, vec } } }) { Color = vec, Thickness = 0.01f }));
+                result.Add(new LineBall(noOffset, new LineSet(new Line[] { new Line() {
+                    Positions = new Vector4[] { Vector4.Zero, Util.Convert(vec) } } }) {
+                    Color = vec, Thickness = 0.01f }));
 
                 ends[a] = new Point(vec) { Color = vec, Radius = 0.02f };
             }

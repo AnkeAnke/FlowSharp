@@ -19,6 +19,16 @@ namespace FlowSharp
             return new SlimDX.Vector3(a.X / b.X, a.Y / b.Y, a.Z / b.Z);
         }
 
+        public static SlimDX.Vector3 Convert(SlimDX.Vector4 vec)
+        {
+            return new SlimDX.Vector3(vec.X, vec.Y, vec.Z);
+        }
+
+        public static SlimDX.Vector4 Convert(SlimDX.Vector3 vec)
+        {
+            return new SlimDX.Vector4(vec.X, vec.Y, vec.Z, 0);
+        }
+
         //public static SlimDX.Matrix MatrixFromColumns(SlimDX.Vector3)
         public static void FlipEndian(float[] data)
         {

@@ -36,13 +36,13 @@ namespace FlowSharp
             _steadySelection = new List<LineBall>(10);
 
             // Core.
-            _core = new Line() { Positions = new Vector3[] { new Vector3(50, 100, 0), new Vector3(155, 100, _velocity.Size.T-1) } };
+            _core = new Line() { Positions = new Vector4[] { new Vector4(50, 100, 0, 0), new Vector4(155, 100, _velocity.Size.T-1, 0) } };
             LineSet set = new LineSet(new Line[] { _core }) { Color = new Vector3(0.2f) };
             set.Thickness *= 3;
             _coreBall = new LineBall(plane, set, LineBall.RenderEffect.DEFAULT);
 
             // Straight core.
-            set = new LineSet(new Line[] { new Line() { Positions = new Vector3[] { _core[0], _core[0] + Vector3.UnitZ * (_velocity.Size.T - 1) } } }) { Color = new Vector3(0.2f) };
+            set = new LineSet(new Line[] { new Line() { Positions = new Vector4[] { _core[0], _core[0] + Vector4.UnitZ * (_velocity.Size.T - 1) } } }) { Color = new Vector3(0.2f) };
             set.Thickness *= 3;
             _straightCoreBall = new LineBall(BasePlane, set);
 
@@ -125,7 +125,7 @@ namespace FlowSharp
                 Vec3 vec = new Vec3((Vec2)point, 0);
                 if (_velocity.Grid.InGrid(vec))
                 {
-                    Vector3[] line = _integrator.IntegrateLineForRendering(vec).Points.ToArray();
+                    Vector4[] line = _integrator.IntegrateLineForRendering(vec, new Vector(0,3)).Points.ToArray();
                     Line newLine = new Line() { Positions = line };
                     var set = new LineSet(new Line[] { newLine }) { Color = _flipColor? Vector3.UnitX : Vector3.UnitZ};
                     
@@ -151,8 +151,8 @@ namespace FlowSharp
                     //        break;
                     //    }
                         
-                        Vector3 sph = FieldAnalysis.SphericalPosition(_core[0], (float)(angle[0].X[p] * 0.5f / Math.PI), angle[0].Fx[p]);
-                        newLine[p] = new Vector3(sph.X, sph.Y, angle[0].X[p] - angle[0].X[0]);
+                        Vector4 sph = FieldAnalysis.SphericalPosition(_core[0], (float)(angle[0].X[p] * 0.5f / Math.PI), angle[0].Fx[p]);
+                        newLine[p] = new Vector4(sph.X, sph.Y, angle[0].X[p] - angle[0].X[0], 0);
                     }
                     set = new LineSet(new Line[] { newLine }) { Color = _flipColor ? Vector3.UnitX : Vector3.UnitZ };
                     set.Thickness *= 3;
@@ -161,7 +161,7 @@ namespace FlowSharp
 
                     _integrator.Field = _steadyField;
                     _integrator.MaxNumSteps = 50;
-                    line = _integrator.IntegrateLineForRendering(new Vec2(vec.X, vec.Y)).Points.ToArray();
+                    line = _integrator.IntegrateLineForRendering(new Vec2(vec.X, vec.Y), new Vector(0, 3)).Points.ToArray();
                     newLine = new Line() { Positions = line };
                     set = new LineSet(new Line[] { newLine }) { Color = _flipColor ? Vector3.UnitX : Vector3.UnitZ };
                     set.Thickness *= 3;

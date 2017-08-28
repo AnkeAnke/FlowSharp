@@ -816,7 +816,7 @@ namespace FlowSharp
 
         public delegate Vector VFJFunction(VectorRef v, SquareMatrix J);
 
-        public delegate Vector3 PositionToColor(VectorField field, Vector3 position);
+        public delegate Vector3 PositionToColor(VectorField field, Vector4 position);
         #endregion Delegates
 
         #region Access
@@ -1169,7 +1169,7 @@ namespace FlowSharp
             int idx = 0;
             foreach (Line line in lines.Lines)
             {
-                foreach (Vector3 pos in line.Positions)
+                foreach (Vector4 pos in line.Positions)
                 {
                     points[idx] = new Point() { Position = pos, Color = func(this, pos), Radius = lines.Thickness };
                     ++idx;

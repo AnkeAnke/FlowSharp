@@ -49,27 +49,15 @@ namespace FlowSharp
             Origin.T = timeOrigin ?? Origin.T;
 
             CellSizeReference = 0;
-            //int everyNthSample = 1;
-            //for (int s = 0; s < Cells.Length; s += everyNthSample)
-            //{
-            //    float dist = (Vertices[Cells[s][0]] - Vertices[Cells[s][1]]).LengthSquared();
-            //    CellSizeReference = Math.Max(CellSizeReference, dist);
-            //}
-
-
 
             _cellCenters = new VectorBuffer(Cells.Length, Vertices.VectorLength);
             for (int c = 0; c < Cells.Length; ++c)
             {
-                
                 _cellCenters[c] = (Vertices[Cells[c][0]] + Vertices[Cells[c][1]] + Vertices[Cells[c][2]] + Vertices[Cells[c][3]]) * 0.25f;
-
-                //for (int v = 0; v < 4; ++v)
                 CellSizeReference = Math.Max(CellSizeReference, (_cellCenters[c] - Vertices[Cells[c][0]]).LengthSquared());
             }
 
-            CellSizeReference = (float)Math.Sqrt(CellSizeReference); // * 1.1f; // Allow for some error.
-            //Console.WriteLine("Maximal cell size found: " + CellSizeReference);
+            CellSizeReference = (float)Math.Sqrt(CellSizeReference);
 
             _cellCenters.MinValue = new Vector(Vertices.MinValue);
             _cellCenters.MaxValue = new Vector(Vertices.MaxValue);
@@ -558,35 +546,4 @@ namespace FlowSharp
         }
         #endregion DebugRendering
     }
-
-    //struct Tet
-    //{
-    //    /// <summary>
-    //    /// Indices referencing the vertices in the containing grid.
-    //    /// </summary>
-    //    public Index VertexIndices;
-
-    //    /// <summary>
-    //    /// Create a Tetraeder.
-    //    /// </summary>
-    //    /// <param name="verts">Vertex indices [4]</param>
-    //    public Tet(Index verts)
-    //    {
-    //        Debug.Assert(verts.Length == 4, "Tetraeders have exactly 4 corners.");
-    //        VertexIndices = verts;
-    //    }
-    //    public Vector ToBaryCoord(TetTreeGrid grid, Vector worldPos)
-    //    {
-    //        Matrix tet = new Matrix();
-    //        for (int c = 0; c < 4; ++c)
-    //        {
-    //            tet.set_Columns(c, (Vector4)grid.Vertices[VertexIndices[c]]);
-    //        }
-
-    //        tet.Invert();
-    //        Vector4 result = Vector4.Transform((Vector4)worldPos, tet);
-    //        return new Vector(result);
-
-    //    }
-    //}
 }

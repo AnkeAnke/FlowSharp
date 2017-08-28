@@ -12,6 +12,8 @@ namespace FlowSharp
 {
     class TetGridMapper : IntegrationMapper
     {
+
+        float INERTIA = 0.1f;
         //LineSet _wireframe;
         //PointSet<Point> _vertices;
         Mesh _viewGeom;
@@ -42,6 +44,8 @@ namespace FlowSharp
             Mapping = ShowSide;
             BasePlane = plane;
 
+            int timestep = 0;
+
             // Load Geometry
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
@@ -60,31 +64,41 @@ namespace FlowSharp
             // Load inlet for seeding.
             LoaderVTU inletLoader = new LoaderVTU(Aneurysm.GeometryPart.Inlet);
             var inlet = inletLoader.LoadGeometry();
-            _points = inlet.SampleRandom(300);
+            LoaderEnsight inletAttributeLoader = new LoaderEnsight(Aneurysm.GeometryPart.Inlet);
+            VectorData vel = inletAttributeLoader.LoadAttribute(Aneurysm.Variable.velocity, timestep);
 
-            Stopwatch watch = new Stopwatch();
-            watch.Start();
-            _streamlines = new List<LineSet>(3);
-
-
-            // Inertial
-            VectorField.Integrator integrator = new VectorField.IntegratorRK4(new VectorFieldInertial(_vectorField, 0.1f));
+            VectorField.Integrator integrator = new VectorField.IntegratorRK4(new VectorFieldInertial(_vectorField, INERTIA));
             integrator.StepSize = _grid.CellSizeReference / 2;
-            _streamlines.Add( integrator.Integrate(_points)[0] );
-            _streamlines.Last().Color = Vector3.UnitZ;
 
-            watch.Stop();
-            Console.WriteLine($"==== Integrating {_points.Length} points took {watch.Elapsed}. ");
+            //            while (true)
+            {
+                _points = inlet.SampleRandom(10, vel);
+//                _points.SetTime(timestep);
 
-            foreach (LineSet lines in _streamlines)
-                lines.Thickness *= 0.4f;
-            _points = _streamlines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
+                _streamlines = new List<LineSet>(3);
 
 
-            Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
-            _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
-            this.SplatToAttribute(attributeTree, _canvas, _points, _grid.Tree.MaxCellDistance * 20);
-            BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename("SplatInt", Aneurysm.GeometryPart.Wall), _canvas);
+                // Inertial
+                _streamlines.Add(integrator.Integrate(_points)[0]);
+                _streamlines.Last().Color = Vector3.UnitZ;
+
+                watch.Stop();
+                Console.WriteLine($"==== Integrating {_points.Length} points took {watch.Elapsed}. ");
+
+                foreach (LineSet lines in _streamlines)
+                    lines.Thickness *= 0.2f;
+                _points = _streamlines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
+
+
+                Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
+                _canvas = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
+                if (_canvas == null)
+                    _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
+                this.SplatToAttribute(attributeTree, _canvas, _points, attributeTree.Extent.Max() * 0.02f);
+                BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), _canvas);
+            }
             //_tree = new KDTree(geomLoader.Grid, 100);
         }
 
@@ -119,7 +133,7 @@ namespace FlowSharp
             {
                 if (GeometryPart == Aneurysm.GeometryPart.Wall)
                 {
-                    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename("SplatInt", Aneurysm.GeometryPart.Wall), 1);
+                    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
                 }
                 else
                 {
@@ -201,9 +215,9 @@ namespace FlowSharp
         {
             foreach (P p in points.Points)
             {
-                List<Octree.IndexDistance> verts = attributeTree.FindWithinRadius(p.Position, radius);
+                List<Octree.IndexDistance> verts = attributeTree.FindWithinRadius(Util.Convert(p.Position), radius);
                 foreach (Octree.IndexDistance v in verts)
-                    canvas[v.VertexIndex] += 1.0f - v.Distance / radius;
+                    canvas[v.VertexIndex] += 1.0f / v.Distance;
             }
             canvas.MaxValue = null;
         }

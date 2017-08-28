@@ -215,7 +215,7 @@ namespace FlowSharp
                 _setMouseRelative = null;
             }
 
-            if (stateMouse.IsPressed(2))
+            if (stateMouse.IsPressed(1))
             {
                 // mouse movement
                 double deltaX = Cursor.Position.X - lastMouseX;

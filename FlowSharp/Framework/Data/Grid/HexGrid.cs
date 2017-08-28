@@ -154,7 +154,7 @@ namespace FlowSharp
             Point[] verts = new Point[Vertices.Length];
             for (int p = 0; p < Vertices.Length; ++p)
             {
-                verts[p] = new Point((Vector3)Vertices[p]) { Color = (Vector3)Vertices[p], Radius = 0.001f };
+                verts[p] = new Point((Vector4)Vertices[p]) { Color = (Vector3)Vertices[p], Radius = 0.001f };
             }
 
             return new PointSet<Point>(verts);

@@ -46,7 +46,7 @@ namespace FlowSharp
             for(int l = 0; l < lines.Length; ++l)
             {
                 for (int p = 0; p < lines[l].Length; ++p)
-                    Positions[p, l] = lines[l][p];
+                    Positions[p, l] = Util.Convert(lines[l][p]);
 
             }
 

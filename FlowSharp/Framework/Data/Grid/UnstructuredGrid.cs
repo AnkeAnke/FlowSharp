@@ -113,20 +113,21 @@ namespace FlowSharp
             Point[] verts = new Point[Vertices.Length];
             for (int p = 0; p < Vertices.Length; ++p)
             {
-                verts[p] = new Point((Vector3)Vertices[p]) { Color = (Vector3)Vertices[p], Radius = 0.001f };
+                verts[p] = new Point((Vector4)Vertices[p]) { Color = (Vector3)Vertices[p], Radius = 0.001f };
             }
 
             return new PointSet<Point>(verts);
         }
 
-        static Random RandomSampler = new Random(1337);
-        public PointSet<Point> SampleRandom(int numSamples)
+        static Random RandomSampler = new Random();
+        public PointSet<Point> SampleRandom(int numSamples, VectorData data)
         {
-            Point[] positions = new Point[numSamples];
+            InertialPoint[] positions = new InertialPoint[numSamples];
             for (int sample = 0; sample < numSamples; ++sample)
             {
                 int tet = RandomSampler.Next(Primitives.Length);
-                Vector pos = new Vector(Vertices.VectorLength);
+                Vector pos = new Vector(0, Vertices.VectorLength);
+                Vector dataSample = new Vector(0, data.VectorLength);
                 //Vector bary = new Vector(Vertices.VectorLength);
 
                 float barySum = 0;
@@ -134,10 +135,12 @@ namespace FlowSharp
                 {
                     float rndFactor = (float)RandomSampler.NextDouble();
                     pos += Vertices[Primitives[tet][l]] * rndFactor;
+                    dataSample += data[Primitives[tet][l]];
                     barySum += rndFactor;
                 }
                 pos /= barySum;
-                positions[sample] = new Point((Vector3)pos);
+                dataSample /= barySum;
+                positions[sample] = new InertialPoint((Vector4)pos, (Vector3)dataSample);
             }
             return new PointSet<Point>(positions);
         }

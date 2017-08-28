@@ -49,9 +49,9 @@ namespace FlowSharp
             /// <param name="stepped"></param>
             public abstract bool StepBorder(Vector pos, Vector sample, out Vector stepped, out float stepLength);
             public abstract bool StepBorderTime(Vector pos, Vector sample, float timeBorder, out Vector stepped, out float stepLength);
-            public virtual StreamLine<Vector3> IntegrateLineForRendering(Vector pos, float? maxTime = null)
+            public virtual StreamLine<Vector4> IntegrateLineForRendering(Vector pos, Vector inertia, float? maxTime = null)
             {
-                StreamLine<Vector3> line = new StreamLine<Vector3>();
+                StreamLine<Vector4> line = new StreamLine<Vector4>();
                 if (StepSize <= 0)
                     Console.WriteLine("StepSize is " + StepSize);
 
@@ -62,7 +62,7 @@ namespace FlowSharp
 
                     Vector point;
                     Vector next = pos;
-                    Vector inertial = new Vector(0, pos.Length);
+                    Vector inertial = inertia.ToVec(pos.Length);
 
                     Vector sample, nextSample;
                     line.Status = CheckPosition(next, inertial, out nextSample);
@@ -81,7 +81,7 @@ namespace FlowSharp
                         point = new Vector(next);
 
                         // Add 3D point to streamline list.
-                        Vector3 posP = (Vector3)point;
+                        Vector4 posP = (Vector4)point;
                         if (attachTimeZ)
                             posP.Z = (float)Field.TimeSlice;
                         line.Points.Add(posP);
@@ -102,7 +102,7 @@ namespace FlowSharp
                     {
                         if (nextSample != null && StepBorder(point, nextSample, out next, out stepLength))
                         {
-                            line.Points.Add((Vector3)next);
+                            line.Points.Add((Vector4)next);
                             line.LineLength += stepLength;
                         }
                     }
@@ -114,7 +114,7 @@ namespace FlowSharp
 
                         if (StepBorderTime(point, sample, timeBorder, out next, out stepLength))
                         {
-                            line.Points.Add((Vector3)next);
+                            line.Points.Add((Vector4)next);
                             line.LineLength += stepLength;
                         }
 
@@ -133,14 +133,14 @@ namespace FlowSharp
                 {
 
                     Console.WriteLine("Caught it! For Rendering!");
-                    Console.WriteLine(e);
+                    Console.WriteLine(e.InnerException);
                 }
                 return line;
             }
 
             public LineSet[] Integrate<P>(PointSet<P> positions, bool forwardAndBackward = false, float? maxTime = null) where P : Point
             {
-                Debug.Assert(Field.NumVectorDimensions <= 3);
+                Debug.Assert(Field.NumVectorDimensions <= 4);
 
                 Line[] lines = new Line[positions.Length];
                 Line[] linesReverse = new Line[forwardAndBackward ? positions.Length : 0];
@@ -150,20 +150,16 @@ namespace FlowSharp
                 Parallel.For(0, positions.Length, index =>
                 //for (int index = 0; index < positions.Length; ++index)
                 {
-                    try
-                    {
-                        StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)positions.Points[index].Position).ToVec(Field.NumDimensions), maxTime);
+                    Vector inertia = (Vec3)(positions.Points[index] as InertialPoint)?.Inertia ?? new Vec3(0);
+                    StreamLine<Vector4> streamline = IntegrateLineForRendering(
+                        ((Vec4)positions.Points[index].Position).ToVec(Field.NumDimensions), 
+                        inertia, 
+                        maxTime);
 
-                        lines[index] = new Line();
-                        lines[index].Positions = streamline.Points.ToArray();
-                        lines[index].Status = streamline.Status;
-                        lines[index].LineLength = streamline.LineLength;
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Caught it in Integrate! Index " + index);
-                        Console.WriteLine(e);
-                    }
+                    lines[index] = new Line();
+                    lines[index].Positions = streamline.Points.ToArray();
+                    lines[index].Status = streamline.Status;
+                    lines[index].LineLength = streamline.LineLength;
                 });
                 result[0] = new LineSet(lines) { Color = (Vector3)Direction };
 
@@ -173,7 +169,11 @@ namespace FlowSharp
                     Parallel.For(0, positions.Length, index =>
                     //for (int index = 0; index < positions.Length; ++index)
                     {
-                        StreamLine<Vector3> streamline = IntegrateLineForRendering((Vec3)positions.Points[index].Position, maxTime);
+                        Vector inertia = (Vec3)(positions.Points[index] as InertialPoint)?.Inertia ?? new Vec3(0);
+                        StreamLine<Vector4> streamline = IntegrateLineForRendering(
+                            (Vec4)positions.Points[index].Position, 
+                            inertia, 
+                            maxTime);
                         linesReverse[index] = new Line();
                         linesReverse[index].Positions = streamline.Points.ToArray();
                     });
@@ -188,7 +188,7 @@ namespace FlowSharp
                 try
                 {
                     Debug.Assert(Field.NumVectorDimensions <= 3);
-                    PointSet<EndPoint> ends = positions.GetAllEndPoints();
+                    PointSet<InertialPoint> ends = positions.GetAllEndPoints();
                     if (ends.Length == 0)
                         return;
 
@@ -198,7 +198,12 @@ namespace FlowSharp
                     {
                         if (positions[index].Length == 0 || ends[index] == null || (ends[index].Status != Status.BORDER && ends[index].Status != Status.TIME_BORDER && ends[index].Status != Status.OK))
                             return;
-                        StreamLine<Vector3> streamline = IntegrateLineForRendering(((Vec3)ends.Points[index].Position).ToVec(Field.NumVectorDimensions), maxTime);
+
+                        Vector inertia = (Vec3)(ends.Points[index] as InertialPoint)?.Inertia ?? new Vec3(0);
+                        StreamLine<Vector4> streamline = IntegrateLineForRendering(
+                            ((Vec4)ends.Points[index].Position).ToVec(Field.NumVectorDimensions),
+                            inertia,
+                            maxTime);
                         positions[index].Positions = positions.Lines[index].Positions.Concat(streamline.Points).ToArray();
                         positions[index].Status = streamline.Status;
                         positions[index].LineLength += streamline.LineLength;

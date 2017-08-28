@@ -54,6 +54,16 @@ namespace FlowSharp
             return a.X + a.Y + a.Z + a.W;
         }
 
+        public static float Min(this Vector3 a)
+        {
+            return Math.Min(Math.Min(a.X, a.Y), a.Z);
+        }
+
+        public static float Max(this Vector3 a)
+        {
+            return Math.Max(Math.Max(a.X, a.Y), a.Z);
+        }
+
         //public static Sign[] Compare(this SlimDX.Vector3 a, SlimDX.Vector3 b)
         //{
         //    return new Sign[] { (Sign)(a.X >= b.X), (Sign)(a.Y >= b.Y), (Sign)(a.Z >= b.Z) };

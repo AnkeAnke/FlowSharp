@@ -89,11 +89,11 @@ namespace FlowSharp
 
             protected Vector Repell(Vector pos)
             {
-                Vector3 dir;
-                float dist = Core.DistanceToPointInZ((Vector3)pos, out dir);
-                dir = (Vector3)pos - dir;
+                Vector4 dir;
+                float dist = Core.DistanceToPointInZ((Vector4)pos, out dir);
+                dir = (Vector4)pos - dir;
                 dir /= dist;
-                return ((Vec3)(dir * Force)).ToVec(pos.Length);
+                return ((Vec4)(dir * Force)).ToVec(pos.Length);
             }
 
             public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)

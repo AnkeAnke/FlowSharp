@@ -90,19 +90,19 @@ namespace FlowSharp
         public Line SetLineHeightSampleLine(Vector3 start, Vector3 end, Vector3 up)
         {
             Vector3 unitStep = (end - start) / (_x[Length - 1] - _x[0]);
-            Vector3[] line = new Vector3[Length];
+            Vector4[] line = new Vector4[Length];
             for (int i = 0; i < Length; ++i)
             {
-                line[i] = start + (_x[i] - _x[0]) * unitStep + up * _fx[i];
+                line[i] = new Vector4(start + (_x[i] - _x[0]) * unitStep + up * _fx[i], 0);
             }
             return new Line() { Positions = line };
         }
         public Line SetLineHeightStraight(Vector3 start, Vector3 dir, Vector3 up)
         {
-            Vector3[] line = new Vector3[Length];
+            Vector4[] line = new Vector4[Length];
             for (int i = 0; i < Length; ++i)
             {
-                line[i] = start + _x[i] * dir + up * _fx[i];
+                line[i] = new Vector4(start + _x[i] * dir + up * _fx[i], 0);
             }
             return new Line() { Positions = line };
         }

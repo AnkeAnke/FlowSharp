@@ -10,26 +10,41 @@ namespace FlowSharp
 {
     class Point
     {
-        public SlimDX.Vector3 Position;
+        public SlimDX.Vector4 Position;
         public virtual SlimDX.Vector3 Color { get; set; } = SlimDX.Vector3.UnitY;
         public virtual float Radius { get; set; } = 0.1f;
         public Point() { }
-        public Point(Vector3 pos) { Position = pos; }
-        public static explicit operator Point(Vector3 pos)
+        public Point(Vector4 pos) { Position = pos; }
+        public Point(Vector3 pos) { Position = new Vector4(pos, 0); }
+        public static explicit operator Point(Vector4 pos)
         {
             return new Point(pos);
         }
-        public static explicit operator Vector3(Point pos)
+        public static explicit operator Vector4(Point pos)
         {
             return pos.Position;
         }
     }
 
-    class EndPoint : Point
+    //class InertialPoint : Point
+    //{
+    //    public float LengthLine = 0;
+    //    public VectorField.Integrator.Status Status = VectorField.Integrator.Status.OK;
+    //    //public Int2 Origin = Int2.ZERO;
+    //}
+
+    class InertialPoint : Point
     {
         public float LengthLine = 0;
         public VectorField.Integrator.Status Status = VectorField.Integrator.Status.OK;
-        //public Int2 Origin = Int2.ZERO;
+        public Vector3 Inertia;
+        public InertialPoint(Vector4 pos, Vector3 inertia)
+        {
+            Position = pos;
+            Inertia = inertia;
+        }
+
+        public InertialPoint() { }
     }
 
     class CriticalPoint2D : Point
@@ -77,7 +92,7 @@ namespace FlowSharp
             //new Vector3(0.01f, 0.8f, 0.1f)  // Green
         };
 
-        public CriticalPoint2D(Vector3 position, SquareMatrix eigenvectors, ComplexDirection[] eigenvalues)
+        public CriticalPoint2D(Vector4 position, SquareMatrix eigenvectors, ComplexDirection[] eigenvalues)
         {
             Position = position;
             Eigenvalues = eigenvalues;
@@ -85,7 +100,7 @@ namespace FlowSharp
             SetType();
         }
 
-        public CriticalPoint2D(Vector3 position, SquareMatrix J)
+        public CriticalPoint2D(Vector4 position, SquareMatrix J)
         {
             Position = position;
             Debug.Assert(J.Length == 2);
@@ -181,7 +196,7 @@ namespace FlowSharp
     class FloatCP2D : CriticalPoint2D
     {
         public float Value;
-        public FloatCP2D(Vector3 position, SquareMatrix J, float value) : base(position, J)
+        public FloatCP2D(Vector4 position, SquareMatrix J, float value) : base(position, J)
         {
             Value = value;
         }
@@ -199,21 +214,21 @@ namespace FlowSharp
         public P[] Points;
         public int Length { get { return Points.Length; } }
 
-        private Vector3? _minPosition, _maxPosition;
-        public Vector3 MinPosition {
+        private Vector4? _minPosition, _maxPosition;
+        public Vector4 MinPosition {
             get {
                 if (_minPosition == null)
                     ExtractMinMax();
-                return (Vector3)_minPosition;
+                return (Vector4)_minPosition;
             }
         }
-        public Vector3 MaxPosition
+        public Vector4 MaxPosition
         {
             get
             {
                 if (_maxPosition == null)
                     ExtractMinMax();
-                return (Vector3)_maxPosition;
+                return (Vector4)_maxPosition;
             }
         }
         public PointSet(P[] points)
@@ -232,13 +247,19 @@ namespace FlowSharp
             set { Points[index] = value; }
         }
 
+        public void SetTime(float time)
+        {
+            foreach (P p in Points)
+                p.Position.W = time;
+        }
+
         public void ExtractMinMax()
         {
             if (_minPosition != null && _maxPosition != null)
                 return;
 
-            Vector3 minPos = Points[0].Position;
-            Vector3 maxPos = Points[0].Position;
+            Vector4 minPos = Points[0].Position;
+            Vector4 maxPos = Points[0].Position;
 
             // Find min and max in each dimension.
             foreach (P p in Points)

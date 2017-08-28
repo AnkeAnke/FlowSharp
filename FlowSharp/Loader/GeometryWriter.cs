@@ -28,7 +28,7 @@ namespace FlowSharp
                     // Write positions.
                     foreach(Line line in lines.Lines)
                     {
-                        foreach(Vector3 vec in line.Positions)
+                        foreach(Vector4 vec in line.Positions)
                         {
                             writer.Write(vec.X);
                             writer.Write(vec.Y);
@@ -50,7 +50,7 @@ namespace FlowSharp
                     // Write positions.
                     foreach (Line line in lines.Lines)
                     {
-                        foreach (Vector3 vec in line.Positions)
+                        foreach (Vector4 vec in line.Positions)
                         {
                             writer.Write("{0},", vec.Z);
                         }
@@ -138,7 +138,7 @@ namespace FlowSharp
 
                     // Write line lengths in order.
                     for (int l = 0; l < lines.Length; ++l)
-                        lines[l] = new Line() { Positions = new Vector3[reader.ReadInt32()] };
+                        lines[l] = new Line() { Positions = new Vector4[reader.ReadInt32()] };
 
                     // Write positions.
                     float x, y, z;
@@ -149,7 +149,7 @@ namespace FlowSharp
                             x = reader.ReadSingle();
                             y = reader.ReadSingle();
                             z = reader.ReadSingle();
-                            line[v] = new Vector3(x, y, z);
+                            line[v] = new Vector4(x, y, z, 0);
                         }
                     }
 

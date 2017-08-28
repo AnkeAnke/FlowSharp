@@ -338,7 +338,7 @@ namespace FlowSharp
         /// </summary>
         public static explicit operator SlimDX.Vector4(VectorRef vec)  // explicit byte to digit conversion operator
         {
-            return new SlimDX.Vector4(vec[0], vec.Length > 1 ? vec[1] : 0, vec.Length > 2 ? vec[2] : 0, vec.Length > 3 ? vec[3] : 1);
+            return new SlimDX.Vector4(vec[0], vec.Length > 1 ? vec[1] : 0, vec.Length > 2 ? vec[2] : 0, vec.Length > 3 ? vec[3] : 0);
         }
 
 
@@ -649,7 +649,7 @@ namespace FlowSharp
         /// </summary>
         /// <param name="v"></param>
         /// <param name="dim"></param>
-        public Vec3(float xy) : base(xy, 2)
+        public Vec3(float xyz) : base(xyz, 3)
         { }
 
         public static Vec3 Cross(Vec3 a, Vec3 b)
@@ -677,6 +677,57 @@ namespace FlowSharp
         }
 
         public static Vec3 operator *(float b, Vec3 a)
+        {
+            return a * b;
+        }
+    }
+
+    class Vec4 : Vector
+    {
+        public float X { get { return _data[0]; } }
+        public float Y { get { return _data[1]; } }
+        public float Z { get { return _data[2]; } }
+        public float W { get { return _data[3]; } }
+        public override int Length { get { return 4; } }
+
+        public Vec4() : base(0, 3)
+        { }
+
+        public Vec4(float x, float y, float z, float w) : base(new float[] { x, y, z, w })
+        { }
+
+        public Vec4(Vec4 copy) : base(copy)
+        { }
+
+        public Vec4(float[] copy) : base(copy)
+        { Debug.Assert(copy.Length == 4); }
+
+        public Vec4(Vec3 a, float b) : base(new float[] { a.X, a.Y, a.Z, b }) { }
+
+        /// <summary>
+        /// Vector with dim elements set to v.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="dim"></param>
+        public Vec4(float xyzw) : base(xyzw, 4)
+        { }
+
+        public static explicit operator Vec4(SlimDX.Vector4 vec)  // explicit byte to digit conversion operator
+        {
+            return new Vec4(vec.X, vec.Y, vec.Z, vec.W);
+        }
+
+        public static Vec4 operator -(Vec4 a)
+        {
+            return new Vec4(-a.X, -a.Y, -a.Z, -a.W);
+        }
+
+        public static Vec4 operator *(Vec4 a, float b)
+        {
+            return new Vec4(a.X * b, a.Y * b, a.Z * b, a.W * b);
+        }
+
+        public static Vec4 operator *(float b, Vec4 a)
         {
             return a * b;
         }
