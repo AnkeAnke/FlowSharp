@@ -123,6 +123,7 @@ namespace FlowSharp
         /// Stack of data arrays. Assume same size and dimensionality in each.
         /// </summary>
         private DataType[] _data;
+        public int ArrayLength { get { return _data?.Length ?? 0; } }
 
         public VectorDataArray(DataType[] data)
         {
@@ -214,6 +215,8 @@ namespace FlowSharp
         /// Data. We only append a 1 if accessed.
         /// </summary>
         private VectorDataArray<DataType> _data;
+        public float TimeScale = 1.0f;
+        public int ArrayLength { get { return _data.ArrayLength; } }
 
         public VectorDataUnsteady(VectorDataArray<DataType> data)
         {

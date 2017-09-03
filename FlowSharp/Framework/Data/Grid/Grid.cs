@@ -13,6 +13,7 @@ namespace FlowSharp
     abstract class FieldGrid
     {
         public Index Size;
+        public int VectorLength { get { return Size.Length; } }
         public virtual bool TimeDependant { get; set; }
         public Vector Origin;
         public virtual float? TimeOrigin{
@@ -84,7 +85,7 @@ namespace FlowSharp
         //}
 
         public abstract FieldGrid Copy();
-        public abstract FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart, float timeStep);
+        public abstract FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart);
         public abstract bool InGrid(Vector pos);
 
         /// <summary>

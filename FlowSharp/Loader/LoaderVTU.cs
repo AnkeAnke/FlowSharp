@@ -20,6 +20,10 @@ namespace FlowSharp
 
         public UnstructuredGeometry LoadGeometry()
         {
+            return LoadGeometry(Aneurysm.Singleton.VtuCompleteFilename(0, Part));
+        }
+        public UnstructuredGeometry LoadGeometry(string filename)
+        {
             int numPoints = 0, numCells = 0;
             VectorBuffer vertices = null;
             IndexArray indices = null;
@@ -31,7 +35,7 @@ namespace FlowSharp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            using (XmlReader reader = XmlReader.Create(Aneurysm.Singleton.VtuCompleteFilename(0, Part)))
+            using (XmlReader reader = XmlReader.Create(filename))
             {
                 while (reader.Read())
                 {
@@ -47,6 +51,7 @@ namespace FlowSharp
                                 Debug.Assert(reader.HasAttributes, "No attributes found.");
                                 numPoints = int.Parse(reader.GetAttribute("NumberOfPoints"));
                                 numCells = int.Parse(reader.GetAttribute("NumberOfCells"));
+                                Console.WriteLine($"Piece has {numPoints} points in {numCells} cells");
                                 readNumberPointsAndCells = true;
                                 break;
                             // Read vertex positions.

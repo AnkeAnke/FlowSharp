@@ -80,10 +80,10 @@ namespace FlowSharp
                 if (line.Length < 2)
                     continue;
                 Debug.Assert(line.Length == lines.Lines[index].Length);
-                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] + zAxis * line.Positions[0][2]), line.Attribute?.ElementAt(0) ?? line.Positions[0][2]));
+                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] + zAxis * line.Positions[0][2]), line.Attribute?.ElementAt(0) ?? line.Positions[0][3]));
                 for (int point = 1; point < line.Positions.Length - 1; ++point)
                 {
-                    Vector4 pos = new Vector4(plane.Origin + (plane.XAxis * line.Positions[point][0] + plane.YAxis * line.Positions[point][1] + zAxis * line.Positions[point][2]), line.Attribute?.ElementAt(point) ?? line.Positions[point][2]);
+                    Vector4 pos = new Vector4(plane.Origin + (plane.XAxis * line.Positions[point][0] + plane.YAxis * line.Positions[point][1] + zAxis * line.Positions[point][2]), line.Attribute?.ElementAt(point) ?? line.Positions[point][3]);
                     stream.Write(pos);
                     stream.Write(pos);
                 }

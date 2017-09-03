@@ -234,6 +234,9 @@
     <Content Include="Framework\Renderer\Resources\ColormapGray.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Framework\Renderer\Resources\ColormapGreen.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Framework\Renderer\Resources\ColormapHeat.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

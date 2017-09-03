@@ -289,7 +289,6 @@ namespace FlowSharp
                     
                 }
             }
-            Console.WriteLine("Finished loading " + variable);
             return vertices;
         }
 
@@ -311,7 +310,7 @@ namespace FlowSharp
                 batch[field] = LoadAttribute(measure, step);
             }
 
-            VectorFieldUnsteady velocity = new VectorFieldUnsteady(new VectorDataUnsteady<VectorChannels>(batch), grid);
+            VectorFieldUnsteady velocity = new VectorFieldUnsteady(new VectorDataUnsteady<VectorChannels>(batch), grid, batch.Length);
             velocity.TimeOrigin = startStep;
 //            velocity.ScaleToGrid(new Vec2((RedSea.Singleton.TimeScale * _everyNthTimestep) / RedSea.Singleton.NumSubsteps));
         }

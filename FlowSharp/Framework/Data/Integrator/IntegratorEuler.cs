@@ -24,13 +24,18 @@ namespace FlowSharp
                 stepLength = 0;
                 nextSample = null;
 
-                if (!ScaleAndCheckVector(sample, out sample))
+                if (!ScaleAndCheckVector(sample, out nextSample))
                     return Status.CP;
+
+                next += nextSample;
+
+                Status stat = CheckPosition(next, inertial, out nextSample);
+                if (stat != Status.OK)
+                    return stat;
 
                 if (float.IsNaN(sample[0]))
                     Console.WriteLine("NaN NaN NaN NaN WATMAN!");
 
-                next += sample;
                 stepLength += sample.LengthEuclidean();
                 return Status.OK;
             }

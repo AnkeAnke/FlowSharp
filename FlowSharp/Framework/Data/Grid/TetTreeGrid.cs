@@ -22,6 +22,23 @@ namespace FlowSharp
         public Octree Tree;
         public float CellSizeReference { get; protected set; }
 
+        private TetTreeGrid(TetTreeGrid other)
+        {
+            Vertices = other.Vertices;
+            Cells = other.Cells;
+            _cellCenters = other._cellCenters;
+            Tree = other.Tree;
+            CellSizeReference = other.CellSizeReference;
+
+            // For Dimensionality.
+            Size = new Index(1, 3);
+            Size[0] = Vertices.Length;
+
+            // Space position.
+            Origin = other.Origin ?? new Vector(0, 4);
+            TimeDependant = other.TimeOrigin != null;
+            Origin.T = other.TimeOrigin ?? Origin.T;
+        }
         public TetTreeGrid(UnstructuredGeometry geom, Aneurysm.GeometryPart part, int maxNumVertices = 100, int maxLevel = 10, Vector origin = null, float? timeOrigin = null) : this(geom.Vertices, geom.Primitives, part, maxNumVertices, maxLevel, origin, timeOrigin) { }
 
         /// <summary>
@@ -32,12 +49,14 @@ namespace FlowSharp
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            // For Dimensionality.
-            Size = new Index(3);
-            Cells = indices;
-            //            Cells = new Tet[indices.Length * 5];
             Vertices = vertices;
             Vertices.ExtractMinMax();
+
+            // For Dimensionality.
+            Size = new Index(1, 3);
+            Size[0] = Vertices.Length;
+            Cells = indices;
+
 
             Debug.Assert(vertices.Length > 0 && indices.Length > 0, "No data given.");
             Debug.Assert(indices.IndexLength == 4, "Not tets.");
@@ -109,9 +128,15 @@ namespace FlowSharp
         /// <param name="timeStart"></param>
         /// <param name="timeStep"></param>
         /// <returns></returns>
-        public override FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart, float timeStep)
+        public override FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart)
         {
-            return this;//new TetGrid(this);
+            //TetTreeGrid cpy = new TetTreeGrid(this);
+            TetTreeGrid other = new TetTreeGrid(this);
+            other.Size = new FlowSharp.Index(1, 4);
+            other.Size[0] = Vertices.Length;
+            other.Size.T = numTimeSlices;
+            other.TimeOrigin = timeStart;
+            return other;
         }
 
         /// <summary>

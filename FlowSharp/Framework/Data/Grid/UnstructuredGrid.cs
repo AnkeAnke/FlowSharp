@@ -119,8 +119,8 @@ namespace FlowSharp
             return new PointSet<Point>(verts);
         }
 
-        static Random RandomSampler = new Random();
-        public PointSet<Point> SampleRandom(int numSamples, VectorData data)
+        static Random RandomSampler = new Random(1337);
+        public PointSet<InertialPoint> SampleRandom(int numSamples, VectorData data)
         {
             InertialPoint[] positions = new InertialPoint[numSamples];
             for (int sample = 0; sample < numSamples; ++sample)
@@ -142,20 +142,25 @@ namespace FlowSharp
                 dataSample /= barySum;
                 positions[sample] = new InertialPoint((Vector4)pos, (Vector3)dataSample);
             }
-            return new PointSet<Point>(positions);
+            return new PointSet<InertialPoint>(positions);
         }
-        public PointSet<Point> SampleAll()
+        public PointSet<InertialPoint> SampleAll(VectorData data)
         {
-            Point[] midpoints = new Point[Primitives.Length];
+            InertialPoint[] midpoints = new InertialPoint[Primitives.Length];
             for (int p = 0; p < midpoints.Length; ++p)
             {
-                Vector3 pos = Vector3.Zero;
+                Vector4 pos = Vector4.Zero;
+                Vector dataSample = new Vector(0, data.VectorLength);
+
                 foreach (int i in Primitives[p].Data)
-                    pos += (Vector3)Vertices[i];
-                midpoints[p] = new Point(pos / Primitives.IndexLength);
+                {
+                    pos += (Vector4)Vertices[i];
+                    dataSample += data[Primitives[p][i]];
+                }
+                midpoints[p] = new InertialPoint(pos / Primitives.IndexLength, (Vector3)dataSample / Primitives.Length);
             }
 
-            return new PointSet<Point>(midpoints);
+            return new PointSet<InertialPoint>(midpoints);
         }
     }
 }

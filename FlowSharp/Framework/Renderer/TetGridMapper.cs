@@ -13,91 +13,88 @@ namespace FlowSharp
     class TetGridMapper : IntegrationMapper
     {
 
-        float INERTIA = 0.1f;
-        //LineSet _wireframe;
-        //PointSet<Point> _vertices;
+
         Mesh _viewGeom;
 
         ColormapRenderable _test;
-        //TetTreeGrid _grid;'
         GeneralUnstructurdGrid _geometry;
         //Index[] _indices;
         //bool update = true;
         PointSet<Point> _points;
         PointCloud _vertices;
         VectorData _attribute;
+        TetTreeGrid _grid;
 
         VectorField _vectorField;
-        List<LineSet> _streamlines;
+        List<LineSet> _streamLines;
         List<LineBall> _streamBall;
 
         VectorData _canvas;
-
-        TetTreeGrid _grid;
-        //KDTree _tree;
-        Mesh _octreeLeafs;
-
-        IndexData _tmpTest;
 
         public TetGridMapper(Plane plane) : base()
         {
             Mapping = ShowSide;
             BasePlane = plane;
 
-            int timestep = 0;
-
             // Load Geometry
             LoaderVTU geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             var hexGrid = geomLoader.LoadGeometry();
             geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
             var wallGrid = geomLoader.LoadGeometry();
-
+            
             // Fit plane to data.
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, hexGrid.Vertices);
             BasePlane.PointSize = 0.1f;
-
-            // Load some attribute.
+            
+            // Load grid.
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
             _grid = new TetTreeGrid(hexGrid, Aneurysm.GeometryPart.Solid, 1, 10);
-            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
 
             // Load inlet for seeding.
             LoaderVTU inletLoader = new LoaderVTU(Aneurysm.GeometryPart.Inlet);
             var inlet = inletLoader.LoadGeometry();
             LoaderEnsight inletAttributeLoader = new LoaderEnsight(Aneurysm.GeometryPart.Inlet);
-            VectorData vel = inletAttributeLoader.LoadAttribute(Aneurysm.Variable.velocity, timestep);
+            VectorData vel = inletAttributeLoader.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
 
-            VectorField.Integrator integrator = new VectorField.IntegratorRK4(new VectorFieldInertial(_vectorField, INERTIA));
+            // Load one vector field for comparison.
+            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
+            VectorField.Integrator integrator = new VectorField.IntegratorRK4(_vectorField);
             integrator.StepSize = _grid.CellSizeReference / 2;
+            integrator.NormalizeField = true;
+            integrator.MaxNumSteps = 10000;
 
-            //            while (true)
+           // while (true)
             {
-                _points = inlet.SampleRandom(10, vel);
+                PointSet<InertialPoint> points = inlet.SampleRandom(10, vel);
 //                _points.SetTime(timestep);
 
                 Stopwatch watch = new Stopwatch();
                 watch.Start();
-                _streamlines = new List<LineSet>(3);
+                _streamLines = new List<LineSet>(3);
 
 
                 // Inertial
-                _streamlines.Add(integrator.Integrate(_points)[0]);
-                _streamlines.Last().Color = Vector3.UnitZ;
+                INERTIA = 0.5f;
+                _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
+                _streamLines.Last().Color = Vector3.UnitZ;
+
+                _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 100));
+                _streamLines.Last().Color = new Vector3(0, 1, 1);
 
                 watch.Stop();
-                Console.WriteLine($"==== Integrating {_points.Length} points took {watch.Elapsed}. ");
+                Console.WriteLine($"==== Integrating {points.Length} points took {watch.Elapsed}. ");
 
-                foreach (LineSet lines in _streamlines)
-                    lines.Thickness *= 0.2f;
-                _points = _streamlines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
+                foreach (LineSet lines in _streamLines)
+                    lines.Thickness *= 0.4f;
+                _points = _streamLines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
 
 
-                Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
-                _canvas = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
-                if (_canvas == null)
-                    _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
-                this.SplatToAttribute(attributeTree, _canvas, _points, attributeTree.Extent.Max() * 0.02f);
-                BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), _canvas);
+//                Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
+//                _canvas = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
+//                if (_canvas == null)
+//                    _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
+//                this.SplatToAttribute(attributeTree, _canvas, _points, attributeTree.Extent.Max() * 0.02f);
+//                BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), _canvas);
             }
             //_tree = new KDTree(geomLoader.Grid, 100);
         }
@@ -135,7 +132,7 @@ namespace FlowSharp
                 {
                     _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
                 }
-                else
+                if (GeometryPart != Aneurysm.GeometryPart.Wall || _attribute == null)
                 {
                     LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
                     _attribute = attribLoader.LoadAttribute((Aneurysm.Variable)(int)Measure, 0);
@@ -149,18 +146,25 @@ namespace FlowSharp
                 _viewGeom = new Mesh(BasePlane, _geometry, _attribute);
             }
 
-            //if (_streamlines != null && 
-            //    _streamlines.Count > 0 &&
-            //    (_lastSetting == null ||
-            //    _streamBall == null))
-            //{
-            //    _streamBall = new List<LineBall>(_streamlines.Count);
-            //    foreach (LineSet lines in _streamlines)
-            //        _streamBall.Add( new LineBall(BasePlane, lines));
-            //}
+            if (_streamLines != null &&
+                _streamLines.Count > 0 &&
+                (_lastSetting == null ||
+                _streamBall == null))
+            {
+                _streamBall = new List<LineBall>(_streamLines.Count);
+                foreach (LineSet lines in _streamLines)
+                {
+                    _streamBall.Add(new LineBall(BasePlane, lines, LineBall.RenderEffect.HEIGHT));
 
-            //if (_streamBall != null)
-            //    wire.AddRange(_streamBall);
+                    foreach (LineBall ball in _streamBall)
+                    {
+                        ball.LowerBound = 0;
+                    }
+                }
+            }
+
+            if (_streamBall != null)
+                wire.AddRange(_streamBall);
 
             if (_lastSetting == null ||
                 GeometryPartChanged ||
@@ -173,11 +177,16 @@ namespace FlowSharp
                 _viewGeom.UpperBound = WindowStart + WindowWidth;
                 _viewGeom.UsedMap = Colormap;
 
-                if (_test != null)
+                if (_streamBall != null)
                 {
-                    _test.LowerBound = WindowStart;
-                    _test.UpperBound = WindowStart + WindowWidth;
-                    _test.UsedMap = Colormap;
+                    foreach (LineBall ball in _streamBall)
+                    {
+                        ball.UsedMap = ColorMapping.GetComplementary(Colormap);
+                        ball.LowerBound = WindowStart;
+                        ball.UpperBound = WindowStart + WindowWidth;
+                    }
+                    _streamBall[0].UsedMap = Colormap.Red;
+                    _streamBall[1].UsedMap = Colormap.Green;
                 }
             }
 

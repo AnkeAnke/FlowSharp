@@ -115,7 +115,7 @@ namespace FlowSharp
         /// <param name="timeStart"></param>
         /// <param name="timeStep"></param>
         /// <returns></returns>
-        public override FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart, float timeStep)
+        public override FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart)
         {
             return this;//new TetGrid(this);
         }

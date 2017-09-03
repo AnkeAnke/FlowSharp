@@ -274,6 +274,11 @@ namespace FlowSharp
             return new PointSet<InertialPoint>(points.ToArray());
         }
 
+        //public void TimeComponentToAttribute()
+        //{
+        //    for 
+        //}
+
         public void FlattenLines(float level = 0)
         {
             foreach (Line line in Lines)

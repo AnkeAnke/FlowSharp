@@ -10,21 +10,33 @@ namespace FlowSharp
 {
     class VectorFieldUnsteady : VectorField
     {
+        public float TimeScale = 1.0f;
+        public virtual float TimeEnd { get { return (TimeOrigin ?? 0) + Size.T * TimeScale; } }
         public float? TimeOrigin
         {
             get { return Grid.TimeDependant ? (float?)Grid.TimeOrigin : null; }
             set { Grid.TimeOrigin = value; }
         }
 
-        public VectorFieldUnsteady(VectorData data, FieldGrid grid)
+        public VectorFieldUnsteady(VectorData data, FieldGrid grid, int numSlices, float timeOrigin = 0)
         {
+            //TimeScale = timeScale;
             Debug.Assert(grid.TimeDependant);
             Data = data;
-            Grid = grid;
+            Grid = grid.GetAsTimeGrid(numSlices, timeOrigin);
         }
 
-        public VectorFieldUnsteady(ScalarFieldUnsteady[] data)
+        public VectorFieldUnsteady(VectorField field, float timeScale = 1.0f)
         {
+            TimeScale = timeScale;
+            Debug.Assert(field.Grid.TimeDependant);
+            Data = field.Data;
+            Grid = field.Grid;
+        }
+
+        public VectorFieldUnsteady(ScalarFieldUnsteady[] data, float timeScale = 1.0f)
+        {
+            TimeScale = timeScale;
             Debug.Assert(data[0].Grid.TimeDependant);
 
             VectorData[] raw = new VectorData[data.Length];
@@ -55,147 +67,100 @@ namespace FlowSharp
             SpreadInvalidValue();
         }
 
-        /// <summary>
-        /// Access field by scalar index.
-        /// </summary>
-        //public override Vector Sample(int index)
-        //{
-        //    Debug.Assert(index >= 0 && index < Size.Product(), "Index out of bounds: " + index + " not within [0, " + Size.Product() + ").");
-        //    Vector vec = new Vector(NumVectorDimensions);
-        //    for (int dim = 0; dim < _scalarsUnsteady.Length; ++dim)
-        //        vec[dim] = Scalars[dim][index];
-
-        //    // Unsteady!
-        //    vec[NumVectorDimensions - 1] = 1;
-
-        //    return vec;
-        //}
-
         public VectorField GetTimeSlice(int slice)
         {
             return GetSlice(slice);
         }
+    }
 
-        //public override VectorField GetSlice(int slice) { return (VectorField)GetTimeSlice(slice); }
+    class VectorFieldInertialUnsteady : VectorFieldUnsteady
+    {
+        public VectorFieldInertial[] TimeSteps;
 
-    //    public VectorFieldScalarsUnsteady(VectorFieldScalarsUnsteady field, VFJFunction function, int outputDim)
-    //    {
-    //        int scalars = outputDim;
-    //        FieldGrid gridCopy = field._scalarsUnsteady[0].TimeSlices[0].Grid.Copy();
-    //        _scalarsUnsteady = new ScalarFieldUnsteady[outputDim];
-            
-    //        // Reserve the space.
-    //        for (int comp = 0; comp < outputDim; ++comp)
-    //        {
-    //            ScalarField[] fields = new ScalarField[field.Size.T]; //(field.Grid);
+        public override float TimeEnd
+        {
+            get
+            {
+                return (TimeOrigin ?? 0) + TimeSteps.Length * TimeScale;
+            }
+        }
 
-    //            for (int t = 0; t < field.Size.T; ++t)
+        public VectorFieldInertialUnsteady(VectorFieldInertial[] fields, float timeScale = 1.0f)
+        {
+            TimeScale = timeScale;
+            Data = null;
+            TimeSteps = fields;
+            Grid = fields[0].Grid.GetAsTimeGrid(fields.Length, fields[0].Grid.TimeOrigin ?? 0);
+        }
+        public VectorFieldInertialUnsteady(VectorData[] data, float inertia, FieldGrid grid, float timeOrigin = 0, float timeScale = 1.0f)
+        {
+            TimeScale = timeScale;
+            Data = null;
+            TimeSteps = new VectorFieldInertial[data.Length];
+            for (int f = 0; f < data.Length; ++f)
+                TimeSteps[f] = new VectorFieldInertial(data[f], grid, inertia);
+            Grid = grid.GetAsTimeGrid(data.Length, timeOrigin);
+        }
 
-    //            {
-    //                fields[t] = new ScalarField(gridCopy);
-    //            }
 
-    //            _scalarsUnsteady[comp] = new ScalarFieldUnsteady(fields);
-    //            _scalarsUnsteady[comp].TimeOrigin = field.Scalars[0].TimeOrigin ?? 0;
-    //            _scalarsUnsteady[comp].InvalidValue = field.InvalidValue;
-    //            _scalarsUnsteady[comp].DoNotScale();
-    //        }
-            
-    //        this.InvalidValue = field.InvalidValue;
-    //        this.TimeOrigin = field.TimeOrigin;
+        public override int NumVectorDimensions { get { return TimeSteps[0].NumVectorDimensions + 1; } }
 
-    //        Grid = field.Grid.Copy();
+        public override void ScaleToGrid(Vector scale)
+        {
+            Debug.Assert(Data.VectorLength == scale.Length);
+            for (int dim = 0; dim < Data.VectorLength; ++dim)
+            {
+                ScaleToGrid(scale[dim]);
+            }
+            SpreadInvalidValue();
+        }
 
-    //        // Since the time component is in the grid size as well, we do not need to account for time specially.
-    //        GridIndex indexIterator = new GridIndex(field.Size);
-    //        foreach (GridIndex index in indexIterator)
-    //        {
-    //            Vector v = field.Sample((int)index);
+        public VectorField GetTimeSlice(int slice)
+        {
+            return TimeSteps[slice];
+        }
 
-    //            if (v[0] == InvalidValue)
-    //            {
-    //                for (int dim = 0; dim < Scalars.Length; ++dim)
-    //                    _scalarsUnsteady[dim][(int)index] = (float)InvalidValue;
-    //                continue;
-    //            }
+        public override VectorRef Sample(Index gridPosition)
+        {
+            return Vector.ToUnsteady(TimeSteps[gridPosition.T].Sample(gridPosition.ToIntX(gridPosition.Length - 1)));
+        }
 
-    //            SquareMatrix J = field.SampleDerivative(index);
-    //            Vector funcValue = function(v, J);
+        public override Vector Sample(Vector position, Vector lastDirection)
+        {
+            if (position == null) Console.WriteLine(position);
 
-    //            for (int dim = 0; dim < Scalars.Length; ++dim)
-    //            {
-    //                Scalars[dim][(int)index] = funcValue[dim];
-    //            }
-    //        }
-    //    }
+            float time = position.T - (float)TimeOrigin;
+            time /= TimeScale;
+            int timeStep = (int)time;
 
-    //    public void DoNotScale()
-    //    {
-    //        foreach (ScalarFieldUnsteady field in _scalarsUnsteady)
-    //            field.DoNotScale();
-    //    }
+            if (timeStep < 0 || timeStep >= TimeSteps.Length - 1)
+            {
+                Console.WriteLine($"{time} not within [0, {TimeSteps.Length})");
+                Console.WriteLine($"\tsince {position.T} not within [TimeOrigin, {TimeEnd})");
+                return null;
+            }
 
-    //    public override VectorFieldScalars GetSlicePlanarVelocity(int timeSlice)
-    //    {
-    //        ScalarField[] slices = new ScalarField[Size.Length - 1];
+            time = time - timeStep;
+            Vector spatial = position.ToVec(position.Length - 1);
 
-    //        // Copy the grid - one dimension smaller!
-    //        RectlinearGrid grid = Grid as RectlinearGrid;
-    //        Index newSize = new Index(Size.Length - 1);
-    //        Array.Copy(Size.Data, newSize.Data, newSize.Length);
+            Vector sample0 = TimeSteps[timeStep].Sample(spatial, lastDirection);
+            Vector sample1 = TimeSteps[timeStep + 1].Sample(spatial, lastDirection);
+            if (sample0 == null || sample1 == null)
+                return null;
 
-    //        FieldGrid sliceGrid = new RectlinearGrid(newSize);
-    //        for (int i = 0; i < Size.Length - 1; ++i)
-    //        {
-    //            slices[i] = this._scalarsUnsteady[i].GetTimeSlice(timeSlice);
-                
-    //            slices[i].TimeOrigin = timeSlice;
-    //        }
-    //        return new VectorFieldScalars(slices);
-    //    }
-    //}
+            return Vector.ToUnsteady((1f - time) * sample0 + time * sample1);
+        }
 
-    //class VectorFieldUnsteadyAnalytical : VectorFieldUnsteady
-    //{
-    //    //delegate Vector Evaluate(Vector inVec);
-    //    public delegate Vector Evaluate(Vector inVec, SquareMatrix inJ);
+        public override bool IsUnsteady()
+        {
+            return true;
+        }
 
-    //    protected Evaluate _evaluate;
-    //    //protected int _numVectorDimensions = -1;
-    //    protected FieldGrid _outGrid;
-
-    //    public VectorFieldUnsteadyAnalytical(Evaluate func, VectorFieldUnsteady field, FieldGrid outGrid, bool useJacobian = false) : base(field.ScalarsAsSFU)
-    //    {
-    //        _evaluate = func;
-    //       // _numVectorDimensions = outDimensions;
-    //    }
-
-    //    public override int NumVectorDimensions
-    //    {
-    //        get
-    //        {
-    //            return _outGrid.Size.Length;
-    //        }
-    //    }
-
-    //    public override void ScaleToGrid(Vector scale)
-    //    {
-    //        base.ScaleToGrid(scale);
-    //    }
-
-    //    public override VectorField GetSlice(int slice)
-    //    {
-    //        return base.GetSlice(slice);
-    //    }
-
-    //    public override Field[] Scalars
-    //    {
-    //        get
-    //        {
-    //            return base.Scalars;
-    //        }
-    //    }
-
+        public override void ScaleToGrid(float dimwiseScale)
+        {
+            foreach (var field in TimeSteps)
+                field.ScaleToGrid(dimwiseScale);
+        }
     }
 
 

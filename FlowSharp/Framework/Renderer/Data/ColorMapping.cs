@@ -104,6 +104,7 @@ namespace FlowSharp
         Parula = 0,
         Heat,
         Red,
+        Green,
         Gray,
         Heatstep,
         Circular,

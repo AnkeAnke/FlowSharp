@@ -60,7 +60,7 @@ namespace FlowSharp
         /// <param name="timeStart"></param>
         /// <param name="timeStep"></param>
         /// <returns></returns>
-        public override FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart, float timeStep)
+        public override FieldGrid GetAsTimeGrid(int numTimeSlices, float timeStart)
         {
             Index timeSize = new Index(Size.Length + 1);
             Array.Copy(Size.Data, timeSize.Data, Size.Length);

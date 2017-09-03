@@ -25,9 +25,7 @@ namespace FlowSharp
         public string OctreeFolderFilename;
 
         public int NumSteps = 200;
-
-        public float DomainScale = 1.0f; //2.593f / 15;
-        public float TimeScale { get { return 1.0f/DomainScale; } }
+        public float TimeScale { get { return 0.005f; } }
         /// <summary>
         /// Relevant variables of Read Sea file.
         /// </summary>
