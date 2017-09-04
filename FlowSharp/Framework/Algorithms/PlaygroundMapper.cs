@@ -125,8 +125,7 @@ namespace FlowSharp
                 Vec3 vec = new Vec3((Vec2)point, 0);
                 if (_velocity.Grid.InGrid(vec))
                 {
-                    Vector4[] line = _integrator.IntegrateLineForRendering(vec, new Vector(0,3)).Points.ToArray();
-                    Line newLine = new Line() { Positions = line };
+                    Line newLine = _integrator.IntegrateLineForRendering(vec);
                     var set = new LineSet(new Line[] { newLine }) { Color = _flipColor? Vector3.UnitX : Vector3.UnitZ};
                     
                     set.Thickness *= 3;
@@ -161,8 +160,7 @@ namespace FlowSharp
 
                     _integrator.Field = _steadyField;
                     _integrator.MaxNumSteps = 50;
-                    line = _integrator.IntegrateLineForRendering(new Vec2(vec.X, vec.Y), new Vector(0, 3)).Points.ToArray();
-                    newLine = new Line() { Positions = line };
+                    newLine = _integrator.IntegrateLineForRendering(new Vec2(vec.X, vec.Y));
                     set = new LineSet(new Line[] { newLine }) { Color = _flipColor ? Vector3.UnitX : Vector3.UnitZ };
                     set.Thickness *= 3;
                     ball = new LineBall(new Plane(BasePlane, Vector3.UnitZ * 0.1f), set, LineBall.RenderEffect.DEFAULT, Colormap, false);

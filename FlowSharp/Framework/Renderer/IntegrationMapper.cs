@@ -9,7 +9,7 @@ namespace FlowSharp
     abstract class IntegrationMapper : DataMapper
     {
         protected static int STEPS_IN_MEMORY = 10;
-        protected float INERTIA = 0.25f;
+        protected float RESPONSE_TIME = 0.25f;
         protected int TIMESTEP = 0;
 
         protected VectorField LoadToVectorField(FieldGrid grid, int startStep, int stepOffset)
@@ -24,7 +24,7 @@ namespace FlowSharp
             }
 
             //var fieldInertial = new VectorFieldInertial(new VectorDataArray<VectorChannels>(buffers), _grid, INERTIA);
-            VectorFieldInertialUnsteady field = new VectorFieldInertialUnsteady(buffers, INERTIA, grid, (stepOffset + startStep) * Aneurysm.Singleton.TimeScale, Aneurysm.Singleton.TimeScale);
+            VectorFieldInertialUnsteady field = new VectorFieldInertialUnsteady(buffers, RESPONSE_TIME, grid, (stepOffset + startStep) * Aneurysm.Singleton.TimeScale, Aneurysm.Singleton.TimeScale);
 
             return field;
         }
@@ -45,7 +45,7 @@ namespace FlowSharp
             {
                 Console.Write(l.Status);
                 if (l.Length > 0)
-                    Console.Write(" at time " + l.Last.W);
+                    Console.Write(" at time " + l.Last.W + ", length " + l.Length);
                 Console.Write('\n');
             }
 

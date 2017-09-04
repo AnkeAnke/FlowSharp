@@ -102,6 +102,8 @@ namespace FlowSharp
             Grid = grid.GetAsTimeGrid(data.Length, timeOrigin);
         }
 
+        public override int NumDimensions { get { return TimeSteps[0].NumDimensions + 1; } }
+        public int NumSpatialDimensions { get { return TimeSteps[0].Data.VectorLength; } }
 
         public override int NumVectorDimensions { get { return TimeSteps[0].NumVectorDimensions + 1; } }
 
@@ -125,30 +127,52 @@ namespace FlowSharp
             return Vector.ToUnsteady(TimeSteps[gridPosition.T].Sample(gridPosition.ToIntX(gridPosition.Length - 1)));
         }
 
-        public override Vector Sample(Vector position, Vector lastDirection)
+        private Vector SampleAtPosition(Vector pos, int timeStep, float time)
         {
-            if (position == null) Console.WriteLine(position);
+            VectorRef weights;
+            Index neighs = Grid.FindAdjacentIndices(pos.SubVec(TimeSteps[0].NumDimensions), out weights);
+            if (neighs == null)
+                return null;
 
-            float time = position.T - (float)TimeOrigin;
+            Vector sample0 = TimeSteps[timeStep  ].Sample(pos, neighs, weights);
+            Vector sample1 = TimeSteps[timeStep+1].Sample(pos, neighs, weights);
+            //Vector[] samples = new Vector[] { new Vector(TimeSteps[0].NumVectorDimensions), new Vector(TimeSteps[0].NumVectorDimensions) };
+            //for (int timePlus = 0; timePlus < 2; ++timePlus)
+            //    for (int neigh = 0; neigh < neighs.Length; ++neigh)
+            //        samples[timePlus] += TimeSteps[timeStep + timePlus][neighs[neigh]] * weights[neigh];
+
+            return (1f - time) * sample0 + time * sample1;
+        }
+
+        public override Vector Sample(Vector state)
+        {
+            float time = state.T - (float)TimeOrigin;
             time /= TimeScale;
             int timeStep = (int)time;
 
             if (timeStep < 0 || timeStep >= TimeSteps.Length - 1)
             {
                 Console.WriteLine($"{time} not within [0, {TimeSteps.Length})");
-                Console.WriteLine($"\tsince {position.T} not within [TimeOrigin, {TimeEnd})");
+                Console.WriteLine($"\tsince {state.T} not within [TimeOrigin, {TimeEnd})");
                 return null;
             }
 
             time = time - timeStep;
-            Vector spatial = position.ToVec(position.Length - 1);
+            Vector spatial = state.SubVec(state.Length - 1);
 
-            Vector sample0 = TimeSteps[timeStep].Sample(spatial, lastDirection);
-            Vector sample1 = TimeSteps[timeStep + 1].Sample(spatial, lastDirection);
-            if (sample0 == null || sample1 == null)
-                return null;
+            Vector sample = SampleAtPosition(state, timeStep, time);
 
-            return Vector.ToUnsteady((1f - time) * sample0 + time * sample1);
+
+            return sample == null?
+                null:
+                VectorRef.ToUnsteady(sample, TimeSteps[timeStep].ResponseTime);
+        }
+
+        
+
+        public override Vector ToPosition(Vector pos)
+        {
+            return VectorRef.ToUnsteady(pos.SubVec(TimeSteps[0].NumDimensions), pos.T);
         }
 
         public override bool IsUnsteady()

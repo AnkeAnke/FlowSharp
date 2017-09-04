@@ -36,7 +36,7 @@ namespace FlowSharp
         /// Number of dimensions per vector.
         /// </summary>
         public virtual int NumVectorDimensions { get { return Data.VectorLength; } }
-        public int NumDimensions { get { return Size.Length; } }
+        public virtual int NumDimensions { get { return Size.Length; } }
 
         public virtual float? InvalidValue { get; set; }
         public virtual float? TimeSlice { get; set; }
@@ -226,14 +226,14 @@ namespace FlowSharp
             return this[gridPosition];
         }
 
-        public virtual Vector Sample(Vector position, Vector lastDirection)
-        {
-            return Sample(position);
-        }
-
-        public Vector Sample(Vector position)
+        public virtual Vector Sample(Vector position)
         {
             return Grid.Sample(this, position);
+        }
+
+        public virtual Vector ToPosition(Vector pos)
+        {
+            return pos;
         }
 
         /// <summary>
@@ -268,9 +268,9 @@ namespace FlowSharp
                     {
                         // Regular case. Interpolate.
                         samplePos[dim]++;
-                        jacobian[dim] = this[samplePos].ToVec(size);
+                        jacobian[dim] = this[samplePos].SubVec(size);
                         samplePos[dim] -= 2;
-                        jacobian[dim] -= this[samplePos].ToVec(size);
+                        jacobian[dim] -= this[samplePos].SubVec(size);
                         jacobian[dim] *= 0.5f;
                         samplePos[dim]++;
                     }
@@ -278,9 +278,9 @@ namespace FlowSharp
                     {
                         // Left border.
                         samplePos[dim]++;
-                        jacobian[dim] = this[samplePos].ToVec(size);
+                        jacobian[dim] = this[samplePos].SubVec(size);
                         samplePos[dim]--;
-                        jacobian[dim] -= this[samplePos].ToVec(size);
+                        jacobian[dim] -= this[samplePos].SubVec(size);
                     }
                 }
                 else
@@ -288,9 +288,9 @@ namespace FlowSharp
                     if (leftValid)
                     {
                         // Right border.
-                        jacobian[dim] = this[samplePos].ToVec(size);
+                        jacobian[dim] = this[samplePos].SubVec(size);
                         samplePos[dim]--;
-                        jacobian[dim] -= this[samplePos].ToVec(size);
+                        jacobian[dim] -= this[samplePos].SubVec(size);
                         samplePos[dim]++;
                     }
                     else

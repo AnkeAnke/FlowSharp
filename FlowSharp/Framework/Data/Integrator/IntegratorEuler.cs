@@ -16,57 +16,40 @@ namespace FlowSharp
             {
                 Field = field;
             }
-            int counter = 0;
-            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector next, out Vector nextSample, out float stepLength)
+
+            public override Status Step(ref Vector state, out float stepLength)
             {
-                ++counter;
-                next = new Vector(pos);
                 stepLength = 0;
-                nextSample = null;
-
-                if (!ScaleAndCheckVector(sample, out nextSample))
-                    return Status.CP;
-
-                next += nextSample;
-
-                Status stat = CheckPosition(next, inertial, out nextSample);
+                Vector step;
+                //Console.WriteLine($"Position {state}");
+                Status stat = CheckPosition(state, out step);
+                //Console.WriteLine($"State {stat}\nStep {step}");
                 if (stat != Status.OK)
                     return stat;
 
-                if (float.IsNaN(sample[0]))
-                    Console.WriteLine("NaN NaN NaN NaN WATMAN!");
+                if (!ScaleAndCheckVector(step))
+                    return Status.CP;
+                //Console.WriteLine($"Step then {step}");
+                state += step;
 
-                stepLength += sample.LengthEuclidean();
+                stepLength += step.LengthEuclidean();
                 return Status.OK;
             }
 
-            public override bool StepBorder(Vector position, Vector dir, out Vector nextPos, out float stepLength)
+            public override bool StepBorder(Vector state, ref Vector nextState, out float stepLength)
             {
-                nextPos = new Vector(position);
                 stepLength = 0;
-                dir *= (int)Direction;
-                if (NormalizeField)
-                    dir.Normalize();
 
-                nextPos = Field.Grid.CutToBorder(Field, position, dir);
+                nextState = Field.Grid.CutToBorder(Field, state, nextState-state);
 
-                stepLength = (nextPos - position).LengthEuclidean();
-                //// How big is the smallest possible scale to hit a maximum border?
-                //float scale = (((Vector)Field.Size - new Vector(1, Field.Size.Length) - position) / dir).MinPos();
-                //scale = Math.Min(scale, (position / dir).MinPos());
+                stepLength = (nextState - state).LengthEuclidean();
 
-                //if (scale >= StepSize)
-                //    return false;
-
-                //nextPos += dir * scale;
-                //stepLength = dir.LengthEuclidean() * scale;
                 return true;
             }
 
-            protected bool ScaleAndCheckVector(Vector vec, out Vector sample)
+            protected bool ScaleAndCheckVector(Vector sample)
             {
-                sample = new Vector(vec);
-                float length = sample.LengthEuclidean();
+                float length = Field.ToPosition(sample).LengthEuclidean();
                 if (NormalizeField)
                     sample = sample / length;
                 sample *= StepSize * (int)Direction;
@@ -77,24 +60,22 @@ namespace FlowSharp
                 return true;
             }
 
-            public override bool StepBorderTime(Vector position, Vector dir, float timeBorder, out Vector stepped, out float stepLength)
+            public override bool StepBorderTime(Vector state, ref Vector nextState, float timeBorder, out float stepLength)
             {
-                stepped = new Vector(position);
+                // Derive direction from failed next position.
+                Vector dir = nextState - state;
                 stepLength = 0;
-                dir *= (int)Direction;
-                if (NormalizeField)
-                    dir.Normalize();
 
                 // How big is the smallest possible scale to hit a maximum border?
                 Vector timeSize = (Vector)Field.Size - new Vector(1, Field.Size.Length);
                 timeSize.T = timeBorder - 1;
-                float scale = ((timeSize - position) / dir).MinPos();
-                scale = Math.Min(scale, (position / dir).MinPos());
+                float scale = ((timeSize - state) / dir).MinPos();
+                scale = Math.Min(scale, (state / dir).MinPos());
 
                 if (scale >= StepSize)
                     return false;
 
-                stepped += dir * scale;
+                nextState = state + dir * scale;
                 stepLength = dir.LengthEuclidean() * scale;
                 return true;
             }

@@ -43,14 +43,14 @@ namespace FlowSharp
 
             Debug.Assert(indices.Length == weights.Length);
 
-            Vector result = new Vector(0, field.NumVectorDimensions);
+            Vector result = new Vector(0, field.NumDimensions);
             // Add the other weighted grid points.
             for (int dim = 0; dim < indices.Length; ++dim)
             {
                 VectorRef add = field.Sample(indices[dim]);
                 if(add[0] == field.InvalidValue)
                 {
-                    new Vector(field.InvalidValue??float.MaxValue, field.NumVectorDimensions);
+                    new Vector(field.InvalidValue??float.MaxValue, field.NumDimensions);
                 }
                 result += add * weights[dim];
             }

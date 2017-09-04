@@ -24,6 +24,11 @@ namespace FlowSharp
         {
             return pos.Position;
         }
+
+        public virtual Vector ToVector()
+        {
+            return new Vector(Position);
+        }
     }
 
     //class InertialPoint : Point
@@ -35,7 +40,7 @@ namespace FlowSharp
 
     class InertialPoint : Point
     {
-        public float LengthLine = 0;
+        //public float LengthLine = 0;
         public VectorField.Integrator.Status Status = VectorField.Integrator.Status.OK;
         public Vector3 Inertia;
         public InertialPoint(Vector4 pos, Vector3 inertia)
@@ -45,6 +50,19 @@ namespace FlowSharp
         }
 
         public InertialPoint() { }
+
+        public override Vector ToVector()
+        {
+            Vector vec = new Vector(7);
+            for (int n = 0; n < 3; ++n)
+            {
+                vec[n] = Position[n];
+                vec[3 + n] = Inertia[n];
+            }
+            vec.T = Position.W;
+
+            return vec;
+        }
     }
 
     class CriticalPoint2D : Point

@@ -8,32 +8,64 @@ namespace FlowSharp
 {
     class VectorFieldInertial : VectorField
     {
-        public float Inertia;
+        /// <summary>
+        /// The field state is compounded of position and last sampled velocity. Inertia basically means that the velocity is applied "one step later".
+        /// </summary>
+        public override int NumVectorDimensions { get { return base.NumVectorDimensions * 2; } }
 
-        public VectorFieldInertial(VectorField field, float inertia = 0.01f) : base(field.Data, field.Grid)
+        //public override int NumDimensions { get { return base.NumVectorDimensions * 2; } }
+
+        public float ResponseTime;
+
+        public VectorFieldInertial(VectorField field, float responseTime = 0.01f) : base(field.Data, field.Grid)
         {
-            Inertia = inertia;
+            ResponseTime = responseTime;
         }
 
-        public VectorFieldInertial(VectorData data, FieldGrid grid, float inertia = 0.01f) : base(data, grid)
+        public VectorFieldInertial(VectorData data, FieldGrid grid, float responseTime = 0.01f) : base(data, grid)
         {
-            Inertia = inertia;
+            ResponseTime = responseTime;
         }
 
-        protected VectorFieldInertial(float inertia = 0.01f)
+        protected VectorFieldInertial(float responseTime = 0.01f)
         {
-            Inertia = inertia;
+            ResponseTime = responseTime;
         }
 
-        public VectorFieldInertial(ScalarField[] scalars, float inertia = 0.01f) : base(scalars)
+        public VectorFieldInertial(ScalarField[] scalars, float responseTime = 0.01f) : base(scalars)
         {
-            Inertia = inertia;
+            ResponseTime = responseTime;
         }
 
-        public override Vector Sample(Vector position, Vector lastDirection)
+        public override Vector Sample(Vector state)
         {
-            Vector s = base.Sample(position, lastDirection);
-            return s != null? s + lastDirection * Inertia : s;
+            // The size of the original field. Appending the last velocity, we get a 2n-D field.
+            int n = Data.VectorLength;
+            Vector v = state.SubVec(Data.VectorLength, Data.VectorLength);
+
+            // Sample the field and save that value as v.
+            Vector u_t = base.Sample(state.SubVec(Data.VectorLength)) - v;
+
+            // The position is advanced by the last sampled position.
+            Vector x_t = ResponseTime * v;
+            
+            return u_t == null? null : x_t.Append(u_t);
         }
+
+        public Vector Sample(VectorRef state, Index neighs, VectorRef weights)
+        {
+            Vector u_t = new Vector(Data.VectorLength);
+            for (int n = 0; n < neighs.Length; ++n)
+                u_t += this[neighs[n]] * weights[n];
+
+            // The position is advanced by the last sampled position.
+            Vector x_t = ResponseTime * state.SubVec(Data.VectorLength, Data.VectorLength);
+
+            return u_t == null ? null : x_t.Append(u_t);
+        }
+        //public override VectorRef Sample(int gridPosition)
+        //{
+        //    return base.Sample(gridPosition);
+        //}
     }
 }

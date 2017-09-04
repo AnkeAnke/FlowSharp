@@ -15,65 +15,74 @@ namespace FlowSharp
             public IntegratorRK4(VectorField field) : base(field)
             { }
 
-            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)
+            public override Status Step(ref Vector pos, out float stepLength)
             {
-                nextPos = new Vector(pos);
+                Vector originPos = new Vector(pos);
                 stepLength = 0;
                 Status status;
                 Vector v0, v1, v2, v3;
 
                 // v0
-                v0 = new Vector(sample);
-                if (!ScaleAndCheckVector(v0, out v0))
-                {
-                    nextSample = v0;
-                    return Status.CP;
-                }
-                status = CheckPosition(pos + v0 / 2, inertial, out v1);
+                status = CheckPosition(pos, out v0);
+
+                // Check original position and vector length.
                 if (status != Status.OK)
                 {
-                    nextSample = v1;
+                    pos += v0;
                     return status;
                 }
+                if (!ScaleAndCheckVector(v0))
+                {
+                    pos += v0;
+                    return Status.CP;
+                }
+                
 
                 // v1
-                if (!ScaleAndCheckVector(v1, out v1))
-                {
-                    nextSample = v1;
-                    return Status.CP;
-                }
-                status = CheckPosition(pos + v1 / 2, inertial, out v2);
+                status = CheckPosition(pos + v0 / 2, out v1);
+
+                // Check original position and vector length.
                 if (status != Status.OK)
                 {
-                    nextSample = v2;
+                    pos += v1;
                     return status;
+                }
+                if (!ScaleAndCheckVector(v1))
+                {
+                    pos += v1;
+                    return Status.CP;
                 }
 
                 // v2
-                if (!ScaleAndCheckVector(v2, out v2))
-                {
-                    nextSample = v2;
-                    return Status.CP;
-                }
-                status = CheckPosition(pos + v2, inertial, out v3);
+                status = CheckPosition(pos + v1 / 2, out v2);
+
+                // Check original position and vector length.
                 if (status != Status.OK)
                 {
-                    nextSample = v3;
+                    pos += v2;
                     return status;
+                }
+                if (!ScaleAndCheckVector(v0))
+                {
+                    pos += v2;
+                    return Status.CP;
                 }
 
                 // v3
-                if (!ScaleAndCheckVector(v3, out v3))
-                {
-                    nextSample = v3;
-                    return Status.CP;
-                }
+                status = CheckPosition(pos + v2, out v3);
 
+                // Check original position and vector length.
                 Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
-                nextPos += dir;
+
+                pos += dir;
+                if (status != Status.OK)
+                    return status;
+                if (!ScaleAndCheckVector(dir))
+                    return Status.CP;
+
                 stepLength = dir.LengthEuclidean();
 
-                return CheckPosition(nextPos, inertial, out nextSample);
+                return status;
             }
         }
 
@@ -93,73 +102,14 @@ namespace FlowSharp
                 float dist = Core.DistanceToPointInZ((Vector4)pos, out dir);
                 dir = (Vector4)pos - dir;
                 dir /= dist;
-                return ((Vec4)(dir * Force)).ToVec(pos.Length);
+                return ((Vec4)(dir * Force)).SubVec(pos.Length);
             }
 
-            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)
+            public override Status Step(ref Vector pos, out float stepLength)
             {
-                nextPos = new Vector(pos);
                 stepLength = 0;
-                Status status;
 
-                Vector v0, v1, v2, v3;
-
-                // v0
-                v0 = new Vector(sample) + Repell(pos);
-                if (!ScaleAndCheckVector(v0, out v0))
-                {
-                    nextSample = v0;
-                    return Status.CP;
-                }
-                status = CheckPosition(pos + v0 / 2, inertial, out v1);
-                if (status != Status.OK)
-                {
-                    nextSample = v1;
-                    return status;
-                }
-
-                // v1
-                v1 += Repell(pos + v0 / 2);
-                if (!ScaleAndCheckVector(v1, out v1))
-                {
-                    nextSample = v1;
-                    return Status.CP;
-                }
-                status = CheckPosition(pos + v1 / 2, inertial, out v2);
-                if (status != Status.OK)
-                {
-                    nextSample = v2;
-                    return status;
-                }
-
-                // v2
-                v2 += Repell(pos + v1 / 2);
-                if (!ScaleAndCheckVector(v2, out v2))
-                {
-                    nextSample = v2;
-                    return Status.CP;
-                }
-                status = CheckPosition(pos + v2, inertial, out v3);
-                if (status != Status.OK)
-                {
-                    nextSample = v3;
-                    return status;
-                }
-
-                // v3
-                v3 += Repell(pos + v2);
-                if (!ScaleAndCheckVector(v3, out v3))
-                {
-                    nextSample = v3;
-                    return Status.CP;
-                }
-
-                Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
-                nextPos += dir;
-                stepLength = dir.LengthEuclidean();
-                nextSample = v3;
-
-                return CheckPosition(nextPos, inertial, out sample);
+                return Status.INVALID;
             }
         }
     }

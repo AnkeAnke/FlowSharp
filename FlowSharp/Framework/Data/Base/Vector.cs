@@ -338,7 +338,7 @@ namespace FlowSharp
         /// </summary>
         public static explicit operator SlimDX.Vector4(VectorRef vec)  // explicit byte to digit conversion operator
         {
-            return new SlimDX.Vector4(vec[0], vec.Length > 1 ? vec[1] : 0, vec.Length > 2 ? vec[2] : 0, vec.Length > 3 ? vec[3] : 0);
+            return new SlimDX.Vector4(vec[0], vec.Length > 1 ? vec[1] : 0, vec.Length > 2 ? vec[2] : 0, vec.Length > 3 ? vec.T : 0);
         }
 
 
@@ -361,14 +361,24 @@ namespace FlowSharp
         /// <summary>
         /// Convert first N elements to a VecN. If less, fill with zeros.
         /// </summary>
-        public Vector ToVec(int N)
+        public Vector SubVec(int N, int offset = 0)
         {
             Vector result = new Vector(0,N);
-            for (int dim = 0; dim < Math.Min(Length, N); ++dim)
-                result[dim] = this[dim];
+            for (int dim = offset; dim < Math.Min(Length, offset + N); ++dim)
+                result[dim-offset] = this[dim];
             return result;
         }
 
+        public Vector Append(Vector app)
+        {
+            Vector comp = new Vector(Length + app.Length);
+            for (int t = 0; t < Length; ++t)
+                comp[t] = this[t];
+            for (int a = 0; a < app.Length; ++a)
+                comp[Length + a] = app[a];
+
+            return comp;
+        }
         /// <summary>
         /// Convert to Vec3. If length is not 3, abort.
         /// </summary>
@@ -497,13 +507,13 @@ namespace FlowSharp
             return ret;
         }
 
-        public static Vector ToUnsteady(VectorRef v)
+        public static Vector ToUnsteady(VectorRef v, float time = 1)
         {
             Vector ret = new Vector(v.Length + 1);
             for (int i = 0; i < v.Length; ++i)
                 ret[i] = v[i];
             //Array.Copy(v.Data, ret.Data, v.Length);
-            ret.T = 1;
+            ret.T = time;
             return ret;
         }
 

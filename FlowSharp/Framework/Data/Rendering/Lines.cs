@@ -15,6 +15,7 @@ namespace FlowSharp
         public int Length { get { return Positions.Length; } }
         public VectorField.Integrator.Status Status;
         public float LineLength = 0;
+        public Vector EndPoint;
 
         public Vector4 Last { get { return Positions[Length - 1]; } }
 
@@ -226,7 +227,7 @@ namespace FlowSharp
                     {
                         Position = Lines[idx].Positions.Last(),
                         Inertia = inertia,
-                        LengthLine = Lines[idx].LineLength,
+                        //LengthLine = Lines[idx].LineLength,
                         Status = Lines[idx].Status
                     };
                 }
@@ -246,7 +247,7 @@ namespace FlowSharp
                     {
                         Position = Lines[idx].Positions.Last(),
                         Inertia = inertia,
-                        LengthLine = Lines[idx].LineLength,
+                        //LengthLine = Lines[idx].LineLength,
                         Status = Lines[idx].Status,
                         Radius = Thickness * 2f
                     });
@@ -268,7 +269,7 @@ namespace FlowSharp
                     {
                         Position = line.Positions.Last(),
                         Inertia = inertia,
-                        LengthLine = line.LineLength,
+                        //LengthLine = line.LineLength,
                         Status = line.Status });
             }
             return new PointSet<InertialPoint>(points.ToArray());

@@ -65,7 +65,7 @@ namespace FlowSharp
             Index timeSize = new Index(Size.Length + 1);
             Array.Copy(Size.Data, timeSize.Data, Size.Length);
             timeSize[Size.Length] = numTimeSlices;
-            Vector origin = Origin.ToVec(Origin.Length + 1);
+            Vector origin = Origin.SubVec(Origin.Length + 1);
             RectlinearGrid timeGrid = new RectlinearGrid(timeSize, origin, timeStart);
             //_timeDependent = true;
             //TimeOrigin = timeStart;

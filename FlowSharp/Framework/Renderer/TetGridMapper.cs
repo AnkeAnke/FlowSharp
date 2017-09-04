@@ -58,14 +58,15 @@ namespace FlowSharp
 
             // Load one vector field for comparison.
             _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
-            VectorField.Integrator integrator = new VectorField.IntegratorRK4(_vectorField);
+            VectorField.Integrator integrator = new VectorField.IntegratorEuler(_vectorField);
             integrator.StepSize = _grid.CellSizeReference / 2;
             integrator.NormalizeField = true;
             integrator.MaxNumSteps = 10000;
+            integrator.EpsCriticalPoint = 0;
 
            // while (true)
             {
-                PointSet<InertialPoint> points = inlet.SampleRandom(10, vel);
+                PointSet<InertialPoint> points = inlet.SampleRandom(3, vel);
 //                _points.SetTime(timestep);
 
                 Stopwatch watch = new Stopwatch();
@@ -74,11 +75,14 @@ namespace FlowSharp
 
 
                 // Inertial
-                INERTIA = 0.5f;
+                RESPONSE_TIME = 0.000001821f;
+                integrator.StepSize = 1;
+                //_streamLines.Add(integrator.Integrate(points)[0]);
                 _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
                 _streamLines.Last().Color = Vector3.UnitZ;
 
-                _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 100));
+                integrator.StepSize = 0.25f;
+                _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
                 _streamLines.Last().Color = new Vector3(0, 1, 1);
 
                 watch.Stop();
@@ -130,7 +134,7 @@ namespace FlowSharp
             {
                 if (GeometryPart == Aneurysm.GeometryPart.Wall)
                 {
-                    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
+                    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{RESPONSE_TIME}", Aneurysm.GeometryPart.Wall), 1);
                 }
                 if (GeometryPart != Aneurysm.GeometryPart.Wall || _attribute == null)
                 {

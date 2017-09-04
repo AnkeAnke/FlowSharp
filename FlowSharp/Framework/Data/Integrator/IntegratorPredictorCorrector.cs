@@ -25,27 +25,26 @@ namespace FlowSharp
                 Field = Predictor.Field;
             }
 
-            public override Status Step(Vector pos, Vector sample, Vector inertial, out Vector nextPos, out Vector nextSample, out float stepLength)
+            public override Status Step(ref Vector state, out float stepLength)
             {
-                // One predictor step.
-                Status status = Predictor.Step(pos, sample, inertial, out nextPos, out nextSample, out stepLength);
+                stepLength = 0;
+                Vector step, next;
+                Status status = CheckPosition(state, out step);
                 if (status != Status.OK)
                     return status;
-                // Now, step until the corrector reaches a critical point.
-                Vector point;
-                Vector next = nextPos;
-                if (CheckPosition(next, inertial, out sample) != Status.OK)
-                {
-                    StepBorder(pos, sample, out nextPos, out stepLength);
-                    return CheckPosition(nextPos, inertial, out sample);
-                }
-                int step = -1;
+
+                step *= StepSize * (int)Direction;
+
+                state += step;
+
+                stepLength += step.LengthEuclidean();
+
+                int stepCount = -1;
                 do
                 {
-                    step++;
-                    point = next;
-                    status = Corrector.Step(point, sample, inertial, out next, out nextSample, out stepLength);
-                } while (status == Status.OK && step < Corrector.MaxNumSteps);
+                    stepCount++;
+                    status = Corrector.Step(ref state, out stepLength);
+                } while (status == Status.OK && stepCount < Corrector.MaxNumSteps);
 
                 if (status == Status.CP)
                     return Status.OK;
@@ -53,15 +52,15 @@ namespace FlowSharp
             }
 
             //TODO: Correct.
-            public override bool StepBorder(Vector position, Vector sample, out Vector stepped, out float stepLength)
+            public override bool StepBorder(Vector state, ref Vector nextState, out float stepLength)
             {
-                return Predictor.StepBorder(position, sample, out stepped, out stepLength);
+                return Predictor.StepBorder(state, ref nextState, out stepLength);
             }
 
             //TODO: Correct.
-            public override bool StepBorderTime(Vector position, Vector sample, float timeBorder, out Vector stepped, out float stepLength)
+            public override bool StepBorderTime(Vector state, ref Vector nextState, float timeBorder, out float stepLength)
             {
-                return Predictor.StepBorderTime(position, sample, timeBorder, out stepped, out stepLength);
+                return Predictor.StepBorderTime(state, ref nextState, timeBorder, out stepLength);
             }
         }
     }
