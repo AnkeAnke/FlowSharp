@@ -44,24 +44,26 @@ namespace FlowSharp
             Vector v = state.SubVec(Data.VectorLength, Data.VectorLength);
 
             // Sample the field and save that value as v.
-            Vector u_t = base.Sample(state.SubVec(Data.VectorLength)) - v;
+            Vector u_t = base.Sample(state.SubVec(Data.VectorLength));
 
             // The position is advanced by the last sampled position.
             Vector x_t = ResponseTime * v;
-            
-            return u_t == null? null : x_t.Append(u_t);
+
+            return u_t == null? null : x_t.Append(u_t - v);
         }
 
         public Vector Sample(VectorRef state, Index neighs, VectorRef weights)
         {
+            Vector v = state.SubVec(Data.VectorLength, Data.VectorLength);
+
             Vector u_t = new Vector(Data.VectorLength);
             for (int n = 0; n < neighs.Length; ++n)
                 u_t += this[neighs[n]] * weights[n];
 
             // The position is advanced by the last sampled position.
-            Vector x_t = ResponseTime * state.SubVec(Data.VectorLength, Data.VectorLength);
+            Vector x_t = ResponseTime * v;
 
-            return u_t == null ? null : x_t.Append(u_t);
+            return u_t == null ? null : x_t.Append(u_t - v);
         }
         //public override VectorRef Sample(int gridPosition)
         //{

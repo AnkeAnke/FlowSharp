@@ -21,7 +21,7 @@ namespace FlowSharp
             {
                 stepLength = 0;
                 Vector step;
-                //Console.WriteLine($"Position {state}");
+
                 Status stat = CheckPosition(state, out step);
                 //Console.WriteLine($"State {stat}\nStep {step}");
                 if (stat != Status.OK)
@@ -29,7 +29,7 @@ namespace FlowSharp
 
                 if (!ScaleAndCheckVector(step))
                     return Status.CP;
-                //Console.WriteLine($"Step then {step}");
+
                 state += step;
 
                 stepLength += step.LengthEuclidean();
@@ -62,21 +62,21 @@ namespace FlowSharp
 
             public override bool StepBorderTime(Vector state, ref Vector nextState, float timeBorder, out float stepLength)
             {
-                // Derive direction from failed next position.
-                Vector dir = nextState - state;
                 stepLength = 0;
+                //// Derive direction from failed next position.
+                //Vector dir = nextState - state;
+                //Console.WriteLine($"Direction: {dir}");
+                //stepLength = 0;
 
-                // How big is the smallest possible scale to hit a maximum border?
-                Vector timeSize = (Vector)Field.Size - new Vector(1, Field.Size.Length);
-                timeSize.T = timeBorder - 1;
-                float scale = ((timeSize - state) / dir).MinPos();
-                scale = Math.Min(scale, (state / dir).MinPos());
+                //// How big is the smallest possible scale to hit a maximum border?
+                //float scale = ((timeBorder - state.T) / dir.T);
+                //Console.WriteLine($"Scale: {(timeBorder - state.T)} / {dir.T} = {scale}");
+                //if (scale >= StepSize)
+                //    return false;
 
-                if (scale >= StepSize)
-                    return false;
-
-                nextState = state + dir * scale;
-                stepLength = dir.LengthEuclidean() * scale;
+                //nextState = state + dir * scale;
+                //nextState.T = timeBorder + dir.T * 0.001f;
+                //stepLength = Field.ToPosition(dir).LengthEuclidean() * scale;
                 return true;
             }
         }

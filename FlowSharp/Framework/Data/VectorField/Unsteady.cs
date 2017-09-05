@@ -11,7 +11,15 @@ namespace FlowSharp
     class VectorFieldUnsteady : VectorField
     {
         public float TimeScale = 1.0f;
-        public virtual float TimeEnd { get { return (TimeOrigin ?? 0) + Size.T * TimeScale; } }
+        public virtual float TimeEnd { get { return (TimeOrigin ?? 0) + (Size.T - 1) * TimeScale; } }
+
+        public override bool InTime(float t)
+        {
+            float time = t - (float)(TimeOrigin??0f);
+            time /= TimeScale;
+            return time >= 0 && time < Size.T - 1;
+        }
+
         public float? TimeOrigin
         {
             get { return Grid.TimeDependant ? (float?)Grid.TimeOrigin : null; }
@@ -81,8 +89,15 @@ namespace FlowSharp
         {
             get
             {
-                return (TimeOrigin ?? 0) + TimeSteps.Length * TimeScale;
+                return (TimeOrigin ?? 0) + (TimeSteps.Length-1) * TimeScale;
             }
+        }
+
+        public override bool InTime(float t)
+        {
+            float time = t - (float)(TimeOrigin ?? 0f);
+            time /= TimeScale;
+            return time >= 0 && time < TimeSteps.Length - 1;
         }
 
         public VectorFieldInertialUnsteady(VectorFieldInertial[] fields, float timeScale = 1.0f)
@@ -146,6 +161,9 @@ namespace FlowSharp
 
         public override Vector Sample(Vector state)
         {
+            if (!InTime(state.T))
+                return null;
+
             float time = state.T - (float)TimeOrigin;
             time /= TimeScale;
             int timeStep = (int)time;
@@ -431,282 +449,4 @@ namespace FlowSharp
         }
     }
 
-    //class ScalarFieldUnsteady : VectorFieldUnsteady
-    //{
-    //    public new float this[int index]
-    //    {
-    //        get { return (float)_data[index]; }
-    //        set { ((VectorBuffer)_data).Data[index] = value; }
-    //    }
-
-    //    public new float this[Index gridPosition]
-    //    {
-    //        get
-    //        {
-    //            Debug.Assert(gridPosition < Size && gridPosition.IsPositive());
-
-    //            int offsetScale = 1;
-    //            int index = 0;
-
-    //            // Have last dimension running fastest.
-    //            for (int dim = 0; dim < NumVectorDimensions; ++dim)
-    //            {
-    //                index += offsetScale * gridPosition[dim];
-    //                offsetScale *= Size[dim];
-    //            }
-
-    //            return this[index];
-    //        }
-    //        protected set
-    //        {
-    //            Debug.Assert(gridPosition < Size && gridPosition.IsPositive());
-
-    //            int offsetScale = 1;
-    //            int index = 0;
-
-    //            // Have last dimension running fastest.
-    //            for (int dim = 0; dim < NumVectorDimensions; ++dim)
-    //            {
-    //                index += offsetScale * gridPosition[dim];
-    //                offsetScale *= Size[dim];
-    //            }
-
-    //            this[index] = value;
-    //        }
-    //    }
-
-    //    //private float? _timeSlice = null;
-    //    //public override float? TimeSlice
-    //    //{
-    //    //    get
-    //    //    {
-    //    //        return Grid.TimeOrigin;
-    //    //    }
-
-    //    //    set
-    //    //    {
-    //    //        Grid.TimeOrigin = value;
-    //    //    }
-    //    //}
-
-    //    /// <summary>
-    //    /// Instanciate a new field. The dimension is derived from the fields size.
-    //    /// </summary>
-    //    /// <param name="fieldSize">Number of grid edges in each dimension.</param>
-    //    //public ScalarFieldUnsteady(FieldGrid grid) : base()
-    //    //{
-    //    //    Grid = grid;
-    //    //    _data = new VectorBuffer(grid.Size.Product(), 1);
-    //    //}
-
-    //    public ScalarFieldUnsteady() { }
-    //    public ScalarFieldUnsteady(ScalarField[] data)
-    //    {
-    //        Grid = data[0].Grid;
-
-
-    //        VectorBuffer[] raw = new VectorBuffer[data.Length];
-    //        for (int d = 0; d < data.Length; ++d)
-    //            raw[d] = data[d].Data;
-
-    //        _data = new VectorDataArray<VectorBuffer>(raw);
-    //    }
-    //    /// <summary>
-    //    /// Returns a value from the grid.
-    //    /// </summary>
-    //    /// <param name="gridPosition"></param>
-    //    /// <returns></returns>
-    //    public new float Sample(Index gridPosition)
-    //    {
-    //        return this[gridPosition];
-    //    }
-
-    //    public new float Sample(Vector position)
-    //    {
-    //        return Grid.Sample(this, position)[0];
-    //    }
-
-    //    public new Vector SampleDerivative(Vector center)
-    //    {
-    //        Vector gradient = new Vector(0, Size.Length);
-
-    //        for (int dim = 0; dim < gradient.Length; ++dim)
-    //        {
-    //            float stepPos = Math.Min(Size[dim] - 1, center[dim] + 0.5f) - center[dim];
-    //            float stepMin = center[dim] - Math.Max(0, center[dim] - 0.5f);
-    //            Vector samplePos = new Vector(center);
-    //            samplePos[dim] += stepPos;
-    //            gradient[dim] = Sample(samplePos);
-
-    //            samplePos[dim] += stepMin - stepPos;
-    //            gradient[dim] -= Sample(samplePos);
-
-    //            gradient[dim] /= (stepPos - stepMin);
-    //        }
-
-    //        return gradient;
-    //    }
-
-    //    /// <summary>
-    //    /// Get the derivative at a data point. Not checking for InvalidValue.
-    //    /// </summary>
-    //    /// <param name="pos"></param>
-    //    /// <returns></returns>
-    //    public new Vector SampleDerivative(Index pos)
-    //    {
-    //        Vector gradient = new Vector(NumDimensions);
-
-    //        // For all dimensions, so please reset each time.
-    //        Index samplePos = new Index(pos);
-
-    //        for (int dim = 0; dim < NumDimensions; ++dim)
-    //        {
-    //            // Just to be sure, check thst no value was overwritten.
-    //            int posCpy = samplePos[dim];
-
-    //            // See whether a step to the right/left is possible.
-    //            samplePos[dim]++;
-    //            bool rightValid = (samplePos[dim] < Size[dim]) && Sample(samplePos) != InvalidValue;
-    //            samplePos[dim] -= 2;
-    //            bool leftValid = (samplePos[dim] >= 0) && Sample(samplePos) != InvalidValue;
-    //            samplePos[dim]++;
-
-    //            if (rightValid)
-    //            {
-    //                if (leftValid)
-    //                {
-    //                    // Regular case. Interpolate.
-    //                    samplePos[dim]++;
-    //                    gradient[dim] = Sample(samplePos);
-    //                    samplePos[dim] -= 2;
-    //                    gradient[dim] -= Sample(samplePos);
-    //                    gradient[dim] *= 0.5f;
-    //                    samplePos[dim]++;
-    //                }
-    //                else
-    //                {
-    //                    // Left border.
-    //                    samplePos[dim]++;
-    //                    gradient[dim] = Sample(samplePos);
-    //                    samplePos[dim]--;
-    //                    gradient[dim] -= Sample(samplePos);
-    //                }
-    //            }
-    //            else
-    //            {
-    //                if (leftValid)
-    //                {
-    //                    // Right border.
-    //                    gradient[dim] = Sample(samplePos);
-    //                    samplePos[dim]--;
-    //                    gradient[dim] -= Sample(samplePos);
-    //                    samplePos[dim]++;
-    //                }
-    //                else
-    //                {
-    //                    // Weird case. 
-    //                    gradient[dim] = 0;
-    //                }
-    //            }
-    //            Debug.Assert(posCpy == samplePos[dim]);
-    //        }
-
-    //        return gradient;
-    //    }
-
-    //    /// <summary>
-    //    /// Function to compute a new field based on an old one, point wise.
-    //    /// </summary>
-    //    /// <param name="v"></param>
-    //    /// <returns></returns>
-    //    public delegate float SGFunction(float v, Vector J);
-
-    //    public ScalarFieldUnsteady(ScalarField field, SGFunction function, bool needJ = true)
-    //    {
-    //        _data = new VectorBuffer(field.Size.Product(), 1);
-    //        Grid = field.Grid;
-
-    //        this.InvalidValue = field.InvalidValue;
-
-    //        GridIndex indexIterator = new GridIndex(field.Size);
-    //        foreach (GridIndex index in indexIterator)
-    //        {
-    //            float s = field[(int)index];
-
-    //            if (s == InvalidValue)
-    //            {
-    //                this[(int)index] = (float)InvalidValue;
-    //            }
-    //            else
-    //            {
-    //                Vector g = needJ ? field.SampleDerivative(index) : new Vec2(0, 0);
-    //                this[(int)index] = function(s, g);
-    //            }
-    //        }
-    //    }
-
-    //    public delegate float AnalyticalField(Vector pos);
-
-    //    public static ScalarField FromAnalyticalField(AnalyticalField func, Index size, Vector origin, Vector cellSize)
-    //    {
-    //        Debug.Assert(size.Length == origin.Length && size.Length == cellSize.Length);
-
-    //        RectlinearGrid grid = new RectlinearGrid(size);
-    //        ScalarField field = new ScalarField(grid);
-
-    //        for (int idx = 0; idx < size.Product(); ++idx)
-    //        {
-    //            // Compute the n-dimensional position.
-    //            int index = idx;
-    //            Index pos = new Index(0, size.Length);
-    //            pos[0] = index % size[0];
-
-    //            for (int dim = 1; dim < size.Length; ++dim)
-    //            {
-    //                index -= pos[dim - 1];
-    //                index /= size[dim - 1];
-    //                pos[dim] = index % size[dim];
-    //            }
-
-    //            Vector posV = origin + pos * cellSize;
-    //            field[idx] = func(posV);
-    //        }
-
-    //        return field;
-    //    }
-
-    //    public void ComputeStatistics(out float validRegion, out float mean, out float sd)
-    //    {
-    //        int numValidCells = 0;
-    //        mean = 0;
-    //        sd = 0;
-
-    //        GridIndex range = new GridIndex(Size);
-    //        foreach (GridIndex idx in range)
-    //        {
-    //            float s = this[(int)idx];
-    //            if (s != InvalidValue)
-    //            {
-    //                numValidCells++;
-    //                mean += s;
-    //            }
-    //        }
-    //        validRegion = (float)numValidCells / Size.Product();
-    //        mean /= numValidCells;
-
-    //        // Compute standard derivative.
-    //        range.Reset();
-    //        foreach (GridIndex idx in range)
-    //        {
-    //            float s = this[(int)idx];
-    //            if (s != InvalidValue)
-    //            {
-    //                float diff = s - mean;
-    //                sd += diff * diff;
-    //            }
-    //        }
-    //        sd /= numValidCells;
-    //        sd = (float)Math.Sqrt(sd);
-    //    }
-    //}
 }

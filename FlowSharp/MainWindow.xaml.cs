@@ -490,18 +490,19 @@ namespace FlowSharp
             Renderer.Singleton.Camera.Active = false;
         }
 
-        private void ChangeProjection(object sender, RoutedEventArgs e)
+        private void ChangeRenderSetttings(object sender, RoutedEventArgs e)
         {
+            // Orthografic.
             bool ortho = orthographic.IsChecked ?? false;
             if (ortho)
                 Renderer.Singleton.Camera.SetOrthographic();
             else
                 Renderer.Singleton.Camera.SetPerspective();
-        }
 
-        private void WireframeChanged(object sender, RoutedEventArgs e)
-        {
+            // Wireframe.
             Renderer.Singleton.Wireframe = wireframe.IsChecked ?? false;
+
+            // Front Face Culling.
         }
     }
 }

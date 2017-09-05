@@ -105,7 +105,6 @@ namespace FlowSharp
 
             Debug.Assert(false, "Each primitive consists of " + Primitives.IndexLength + " vertices, don't know what to do.");
             throw new NotImplementedException("Only able to do triangles (3), tetrahedrons (4) and cubes (2 extrema)");
-            return null;
         }
 
         public PointSet<Point> GetVertices()
@@ -119,6 +118,34 @@ namespace FlowSharp
             return new PointSet<Point>(verts);
         }
 
+        /// <summary>
+        /// Assume Triangle Mesh.
+        /// </summary>
+        public VectorData ComputeNormals()
+        {
+            // Initialize with zeros.
+            VectorBuffer normals = new VectorBuffer(Vertices.Length, 3);
+
+            foreach (Index i in Primitives)
+            {
+                Vec3 triNorm = VectorRef.CrossUnchecked(
+                    Vertices[i[1]] - Vertices[i[0]],
+                    Vertices[i[2]] - Vertices[i[0]]);
+
+                normals[i[0]] += triNorm;
+                normals[i[1]] += triNorm;
+                normals[i[2]] += triNorm;
+            }
+
+            Parallel.For(0, normals.Length, n => { normals[n].Normalize(); });
+
+            normals.MinValue = new Vec3(-1);
+            normals.MaxValue = new Vec3(1);
+
+            return normals;
+        }
+
+        #region Sample
         static Random RandomSampler = new Random(1337);
         public PointSet<InertialPoint> SampleRandom(int numSamples, VectorData data)
         {
@@ -162,5 +189,25 @@ namespace FlowSharp
 
             return new PointSet<InertialPoint>(midpoints);
         }
+
+        public PointSet<InertialPoint> SampleRegular(int step, int stepDist, VectorData data)
+        {
+            List<InertialPoint> midpoints = new List<InertialPoint>(Primitives.Length / stepDist + 1);
+            for (int p = step; p < Primitives.Length; p+= stepDist)
+            {
+                Vector4 pos = Vector4.Zero;
+                Vector dataSample = new Vector(0, data.VectorLength);
+
+                foreach (int i in Primitives[p].Data)
+                {
+                    pos += (Vector4)Vertices[i];
+                    dataSample += data[Primitives[p][i]];
+                }
+                midpoints.Add(new InertialPoint(pos / Primitives.IndexLength, (Vector3)dataSample / Primitives.Length));
+            }
+
+            return new PointSet<InertialPoint>(midpoints.ToArray());
+        }
+        #endregion Sample
     }
 }

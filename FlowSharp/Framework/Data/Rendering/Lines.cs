@@ -86,27 +86,7 @@ namespace FlowSharp
 
             return integrated;
         }
-        //public Vector3 GetPointInZ(float z)
-        //{
-        //    // Slow linear search. Khalas.
-        //    int i = 0;
-        //    for (; i < Positions.Length - 1; ++i)
-        //    {
-        //        // One point above, one below.
-        //        if ((Positions[i].Z - z) * (Positions[i + 1].Z - z) <= 0)
-        //            break;
-        //    }
-        //    if (i == Length - 2)
-        //        return float.MaxValue;
 
-        //    Vector3 p0 = Positions[i];
-        //    Vector3 p1 = Positions[i + 1];
-        //    float t = (position.Z - p0.Z) / (p1.Z - p0.Z);
-        //    Vector3 zNearest = (1 - t) * p0 + t * p1;
-        //    Debug.Assert(Math.Abs(position.Z - zNearest.Z) < 0.00000001f);
-
-        //    return (position - zNearest).Length();
-        //}
         public Line(Line cpy)
         {
             Positions = new Vector4[cpy.Length];
@@ -118,6 +98,7 @@ namespace FlowSharp
             }
             Status = cpy.Status;
             LineLength = cpy.LineLength;
+            EndPoint = new Vector(cpy.EndPoint);
         }
         public Line() { }
         public Line(int size) { Positions = new Vector4[size]; }
@@ -147,6 +128,24 @@ namespace FlowSharp
             Array.Resize(ref Positions, length);
             if (Attribute != null)
                 Array.Resize(ref Attribute, length);
+        }
+
+        public Line Append(Line other)
+        {
+            Line app = new Line(Length + other.Length);
+            Array.Copy(Positions, 0, app.Positions, 0, Length);
+            Array.Copy(other.Positions, 0, app.Positions, Length, other.Length);
+            if (Attribute != null && other.Attribute != null)
+            {
+                app.Attribute = new float[Length + other.Length];
+                Array.Copy(Attribute, 0, app.Attribute, 0, Length);
+                Array.Copy(other.Attribute, 0, app.Attribute, Length, other.Length);
+            }
+
+            app.LineLength = LineLength + other.LineLength;
+            app.EndPoint = other.EndPoint;
+            app.Status = other.Status;
+            return app;
         }
     }
 
@@ -256,23 +255,21 @@ namespace FlowSharp
             return new PointSet<InertialPoint>(points.ToArray());
         }
 
-        public PointSet<InertialPoint> GetEndPoints(VectorField.Integrator.Status select)
+        public List<Vector> GetEndPoints(VectorField.Integrator.Status select)
         {
-            List<InertialPoint> points = new List<InertialPoint>(Lines.Length);
+            List<Vector> points = new List<Vector>(Lines.Length);
             for (int idx = 0; idx < Lines.Length; ++idx)
             {
                 Line line = Lines[idx];
-                Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
-                        Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
+
+                //if (line.Length > 0)
+                //    Console.WriteLine($"Line {idx} ends with {line.Status}\n\tPoint {line.EndPoint}, ie {line.Last}");
+                //Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
+                //        Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
                 if (line.Length > 0 && line.Status == select)
-                    points.Add(new InertialPoint()
-                    {
-                        Position = line.Positions.Last(),
-                        Inertia = inertia,
-                        //LengthLine = line.LineLength,
-                        Status = line.Status });
+                    points.Add(line.EndPoint ?? new Vector(line.Positions.Last()));
             }
-            return new PointSet<InertialPoint>(points.ToArray());
+            return points;
         }
 
         //public void TimeComponentToAttribute()

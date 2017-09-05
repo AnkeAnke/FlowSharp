@@ -47,6 +47,7 @@ namespace FlowSharp
 
         public Camera Camera { get; set; }
         public bool Wireframe = false;
+        public bool CullFront = false;
         //protected TimeSpan _lastTime;
 
         protected Renderer() { }
@@ -144,7 +145,7 @@ namespace FlowSharp
 
         public void Render()
         {
-            if (!Wireframe)
+            if (!Wireframe && !CullFront)
             {
                 foreach (Renderable obj in _renderables)
                     if (obj.Active)
@@ -157,7 +158,9 @@ namespace FlowSharp
                     if (obj.Active && (obj as Mesh) == null)
                         obj.Render(Device);
 
-                var desc = new RasterizerStateDescription { CullMode = CullMode.Front, FillMode = FillMode.Wireframe };
+                var desc = new RasterizerStateDescription {
+                    CullMode = CullFront? CullMode.Front : CullMode.None,
+                    FillMode = Wireframe? FillMode.Wireframe : FillMode.Solid};
                 Device.ImmediateContext.Rasterizer.State = RasterizerState.FromDescription(Device, desc);
 
                 // Every mesh: wireframe.

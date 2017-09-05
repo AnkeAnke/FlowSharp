@@ -61,12 +61,12 @@ namespace FlowSharp
             VectorField.Integrator integrator = new VectorField.IntegratorEuler(_vectorField);
             integrator.StepSize = _grid.CellSizeReference / 2;
             integrator.NormalizeField = true;
-            integrator.MaxNumSteps = 10000;
+            integrator.MaxNumSteps = 1000000;
             integrator.EpsCriticalPoint = 0;
 
            // while (true)
             {
-                PointSet<InertialPoint> points = inlet.SampleRandom(3, vel);
+                PointSet<InertialPoint> points = inlet.SampleRandom(100, vel);
 //                _points.SetTime(timestep);
 
                 Stopwatch watch = new Stopwatch();
@@ -76,29 +76,32 @@ namespace FlowSharp
 
                 // Inertial
                 RESPONSE_TIME = 0.000001821f;
-                integrator.StepSize = 1;
-                //_streamLines.Add(integrator.Integrate(points)[0]);
+                integrator.StepSize = 0.1f;
+
                 _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
                 _streamLines.Last().Color = Vector3.UnitZ;
 
-                integrator.StepSize = 0.25f;
-                _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
-                _streamLines.Last().Color = new Vector3(0, 1, 1);
+                //RESPONSE_TIME = 0.1f * 0.5f;
+                //integrator.StepSize *= 2;
+
+                //_streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
+                //_streamLines.Last().Color = new Vector3(0, 1, 1);
 
                 watch.Stop();
                 Console.WriteLine($"==== Integrating {points.Length} points took {watch.Elapsed}. ");
 
-                foreach (LineSet lines in _streamLines)
-                    lines.Thickness *= 0.4f;
+                
                 _points = _streamLines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
+                foreach (LineSet lines in _streamLines)
+                    lines.Thickness *= 0.1f;
 
 
-//                Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
-//                _canvas = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
-//                if (_canvas == null)
-//                    _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
-//                this.SplatToAttribute(attributeTree, _canvas, _points, attributeTree.Extent.Max() * 0.02f);
-//                BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), _canvas);
+                //                Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
+                //                _canvas = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
+                //                if (_canvas == null)
+                //                    _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
+                //                this.SplatToAttribute(attributeTree, _canvas, _points, attributeTree.Extent.Max() * 0.02f);
+                //                BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), _canvas);
             }
             //_tree = new KDTree(geomLoader.Grid, 100);
         }
@@ -189,8 +192,10 @@ namespace FlowSharp
                         ball.LowerBound = WindowStart;
                         ball.UpperBound = WindowStart + WindowWidth;
                     }
-                    _streamBall[0].UsedMap = Colormap.Red;
-                    _streamBall[1].UsedMap = Colormap.Green;
+                    if (_streamBall.Count > 0)
+                        _streamBall[0].UsedMap = Colormap.Red;
+                    if (_streamBall.Count > 1)
+                        _streamBall[1].UsedMap = Colormap.Green;
                 }
             }
 

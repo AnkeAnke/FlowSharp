@@ -93,6 +93,11 @@ namespace FlowSharp
             return Sample(pos)[0] != InvalidValue;
         }
 
+        public virtual bool InTime(float t)
+        {
+            return true;
+        }
+
         public VectorField(VectorData data, FieldGrid grid)
         {
             Data = data;
