@@ -33,6 +33,12 @@ namespace FlowSharp
 
         public VectorBuffer() { }
         public VectorBuffer(int numElements, int vectorLength) { SetSize(numElements, vectorLength); }
+        public VectorBuffer(int numElements, int vectorLength, float value)
+        {
+            SetSize(numElements, vectorLength);
+            for (int d = 0; d < Data.Length; ++d)
+                Data[d] = value;
+        }
         public override void SetSize(int numElements, int vectorLength)
         {
             VectorLength = vectorLength;

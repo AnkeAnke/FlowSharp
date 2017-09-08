@@ -452,8 +452,8 @@ namespace FlowSharp
 
                     WindowStart.Value = WindowStart.Minimum + relativeSelection * range;
 
-                    WindowStart.SmallChange = range / 100;
-                    WindowStart.LargeChange = range / 10;
+                    WindowStart.SmallChange = Double.IsNaN(range)? 1 : range / 100;
+                    WindowStart.LargeChange = Double.IsNaN(range) ? 0.1 : range / 10;
                 }
 
                 // Update slider ranges.
@@ -503,6 +503,7 @@ namespace FlowSharp
             Renderer.Singleton.Wireframe = wireframe.IsChecked ?? false;
 
             // Front Face Culling.
+            Renderer.Singleton.CullFront = cull.IsChecked ?? false;
         }
     }
 }

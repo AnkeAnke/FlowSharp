@@ -20,7 +20,7 @@ namespace FlowSharp
         GeneralUnstructurdGrid _geometry;
         //Index[] _indices;
         //bool update = true;
-        PointSet<Point> _points;
+        PointSet<DirectionPoint> _points;
         PointCloud _vertices;
         VectorData _attribute;
         TetTreeGrid _grid;
@@ -29,7 +29,7 @@ namespace FlowSharp
         List<LineSet> _streamLines;
         List<LineBall> _streamBall;
 
-        VectorData _canvas;
+        VectorData _canvasQuant, _canvasAnglePerp, _canvasAngleShear;
 
         public TetGridMapper(Plane plane) : base()
         {
@@ -41,7 +41,8 @@ namespace FlowSharp
             var hexGrid = geomLoader.LoadGeometry();
             geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
             var wallGrid = geomLoader.LoadGeometry();
-            
+            Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
+
             // Fit plane to data.
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, hexGrid.Vertices);
             BasePlane.PointSize = 0.1f;
@@ -53,57 +54,90 @@ namespace FlowSharp
             // Load inlet for seeding.
             LoaderVTU inletLoader = new LoaderVTU(Aneurysm.GeometryPart.Inlet);
             var inlet = inletLoader.LoadGeometry();
-            LoaderEnsight inletAttributeLoader = new LoaderEnsight(Aneurysm.GeometryPart.Inlet);
-            VectorData vel = inletAttributeLoader.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
 
-            // Load one vector field for comparison.
-            _vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, 0), _grid);
+
+            // Setup integrator.
             VectorField.Integrator integrator = new VectorField.IntegratorEuler(_vectorField);
             integrator.StepSize = _grid.CellSizeReference / 2;
             integrator.NormalizeField = true;
             integrator.MaxNumSteps = 1000000;
             integrator.EpsCriticalPoint = 0;
 
-           // while (true)
-            {
-                PointSet<InertialPoint> points = inlet.SampleRandom(100, vel);
-//                _points.SetTime(timestep);
+            for (int offset = 0; offset < 10; ++offset)
+                for (TIMESTEP = 0; TIMESTEP < 200; TIMESTEP += 10)
+                {
 
-                Stopwatch watch = new Stopwatch();
-                watch.Start();
-                _streamLines = new List<LineSet>(3);
+                    //if (TIMESTEP == 0 && offset == 0)
+                    //        continue;
 
+                    LoaderEnsight inletAttributeLoader = new LoaderEnsight(Aneurysm.GeometryPart.Inlet);
+                    VectorData vel = inletAttributeLoader.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
 
-                // Inertial
-                RESPONSE_TIME = 0.000001821f;
-                integrator.StepSize = 0.1f;
-
-                _streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
-                _streamLines.Last().Color = Vector3.UnitZ;
-
-                //RESPONSE_TIME = 0.1f * 0.5f;
-                //integrator.StepSize *= 2;
-
-                //_streamLines.Add(this.IntegratePoints(integrator, _grid, points, 0));
-                //_streamLines.Last().Color = new Vector3(0, 1, 1);
-
-                watch.Stop();
-                Console.WriteLine($"==== Integrating {points.Length} points took {watch.Elapsed}. ");
-
-                
-                _points = _streamLines?[0].GetAllEndPoints().ToBasicSet() ?? _points;
-                foreach (LineSet lines in _streamLines)
-                    lines.Thickness *= 0.1f;
+                    // Load one vector field for comparison.
+                    //_vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP), _grid);
 
 
-                //                Octree attributeTree = Octree.LoadOrComputeWrite(wallGrid.Vertices, 10, 10, Aneurysm.GeometryPart.Wall, float.MaxValue);
-                //                _canvas = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), 1);
-                //                if (_canvas == null)
-                //                    _canvas = new VectorBuffer(wallGrid.Vertices.Length, 1);
-                //                this.SplatToAttribute(attributeTree, _canvas, _points, attributeTree.Extent.Max() * 0.02f);
-                //                BinaryFile.WriteFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{INERTIA}", Aneurysm.GeometryPart.Wall), _canvas);
-            }
-            //_tree = new KDTree(geomLoader.Grid, 100);
+                    _canvasQuant = LoadOrCreateEmptyWallCanvas($"SplatQuantity", TIMESTEP);
+                    _canvasAnglePerp = LoadOrCreateEmptyWallCanvas($"SplatPerpendicular", TIMESTEP);
+                    _canvasAngleShear = LoadOrCreateEmptyWallCanvas($"SplatShear", TIMESTEP);
+
+                    //for (int offset = 0; offset < 10; offset++)
+                    //int offset = 0;
+                    //if (false)
+
+                    {
+                        //PointSet<DirectionPoint> points = inlet.SampleRandom(100, vel);
+                        PointSet<DirectionPoint> points = inlet.SampleRegular(offset, 10, vel);
+                        Console.WriteLine($"=====\n===== Sampling {offset}/10 at time {TIMESTEP} =====\n=====");
+                        //PointSet<DirectionPoint> points2 = inlet.SampleAllVertices(vel);
+                        //for (int i = 0; i < 10; ++i)
+                        //    Console.WriteLine($"Regular: {points[i].Position} -> {points[i].Direction}\nVertex: {points2[i].Position} -> {points2[i].Direction}\n");
+                        //PointSet<DirectionPoint> points = inlet.SampleAllVertices(vel);
+                        //Console.WriteLine($"Integrating {points.Length} Positions");
+                        Stopwatch watch = new Stopwatch();
+                        watch.Start();
+                        _streamLines = new List<LineSet>(3);
+
+
+                        // Inertial
+                        RESPONSE_TIME = 0.000001821f;
+                        integrator.StepSize = 0.5f;
+
+                        _streamLines.Add(this.IntegratePoints(integrator, _grid, points, TIMESTEP));
+                        _streamLines.Last().Color = Vector3.UnitZ;
+
+                        watch.Stop();
+                        Console.WriteLine($"==== Integrating {points.Length} points took {watch.Elapsed}. ");
+
+
+                        _points = _streamLines?[0].GetAllEndPoints() ?? _points;
+                        foreach (LineSet lines in _streamLines)
+                            lines.Thickness *= 0.1f;
+
+
+
+
+                        VectorBuffer normals = wallGrid.ComputeNormals();
+
+                        this.SplatToAttribute(attributeTree, normals, _points, attributeTree.Extent.Max() * 0.02f);
+
+                        Stopwatch timeWrite = new Stopwatch();
+                        timeWrite.Start();
+                        BinaryFile.WriteFile(
+                            Aneurysm.Singleton.CustomAttributeFilename($"SplatQuantity_{TIMESTEP}", Aneurysm.GeometryPart.Wall),
+                            _canvasQuant);
+                        BinaryFile.WriteFile(
+                            Aneurysm.Singleton.CustomAttributeFilename($"SplatPerpendicular_{TIMESTEP}", Aneurysm.GeometryPart.Wall),
+                            _canvasAnglePerp);
+                        BinaryFile.WriteFile(
+                            Aneurysm.Singleton.CustomAttributeFilename($"SplatShear_{TIMESTEP}", Aneurysm.GeometryPart.Wall),
+                            _canvasAngleShear);
+                        timeWrite.Stop();
+                        Console.WriteLine($"Time to splat: {timeWrite.Elapsed}");
+
+                    }
+                }
+            _points = null;
         }
 
         public List<Renderable> ShowSide()
@@ -135,15 +169,26 @@ namespace FlowSharp
                 GeometryPartChanged ||
                 MeasureChanged)
             {
-                if (GeometryPart == Aneurysm.GeometryPart.Wall)
-                {
-                    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename($"SplatInt_{RESPONSE_TIME}", Aneurysm.GeometryPart.Wall), 1);
-                }
-                if (GeometryPart != Aneurysm.GeometryPart.Wall || _attribute == null)
-                {
-                    LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
+                //if (GeometryPart == Aneurysm.GeometryPart.Wall)
+                //{
+                //    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename("SplatQuant", Aneurysm.GeometryPart.Wall), 1);
+                //}
+                //if (GeometryPart != Aneurysm.GeometryPart.Wall || _attribute == null)
+                //{
+                _attribute = null;
+
+                LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
+
+                if (Measure == Aneurysm.Measure.x_wall_shear)
+                    _attribute = _canvasQuant;
+                if (Measure == Aneurysm.Measure.y_wall_shear)
+                    _attribute = _canvasAnglePerp;
+                if (Measure == Aneurysm.Measure.z_wall_shear)
+                    _attribute = _canvasAngleShear;
+
+                if (_attribute == null)
                     _attribute = attribLoader.LoadAttribute((Aneurysm.Variable)(int)Measure, 0);
-                }
+                //}
                 _attribute.ExtractMinMax();
                 updateCubes = true;
             }
@@ -208,20 +253,10 @@ namespace FlowSharp
 
             if (_points != null && _points.Length > 0 && (_vertices == null || updateCubes))
             {
-                _vertices = new PointCloud(BasePlane, _points);
+                _vertices = new PointCloud(BasePlane, _points.ToBasicSet());
             }
             if (_vertices != null)
                 wire.Add(_vertices);
-
-
-            //if (_octreeLeafs == null)
-            //    _octreeLeafs = new Mesh(BasePlane, _tree.LeafGeometry());
-
-            //wire.Add(_octreeLeafs);
-
-            //if (_vertices == null)
-            //    _vertices = new PointCloud(BasePlane, _geometry.GetVertices());
-            //wire.Add(_vertices);
 
             var axes = BasePlane.GenerateOriginAxisGlyph();
             wire.AddRange(axes);
@@ -229,15 +264,39 @@ namespace FlowSharp
 
         }
 
-        private void SplatToAttribute<P>(Octree attributeTree, VectorData canvas, PointSet<P> points, float radius) where P : Point
+        private void SplatToAttribute(Octree attributeTree, VectorData normals, PointSet<DirectionPoint> points, float radius) 
         {
-            foreach (P p in points.Points)
+            Parallel.ForEach(points.Points, p =>
+            //foreach (DirectionPoint p in )
             {
-                List<Octree.IndexDistance> verts = attributeTree.FindWithinRadius(Util.Convert(p.Position), radius);
-                foreach (Octree.IndexDistance v in verts)
-                    canvas[v.VertexIndex] += 1.0f / v.Distance;
-            }
-            canvas.MaxValue = null;
+                /*List<Octree.IndexDistance>*/
+                Dictionary<int, float> verts = attributeTree.FindWithinRadius(Util.Convert(p.Position), radius);
+                foreach (var v in verts)
+                {
+                    float weight = radius / v.Value - 1;
+                    _canvasQuant[v.Key] += (Vector)weight;
+
+                    Vector incident = new Vector(p.Direction);
+                    incident.Normalize();
+
+                    float angle = VectorRef.Dot(normals[v.Key], incident);
+                    angle = (float)Math.Cosh(Math.Abs(angle));
+                    _canvasAnglePerp[v.Key] += weight / angle;
+                    _canvasAngleShear[v.Key] += angle * weight;
+                }
+            });
+            _canvasQuant.MaxValue = null; //(Vector)50;
+            _canvasQuant.MinValue = (Vector)0;
+            _canvasQuant.ExtractMinMax();
+        }
+
+        private VectorBuffer LoadOrCreateEmptyWallCanvas(string name, int step)
+        {
+            VectorBuffer buff = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(name + $"_{step}", Aneurysm.GeometryPart.Wall), 1);
+            if (buff == null)
+                buff = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
+
+            return buff;
         }
 
         public override bool IsUsed(Setting.Element element)

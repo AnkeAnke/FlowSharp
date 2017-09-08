@@ -123,15 +123,17 @@
     <Compile Include="Framework\Data\VectorField\VectorFieldBlock.cs" />
     <Compile Include="Framework\Data\VectorField\VectorFieldInertial.cs" />
     <Compile Include="Framework\Data\VectorField\VectorFieldScalars.cs" />
-    <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
-    <Compile Include="Framework\Renderer\CUDAMappers.cs" />
-    <Compile Include="Framework\Renderer\DataMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\CoreDistanceMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\CUDAMappers.cs" />
+    <Compile Include="Framework\Renderer\Mapper\DataMapper.cs" />
     <Compile Include="Framework\Algorithms\FieldAnalysis.cs" />
     <Compile Include="Framework\Data\Rendering\Lines.cs" />
     <Compile Include="Framework\Data\Base\Matrix.cs" />
     <Compile Include="Framework\Data\Rendering\Points.cs" />
     <Compile Include="Framework\Data\VectorField\Unsteady.cs" />
-    <Compile Include="Framework\Renderer\IntegrationMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\HitTimeMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\IntegrationMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\AneurysmViewMapper.cs" />
     <Compile Include="Framework\Util.cs" />
     <Compile Include="Framework\Renderer\Camera.cs" />
     <Compile Include="Framework\Renderer\Data\ColorMapping.cs" />
@@ -140,12 +142,12 @@
     <Compile Include="Framework\Renderer\Data\PointCloud.cs" />
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
     <Compile Include="Framework\Renderer\Data\Renderable.cs" />
-    <Compile Include="Framework\Renderer\TetGridMapper.cs" />
-    <Compile Include="Framework\Renderer\LineStatisticsMapper.cs" />
-    <Compile Include="Framework\Renderer\HexGridMapper.cs" />
-    <Compile Include="Framework\Renderer\HexTetGridMapper.cs" />
-    <Compile Include="Framework\Renderer\PathlineLengthMapper.cs" />
-    <Compile Include="Framework\Vector3Extensions.cs" />
+    <Compile Include="Framework\Renderer\Mapper\TetGridMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\LineStatisticsMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\HexGridMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\HexTetGridMapper.cs" />
+    <Compile Include="Framework\Renderer\Mapper\PathlineLengthMapper.cs" />
+    <Compile Include="Framework\Data\Base\Vector3Extensions.cs" />
     <Compile Include="Loader\BinaryFile.cs" />
     <Compile Include="Loader\GeometryWriter.cs" />
     <Compile Include="Loader\LoaderEnsight.cs" />
@@ -259,6 +261,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -309,19 +309,32 @@ namespace FlowSharp
             return -1;
         }
 
-        public struct IndexDistance
+        public struct IndexDistance : IComparable<IndexDistance>
         {
             public int VertexIndex;
             public float Distance;
+
+            //public static  bool operator > (IndexDistance a, IndexDistance b)
+            //{
+            //    return a.Distance > b.Distance;
+            //}
+
+            //public static bool operator <(IndexDistance a, IndexDistance b)
+            //{
+            //    return a.Distance < b.Distance;
+            //}
+
+            public int CompareTo(IndexDistance other)
+            {
+                return Distance.CompareTo(other.Distance);
+            }
         }
-        public List<IndexDistance> FindWithinRadius(Vector3 pos, float radius)
+        public Dictionary<int, float> FindWithinRadius(Vector3 pos, float radius)
         {
             Node range;
-            List<Node> nodes = new List<Node>();
-
+            HashSet<Node> nodes = new HashSet<Node>();
+            Dictionary<int, float> vertices = new Dictionary<int, float>();
             Vector3 gridPos = ToGridPosition(pos);
-
-            List<IndexDistance> verts = new List<IndexDistance>();
             
             // How many cells can we go maximally before there is definitely nothing there.
             // 1.73... = sqrt(3)
@@ -357,14 +370,14 @@ namespace FlowSharp
 
                 foreach (int vert in range.GetData(this))
                 {
-                    float dist = ((Vector3)Vertices[vert] - pos).LengthSquared();
-                    if (dist < radiusSquared)
-                        verts.Add(new IndexDistance() { VertexIndex = vert, Distance = (float)Math.Sqrt(dist) });
+                    float dist = Vector3.Distance((Vector3)Vertices[vert], pos);
+                    if (dist < radius)
+                        vertices[vert] = dist;
+                        //verts.Add(new IndexDistance() { VertexIndex = vert, Distance = dist });
                 }
-
-
             }
-            return verts;
+            //return verts;
+            return vertices;
         }
 
         public UnstructuredGeometry LeafGeometry()
@@ -540,37 +553,11 @@ namespace FlowSharp
                 return ret;
             }
 
-            //public Node Stab(Octree tree, Vector3 pos) //Vector cellExtent)
-            //{
-            //    // Console.WriteLine("============\nMin pos {0}\nMax pos {1}\nPosition {2}\nMid pos {3}\n\tLevel {4}\n\t{5} Children\n\t{6} Elements\n============", MinPos, MaxPos, pos, MidPos, Level, Children?.Length ?? 0, MaxIdx - MinIdx);
-            //    if (IsLeaf)
-            //    {
-            //        return this;
-            //    }
-
-            //    //Sign[] comp = Vector3Extensions.Compare(pos, MidPos);
-            //    //Node child = tree._nodes[Children[IndexBySigns(comp)]];
-            //    int comp = Vector3Extensions.CompareForIndex(pos, MidPos);
-
-            //    return tree._nodes[Children[comp]].Stab(tree, pos);
-            //}
-
             public bool IsGridPosInside(Vector3 vec)
             {
                 return vec.IsLargerEqual(MinPos) && vec.IsLess(MaxPos);
             }
 
-            //public struct Leaf
-            //{
-            //    public Node Node;
-            //    public Vector MinPos, MaxPos;
-            //    public Leaf(Node node)
-            //    {
-            //        Node = node;
-            //        MinPos = min;
-            //        MaxPos = max;
-            //    }
-            //}
             public void AssembleLeafs(Octree tree, List<Node> leafs)
             {
                 if (IsLeaf)
@@ -590,18 +577,6 @@ namespace FlowSharp
             {
                 return new CellData(this, tree);
             }
-
-            //private int IndexBySigns(Sign[] signs)
-            //{
-            //    int idx = 0;
-            //    int factor = 1;
-            //    for (int s = 0; s < signs.Length; ++s)
-            //    {
-            //        idx += signs[s] ? factor : 0;
-            //        factor *= 2;
-            //    }
-            //    return idx;
-            //}
 
             private Sign[] SignsByIndex(int idx, int numDimensions)
             {
@@ -628,9 +603,9 @@ namespace FlowSharp
 
             public override bool Equals(object obj)
             {
-                if (obj as Node == null)
+                if ((obj as Node) == null)
                     return false;
-                return obj as Node == this;
+                return (obj as Node) == this;
             }
 
             public override string ToString()

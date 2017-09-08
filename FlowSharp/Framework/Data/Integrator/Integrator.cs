@@ -78,7 +78,6 @@ namespace FlowSharp
                 //line.Points.Add((Vector3)pos);
                 var unsteadyField = (Field as VectorFieldUnsteady);
                 float timeBorder = maxTime ?? ((unsteadyField == null) ? float.MaxValue : unsteadyField.TimeEnd);
-                //Console.WriteLine($"Time Border: {timeBorder}");
                 //if (pos.T == 0.005f * 9)
                 //{
                 //    Console.WriteLine(pos);
@@ -174,7 +173,7 @@ namespace FlowSharp
                     Parallel.For(0, positions.Length, index =>
                     //for (int index = 0; index < positions.Length; ++index)
                     {
-                        Vector inertia = (Vec3)(positions.Points[index] as InertialPoint)?.Inertia ?? new Vec3(0);
+                        Vector inertia = (Vec3)(positions.Points[index] as DirectionPoint)?.Direction ?? new Vec3(0);
                         linesReverse[index] = IntegrateLineForRendering(
                             (positions.Points[index].ToVector()).SubVec(Field.NumVectorDimensions),
                             maxTime);

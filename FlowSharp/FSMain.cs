@@ -11,9 +11,10 @@ namespace FlowSharp
     {
         static VectorField velocity;
 
-        static Plane redSea;
+        static Plane basePlane;
 
-        static DataMapper mapperTetWireframe, mapperHexCubes, tetTreeMapper;
+        static DataMapper tetTreeMapper;
+        static DataMapper hitsQuant, hitsShear, hitsPerp;
 
         public static void LoadData()
         {
@@ -35,17 +36,31 @@ namespace FlowSharp
             Aneurysm.Singleton.VtuFolderFilename = mainFolder + "vtu/tets/";
             Aneurysm.Singleton.VtuDataFilename = "tets_0_";
             Aneurysm.Singleton.OctreeFolderFilename = mainFolder;
-            redSea = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
+            basePlane = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
             //mapperTetWireframe = new HexTetGridMapper(redSea);
-            tetTreeMapper = new TetGridMapper(redSea);
+            //tetTreeMapper = new TetGridMapper(redSea);
+            tetTreeMapper = new AneurysmViewMapper(basePlane);
+
+            hitsQuant = new HitTimeMapper(basePlane, HitTimeMapper.Measure.Hits);
+            hitsShear = new HitTimeMapper(basePlane, HitTimeMapper.Measure.Shear);
+            hitsPerp  = new HitTimeMapper(basePlane, HitTimeMapper.Measure.Perpendicular);
             //mapperHexCubes = new HexGridMapper(redSea);
             Console.WriteLine("Computed all data necessary.");
         }
 
         public static void CreateRenderables()
         {
-            Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_TETRAHEDRONS, tetTreeMapper);
+            Aneurysm.Singleton.SetMapper(Aneurysm.Display.View_Tetrahedrons, tetTreeMapper);
+            Aneurysm.Singleton.SetMapper(
+                Aneurysm.Display.Quantity_Hits,
+                hitsQuant);
+            Aneurysm.Singleton.SetMapper(
+                Aneurysm.Display.Perpendicular_Hits,
+                hitsPerp);
+            Aneurysm.Singleton.SetMapper(
+                Aneurysm.Display.Shear_Hits,
+               hitsShear);
             //Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_HEXAHEDRONS, mapperHexCubes);
         }
     }

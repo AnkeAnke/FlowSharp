@@ -38,18 +38,18 @@ namespace FlowSharp
     //    //public Int2 Origin = Int2.ZERO;
     //}
 
-    class InertialPoint : Point
+    class DirectionPoint : Point
     {
         //public float LengthLine = 0;
         public VectorField.Integrator.Status Status = VectorField.Integrator.Status.OK;
-        public Vector3 Inertia;
-        public InertialPoint(Vector4 pos, Vector3 inertia)
+        public Vector3 Direction;
+        public DirectionPoint(Vector4 pos, Vector3 inertia)
         {
             Position = pos;
-            Inertia = inertia;
+            Direction = inertia;
         }
 
-        public InertialPoint() { }
+        public DirectionPoint() { }
 
         public override Vector ToVector()
         {
@@ -57,7 +57,7 @@ namespace FlowSharp
             for (int n = 0; n < 3; ++n)
             {
                 vec[n] = Position[n];
-                vec[3 + n] = Inertia[n];
+                vec[3 + n] = Direction[n];
             }
             vec.T = Position.W;
 

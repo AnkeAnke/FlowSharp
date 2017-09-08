@@ -72,5 +72,14 @@ namespace FlowSharp
         {
             return ((a.X >= b.X) ? 1 : 0) + ((a.Y >= b.Y) ? 2 : 0) + ((a.Z >= b.Z) ? 4 : 0);
         }
+
+        public static float DistanceSquared(this Vector3 a, Vector3 b)
+        {
+            double lenX = ((double)a.X - (double)b.X) * 10f;
+            double lenY = ((double)a.Y - (double)b.Y) * 10f;
+            double lenZ = ((double)a.Z - (double)b.Z) * 10f;
+            //return (float)Math.Sqrt(lenX * lenX + lenY * lenY + lenZ * lenZ)*0.1f;
+            return (float)(lenX * lenX + lenY * lenY + lenZ * lenZ) * 0.01f;
+        }
     }
 }

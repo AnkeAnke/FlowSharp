@@ -20,6 +20,7 @@ namespace FlowSharp
 
         public UnstructuredGeometry LoadGeometry()
         {
+            Console.Write($"Loading {Part}: ");
             return LoadGeometry(Aneurysm.Singleton.VtuCompleteFilename(0, Part));
         }
         public UnstructuredGeometry LoadGeometry(string filename)
@@ -51,7 +52,7 @@ namespace FlowSharp
                                 Debug.Assert(reader.HasAttributes, "No attributes found.");
                                 numPoints = int.Parse(reader.GetAttribute("NumberOfPoints"));
                                 numCells = int.Parse(reader.GetAttribute("NumberOfCells"));
-                                Console.WriteLine($"Piece has {numPoints} points in {numCells} cells");
+                                Console.WriteLine($"Mesh has {numPoints} points in {numCells} cells");
                                 readNumberPointsAndCells = true;
                                 break;
                             // Read vertex positions.

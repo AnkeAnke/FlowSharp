@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,8 +13,12 @@ namespace FlowSharp
         protected float RESPONSE_TIME = 0.25f;
         protected int TIMESTEP = 0;
 
+        Stopwatch timeLoad = new Stopwatch();
+        Stopwatch timeIntegrate = new Stopwatch();
+
         protected VectorField LoadToVectorField(FieldGrid grid, int startStep, int stepOffset)
         {
+            timeLoad.Start();
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
 
             int numSteps = Math.Min(Aneurysm.Singleton.NumSteps - startStep, STEPS_IN_MEMORY);
@@ -26,8 +31,8 @@ namespace FlowSharp
             //var fieldInertial = new VectorFieldInertial(new VectorDataArray<VectorChannels>(buffers), _grid, INERTIA);
             VectorFieldInertialUnsteady field = new VectorFieldInertialUnsteady(buffers, RESPONSE_TIME, grid, (stepOffset + startStep) * Aneurysm.Singleton.TimeScale, Aneurysm.Singleton.TimeScale);
 
-            Console.WriteLine($"==== Loaded Time Range [{field.TimeOrigin}, {field.TimeEnd}) ====\n");
-
+            //Console.WriteLine($"==== Loaded Time Range [{field.TimeOrigin}, {field.TimeEnd}) ====\n");
+            timeLoad.Stop();
             return field;
         }
 
@@ -40,7 +45,9 @@ namespace FlowSharp
             // 0.005 is the timestep of the data. Overall they add up to 1 second.
             integrator.Field = LoadToVectorField(grid, startStep, 0);
             startStep += integrator.Field.Size.T - 1;
+            timeIntegrate.Start();
             LineSet set = integrator.Integrate(points, false)[0];
+            timeIntegrate.Stop();
 
             List<Vector> validPoints = set.GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
             //foreach (Line l in set.Lines)
@@ -59,7 +66,9 @@ namespace FlowSharp
                 {
                     integrator.Field = LoadToVectorField(grid, startStep, numIteration * Aneurysm.Singleton.NumSteps);
                     startStep += integrator.Field.Size.T - 1;
+                    timeIntegrate.Start();
                     integrator.IntegrateFurther(set);
+                    timeIntegrate.Stop();
 
                     validPoints = set.GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
                     Console.WriteLine($"=== {validPoints.Count} Remaining Lines");
@@ -72,8 +81,11 @@ namespace FlowSharp
                     //}
                 }
 
+                startStep = 0;
                 numIteration++;
             }
+
+            Console.WriteLine($"Total loading time: {timeLoad.Elapsed}\nTotal integaration time: {timeIntegrate.Elapsed}");
             return set;
         } 
 

@@ -121,7 +121,7 @@ namespace FlowSharp
         /// <summary>
         /// Assume Triangle Mesh.
         /// </summary>
-        public VectorData ComputeNormals()
+        public VectorBuffer ComputeNormals()
         {
             // Initialize with zeros.
             VectorBuffer normals = new VectorBuffer(Vertices.Length, 3);
@@ -146,10 +146,10 @@ namespace FlowSharp
         }
 
         #region Sample
-        static Random RandomSampler = new Random(1337);
-        public PointSet<InertialPoint> SampleRandom(int numSamples, VectorData data)
+        static Random RandomSampler = new Random(/*1337*/);
+        public PointSet<DirectionPoint> SampleRandom(int numSamples, VectorData data)
         {
-            InertialPoint[] positions = new InertialPoint[numSamples];
+            DirectionPoint[] positions = new DirectionPoint[numSamples];
             for (int sample = 0; sample < numSamples; ++sample)
             {
                 int tet = RandomSampler.Next(Primitives.Length);
@@ -167,46 +167,56 @@ namespace FlowSharp
                 }
                 pos /= barySum;
                 dataSample /= barySum;
-                positions[sample] = new InertialPoint((Vector4)pos, (Vector3)dataSample);
+                positions[sample] = new DirectionPoint((Vector4)pos, (Vector3)dataSample);
             }
-            return new PointSet<InertialPoint>(positions);
+            return new PointSet<DirectionPoint>(positions);
         }
-        public PointSet<InertialPoint> SampleAll(VectorData data)
+        public PointSet<DirectionPoint> SampleAll(VectorData data)
         {
-            InertialPoint[] midpoints = new InertialPoint[Primitives.Length];
+            DirectionPoint[] midpoints = new DirectionPoint[Primitives.Length];
             for (int p = 0; p < midpoints.Length; ++p)
             {
                 Vector4 pos = Vector4.Zero;
                 Vector dataSample = new Vector(0, data.VectorLength);
 
-                foreach (int i in Primitives[p].Data)
+                for (int i = 0; i < Primitives[p].Data.Length; ++i)
                 {
-                    pos += (Vector4)Vertices[i];
+                    pos += (Vector4)Vertices[Primitives[p][i]];
                     dataSample += data[Primitives[p][i]];
                 }
-                midpoints[p] = new InertialPoint(pos / Primitives.IndexLength, (Vector3)dataSample / Primitives.Length);
+                midpoints[p] = new DirectionPoint(pos / Primitives.IndexLength, (Vector3)dataSample / Primitives.Length);
             }
 
-            return new PointSet<InertialPoint>(midpoints);
+            return new PointSet<DirectionPoint>(midpoints);
         }
 
-        public PointSet<InertialPoint> SampleRegular(int step, int stepDist, VectorData data)
+        public PointSet<DirectionPoint> SampleAllVertices(VectorData data)
         {
-            List<InertialPoint> midpoints = new List<InertialPoint>(Primitives.Length / stepDist + 1);
+            DirectionPoint[] midpoints = new DirectionPoint[Vertices.Length];
+            for (int p = 0; p < midpoints.Length; ++p)
+            {
+                midpoints[p] = new DirectionPoint((Vector4)(Vertices[p] + data[p]*0.0000001f), (Vector3)data[p]);
+            }
+            return new PointSet<DirectionPoint>(midpoints);
+        }
+
+        public PointSet<DirectionPoint> SampleRegular(int step, int stepDist, VectorData data)
+        {
+            List<DirectionPoint> midpoints = new List<DirectionPoint>(Primitives.Length / stepDist + 1);
             for (int p = step; p < Primitives.Length; p+= stepDist)
             {
                 Vector4 pos = Vector4.Zero;
                 Vector dataSample = new Vector(0, data.VectorLength);
 
-                foreach (int i in Primitives[p].Data)
+                for (int i = 0; i <  Primitives[p].Data.Length; ++i)
                 {
-                    pos += (Vector4)Vertices[i];
+                    pos += (Vector4)Vertices[Primitives[p][i]];
                     dataSample += data[Primitives[p][i]];
                 }
-                midpoints.Add(new InertialPoint(pos / Primitives.IndexLength, (Vector3)dataSample / Primitives.Length));
+                midpoints.Add(new DirectionPoint(pos / Primitives.IndexLength, (Vector3)dataSample / Primitives.IndexLength));
             }
 
-            return new PointSet<InertialPoint>(midpoints.ToArray());
+            return new PointSet<DirectionPoint>(midpoints.ToArray());
         }
         #endregion Sample
     }

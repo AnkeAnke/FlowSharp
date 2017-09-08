@@ -61,29 +61,12 @@ namespace FlowSharp
 
         public enum Display : int
         {
-            NONE,
-            VIEW_TETRAHEDRONS,
-            VIEW_HEXAHEDRONS
-            //MEMBER_COMPARISON,
-            ////SUBSTEP_VIEWER,
-            //CP_TRACKING,
-            //PATHLINE_CORES,            
-            //OKUBO_WEISS,
-            //FLOW_MAP_UNCERTAIN,
-            //PATHLINE_LENGTH,
-            //CUT_DIFFUSION_MAP,
-            //LOCAL_DIFFUSION_MAP,
-            //PATHLINE_RADIUS,
-            //LINE_STATISTICS,
-            //SUBSTEP_VIEWER,
-            //DONUT_ANALYSIS,
-            //CORE_DISTANCE,
-            //PREDICTOR_CORE_ANGLE,
-            //CONCENTRIC_DISTANCE,
-            //FTLE_CONCENTRIC,
-            //PATHLINE_DISTANCE,
-            //CONCENTRIC_TUBE,
-            //PLAYGROUND
+            None,
+            View_Tetrahedrons,
+            Quantity_Hits,
+            Perpendicular_Hits,
+            Shear_Hits,
+            Wall_Shear_Stress
         }
 
         public enum DisplayLines : int
@@ -147,7 +130,7 @@ namespace FlowSharp
 
 
         private DataMapper[] _mappers;
-        private Display _currentMapper = Display.NONE;
+        private Display _currentMapper = Display.None;
         public Display Mapper { get { return _currentMapper; } }
 
         public string GridFilename { get

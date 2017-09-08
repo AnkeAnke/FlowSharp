@@ -53,7 +53,7 @@ PS_IN_H VS_Height(VS_IN input)
 
 float4 PS_Height(PS_IN_H input) : SV_Target
 {
-	return float4(colormap.Sample(LinSampler, float2(input.height, 0.5)).xyz, 1.0); // input.color;
+	return float4(colormap.Sample(LinSampler, saturate(float2(input.height, 0.5))).xyz, 1.0); // input.color;
 }
 
 

@@ -213,46 +213,46 @@ namespace FlowSharp
             }
         }
 
-        public PointSet<InertialPoint> GetValidEndPoints()
+        public PointSet<DirectionPoint> GetValidEndPoints()
         {
-            InertialPoint[] points = new InertialPoint[Lines.Length];
+            DirectionPoint[] points = new DirectionPoint[Lines.Length];
             int currentWriteIdx = 0;
             for (int idx = 0; idx < points.Length; ++idx)
                 if (Lines[idx].Positions.Length > 0)
                 {
                     Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
                         Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
-                    points[currentWriteIdx++] = new InertialPoint()
+                    points[currentWriteIdx++] = new DirectionPoint()
                     {
                         Position = Lines[idx].Positions.Last(),
-                        Inertia = inertia,
+                        Direction = inertia,
                         //LengthLine = Lines[idx].LineLength,
                         Status = Lines[idx].Status
                     };
                 }
             Array.Resize(ref points, currentWriteIdx);
-            return new PointSet<InertialPoint>(points);
+            return new PointSet<DirectionPoint>(points);
         }
 
-        public PointSet<InertialPoint> GetAllEndPoints()
+        public PointSet<DirectionPoint> GetAllEndPoints()
         {
-            List<InertialPoint> points = new List<InertialPoint>(Lines.Length);
+            List<DirectionPoint> points = new List<DirectionPoint>(Lines.Length);
             for (int idx = 0; idx < Lines.Length; ++idx)
                 if (Lines[idx].Positions.Length > 0)
                 {
                     Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
                         Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
-                    points.Add(new InertialPoint()
+                    points.Add(new DirectionPoint()
                     {
                         Position = Lines[idx].Positions.Last(),
-                        Inertia = inertia,
+                        Direction = inertia,
                         //LengthLine = Lines[idx].LineLength,
                         Status = Lines[idx].Status,
                         Radius = Thickness * 2f
                     });
                 }
             
-            return new PointSet<InertialPoint>(points.ToArray());
+            return new PointSet<DirectionPoint>(points.ToArray());
         }
 
         public List<Vector> GetEndPoints(VectorField.Integrator.Status select)
