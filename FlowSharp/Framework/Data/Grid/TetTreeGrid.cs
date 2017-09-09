@@ -330,40 +330,42 @@ namespace FlowSharp
 
             return result;
         }
-        //static Stopwatch PROF_BARY = new Stopwatch();
+
         public bool ToBaryCoord(int cell, Vector3 worldPos, out Vector4 bary)
         {
-            //PROF_BARY.Start();
-            Matrix tet = new Matrix();
-            for (int i = 0; i < 4; ++i)
-            {
-                //tet[i] = VectorRef.ToUnsteady(Vertices[Cells[cell][i]]);
-                tet.set_Columns(i, new Vector4(Vertices[Cells[cell][i]][0], Vertices[Cells[cell][i]][1], Vertices[Cells[cell][i]][2], 1));
-            }
-
-            //Console.WriteLine("===========\nTetrahedron matrix {0}", tet);
-            bary = Vector4.Zero;
-            float d0 = tet.Determinant();
-
-            // Go over all corner points and exchange them with the sample position.
-            // If sign of determinant is the same as of the original, cube, the point is on the same side.
-            for (int i = 0; i < 4; ++i)
-            {
-                Matrix mi = tet;
-                mi.set_Columns(i, new Vector4((Vector3)worldPos, 1));
-                bary[i] = mi.Determinant() / d0;
-                if (bary[i] <= 0)
-                {
-                    //PROF_BARY.Stop();
-                    return false;
-                }
-            }
-            float barySum = bary.Sum();
-            //float eps = 0.01f;
-            //Console.WriteLine("===========\nPosition {0}\nBarycentric Coordinate {1}", worldPos, bary);
-            //PROF_BARY.Stop();
-            return true;
+            return UtilTet.ToBaryCoord(Vertices, Cells, cell, worldPos, out bary);   
         }
+
+        
+
+        //public static bool ToBaryCoord(VectorRef[] corners, Vector3 worldPos, out Vector4 bary)
+        //{
+        //    Matrix tet = new Matrix();
+        //    for (int i = 0; i < 4; ++i)
+        //    {
+        //        tet.set_Columns(i, new Vector4(corners[i][0], corners[i][1], corners[i][2], 1));
+        //    }
+
+
+        //    bary = Vector4.Zero;
+        //    float d0 = tet.Determinant();
+
+        //    // Go over all corner points and exchange them with the sample position.
+        //    // If sign of determinant is the same as of the original, cube, the point is on the same side.
+        //    for (int i = 0; i < 4; ++i)
+        //    {
+        //        Matrix mi = tet;
+        //        mi.set_Columns(i, new Vector4((Vector3)worldPos, 1));
+        //        bary[i] = mi.Determinant() / d0;
+        //        if (bary[i] <= 0)
+        //        {
+        //            //PROF_BARY.Stop();
+        //            return false;
+        //        }
+        //    }
+        //    float barySum = bary.Sum();
+        //    return true;
+        //}
 
 
         /// <summary>

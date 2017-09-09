@@ -123,6 +123,7 @@
     <Compile Include="Framework\Data\VectorField\VectorFieldBlock.cs" />
     <Compile Include="Framework\Data\VectorField\VectorFieldInertial.cs" />
     <Compile Include="Framework\Data\VectorField\VectorFieldScalars.cs" />
+    <Compile Include="Framework\Renderer\Mapper\WallShearMapper.cs" />
     <Compile Include="Framework\Renderer\Mapper\CoreDistanceMapper.cs" />
     <Compile Include="Framework\Renderer\Mapper\CUDAMappers.cs" />
     <Compile Include="Framework\Renderer\Mapper\DataMapper.cs" />
@@ -148,6 +149,7 @@
     <Compile Include="Framework\Renderer\Mapper\HexTetGridMapper.cs" />
     <Compile Include="Framework\Renderer\Mapper\PathlineLengthMapper.cs" />
     <Compile Include="Framework\Data\Base\Vector3Extensions.cs" />
+    <Compile Include="Framework\UtilTet.cs" />
     <Compile Include="Loader\BinaryFile.cs" />
     <Compile Include="Loader\GeometryWriter.cs" />
     <Compile Include="Loader\LoaderEnsight.cs" />

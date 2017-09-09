@@ -124,6 +124,9 @@ namespace FlowSharp
             DropDownCore.ItemsSource = Enum.GetValues(typeof(DataMapper.CoreAlgorithm)).Cast<DataMapper.CoreAlgorithm>();
             DropDownColormap.SelectedIndex = 0;
 
+            CustomMeasure.ItemsSource = Enum.GetValues(typeof(DataMapper.DefaultEnum)).Cast<DataMapper.DefaultEnum>();
+            CustomMeasure.SelectedIndex = 0;
+
             VarX.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
             VarX.SelectedIndex = 0;
             VarY.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
@@ -144,7 +147,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.LineSetting] = DropDownDisplayLines;
             _windowObjects[(int)DataMapper.Setting.Element.SliceTimeMain] = DropDownSlice0;
             _windowObjects[(int)DataMapper.Setting.Element.SliceTimeReference] = DropDownSlice1;
-            _windowObjects[(int)DataMapper.Setting.Element.MemberMain] = Member0Block;
+            _windowObjects[(int)DataMapper.Setting.Element.MemberMain] = DropDownMember0;
             _windowObjects[(int)DataMapper.Setting.Element.MemberReference] = DropDownMember1;
             _windowObjects[(int)DataMapper.Setting.Element.SliceHeight] = MemberHeightBlock;
             _windowObjects[(int)DataMapper.Setting.Element.IntegrationType] = DropDownIntegrator;
@@ -171,6 +174,7 @@ namespace FlowSharp
             _windowObjects[(int)DataMapper.Setting.Element.Flat] = DisplayFlat;
             _windowObjects[(int)DataMapper.Setting.Element.Graph] = ShowGraph;
             _windowObjects[(int)DataMapper.Setting.Element.Core] = DropDownCore;
+            _windowObjects[(int)DataMapper.Setting.Element.Custom] = CustomMeasure;
 
             Renderer.Singleton.SetCanvas(DX11Display);
         }
@@ -185,6 +189,11 @@ namespace FlowSharp
             _mapper.CurrentSetting = new DataMapper.Setting(last.CurrentSetting);
 
             _mapperChanged = true;
+
+            CustomMeasure.ItemsSource = _mapper.GetCustomAttribute();
+            Console.WriteLine($"Set seleceted to {CustomMeasure.SelectedIndex}");
+
+
 
             UpdateRenderer();
         }
@@ -306,6 +315,16 @@ namespace FlowSharp
         {
             var comboBox = sender as ComboBox;
             _mapper.CurrentSetting.Core = (DataMapper.CoreAlgorithm)(comboBox.SelectedItem as DataMapper.CoreAlgorithm?);
+            UpdateRenderer();
+        }
+
+        private void OnChangeCustom(object sender, RoutedEventArgs e)
+        {
+            var comboBox = sender as ComboBox;
+            if (_mapperChanged)
+                comboBox.SelectedIndex = 0;
+
+            _mapper.CurrentSetting.Custom = comboBox.SelectedIndex;
             UpdateRenderer();
         }
 

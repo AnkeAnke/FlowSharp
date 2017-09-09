@@ -150,32 +150,6 @@ namespace FlowSharp
 
         }
 
-        private void SplatToAttribute(Octree attributeTree, VectorData normals, PointSet<DirectionPoint> points, float radius) 
-        {
-            Parallel.ForEach(points.Points, p =>
-            //foreach (DirectionPoint p in )
-            {
-                /*List<Octree.IndexDistance>*/
-                Dictionary<int, float> verts = attributeTree.FindWithinRadius(Util.Convert(p.Position), radius);
-                foreach (var v in verts)
-                {
-                    float weight = radius / v.Value - 1;
-                    _canvasQuant[v.Key] += (Vector)weight;
-
-                    Vector incident = new Vector(p.Direction);
-                    incident.Normalize();
-
-                    float angle = VectorRef.Dot(normals[v.Key], incident);
-                    angle = (float)Math.Cosh(Math.Abs(angle));
-                    _canvasAnglePerp[v.Key] += weight / angle;
-                    _canvasAngleShear[v.Key] += angle * weight;
-                }
-            });
-            _canvasQuant.MaxValue = null; //(Vector)50;
-            _canvasQuant.MinValue = (Vector)0;
-            _canvasQuant.ExtractMinMax();
-        }
-
         private VectorBuffer LoadOrCreateEmptyWallCanvas(string name, int step)
         {
             VectorBuffer buff = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(name + $"_{step}", Aneurysm.GeometryPart.Wall), 1);

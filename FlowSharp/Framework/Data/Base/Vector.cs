@@ -130,6 +130,7 @@ namespace FlowSharp
             _data = new float[] { vec.X, vec.Y, vec.Z, vec.W };
         }
     }
+
     abstract class VectorRef
     {
         public abstract int Length { get; }

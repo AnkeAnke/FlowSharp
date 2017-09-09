@@ -161,9 +161,9 @@ namespace FlowSharp
             return VtuFolderFilename + VtuDataFilename + (((int)geom)-1) + "_0.vtu";
         }
 
-        public string OctreeFilename(int maxVerts, int maxLevels, GeometryPart part)
+        public string OctreeFilename(int maxVerts, int maxLevels, GeometryPart part, string customPraefix = "")
         {
-            return OctreeFolderFilename + part + "_vert" + maxVerts + "_lvl" + maxLevels + ".octree";
+            return OctreeFolderFilename + customPraefix + part + "_vert" + maxVerts + "_lvl" + maxLevels + ".octree";
         }
 
         public string CustomAttributeFilename(string custom, GeometryPart part)

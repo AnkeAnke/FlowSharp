@@ -14,7 +14,7 @@ namespace FlowSharp
         static Plane basePlane;
 
         static DataMapper tetTreeMapper;
-        static DataMapper hitsQuant, hitsShear, hitsPerp;
+        static DataMapper hitMapper;
 
         public static void LoadData()
         {
@@ -38,14 +38,10 @@ namespace FlowSharp
             Aneurysm.Singleton.OctreeFolderFilename = mainFolder;
             basePlane = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
-            //mapperTetWireframe = new HexTetGridMapper(redSea);
-            //tetTreeMapper = new TetGridMapper(redSea);
             tetTreeMapper = new AneurysmViewMapper(basePlane);
 
-            hitsQuant = new HitTimeMapper(basePlane, HitTimeMapper.Measure.Hits);
-            hitsShear = new HitTimeMapper(basePlane, HitTimeMapper.Measure.Shear);
-            hitsPerp  = new HitTimeMapper(basePlane, HitTimeMapper.Measure.Perpendicular);
-            //mapperHexCubes = new HexGridMapper(redSea);
+            hitMapper = new HitTimeMapper(basePlane);
+
             Console.WriteLine("Computed all data necessary.");
         }
 
@@ -54,14 +50,8 @@ namespace FlowSharp
             Aneurysm.Singleton.SetMapper(Aneurysm.Display.View_Tetrahedrons, tetTreeMapper);
             Aneurysm.Singleton.SetMapper(
                 Aneurysm.Display.Quantity_Hits,
-                hitsQuant);
-            Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Perpendicular_Hits,
-                hitsPerp);
-            Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Shear_Hits,
-               hitsShear);
-            //Aneurysm.Singleton.SetMapper(Aneurysm.Display.VIEW_HEXAHEDRONS, mapperHexCubes);
+                hitMapper);
+            
         }
     }
 }

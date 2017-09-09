@@ -100,5 +100,20 @@ namespace FlowSharp
                     }
             }
         }
+
+
+        public static Vector WeightCombine(VectorData data, VectorRef weights, Index indices)
+        {
+            Vector result = new Vector(0, data.VectorLength);
+
+            // Add the other weighted grid points.
+            for (int dim = 0; dim < indices.Length; ++dim)
+            {
+                VectorRef add = data[indices[dim]];
+                result += add * weights[dim];
+            }
+
+            return result;
+        }
     }
 }

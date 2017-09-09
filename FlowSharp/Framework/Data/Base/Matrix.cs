@@ -245,7 +245,6 @@ namespace FlowSharp
                     inv[r][c] = (this[col0][row0] * this[col1][row1] - this[col0][row1] * this[col1][row0]);
                 }
             }
-            // -6.2938e-14
             float det = -this[0][0] * inv[0][0] + this[0][1] * inv[0][1] - this[0][2] * inv[0][2];
             return inv/det;
         }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections;
 
 namespace FlowSharp
 {
@@ -16,7 +17,7 @@ namespace FlowSharp
         VectorData _timeStep;
         string _splatName;
 
-        public enum Measure
+        public enum HitMeasure
         {
             Hits,
             Shear,
@@ -24,7 +25,7 @@ namespace FlowSharp
         }
 
 
-        public HitTimeMapper(Plane plane, Measure splatMeasure) : base()
+        public HitTimeMapper(Plane plane/*, HitMeasure splatMeasure*/) : base()
         {
             Mapping = ShowWall;
             BasePlane = plane;
@@ -35,21 +36,7 @@ namespace FlowSharp
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, _wallGrid.Vertices);
             BasePlane.PointSize = 0.1f;
 
-            switch (splatMeasure)
-            {
-                case Measure.Hits:
-                    _splatName = "SplatQuantity";
-                    break;
-                case Measure.Perpendicular:
-                    _splatName = "SplatPerpendicular";
-                    break;
-                case Measure.Shear:
-                    _splatName = "SplatShear";
-                    break;
-                default:
-                    _splatName = "Error";
-                    break;
-            }
+            
 
             // Load Time Steps
             
@@ -59,8 +46,26 @@ namespace FlowSharp
         {
             List<Renderable> renderables = new List<Renderable>(16);
 
+            if (_lastSetting == null || CustomChanged)
+            {
+                switch ((HitMeasure)Custom)
+                {
+                    case HitMeasure.Hits:
+                        _splatName = "SplatQuantity";
+                        break;
+                    case HitMeasure.Perpendicular:
+                        _splatName = "SplatPerpendicular";
+                        break;
+                    case HitMeasure.Shear:
+                        _splatName = "SplatShear";
+                        break;
+                    default:
+                        _splatName = "Error";
+                        break;
+                }
+            }
 
-            if (_lastSetting == null || LineXChanged)
+            if (_lastSetting == null || LineXChanged || CustomChanged)
             {
                 //_timeSteps = new VectorData[20];
                 //for (int s = 0; s < 20; s++)
@@ -110,6 +115,7 @@ namespace FlowSharp
                 case Setting.Element.LineX:
                 case Setting.Element.WindowStart:
                 case Setting.Element.WindowWidth:
+                case Setting.Element.Custom:
                     return true;
                 default:
                     return false;
@@ -153,6 +159,11 @@ namespace FlowSharp
                 default:
                     return base.GetMin(element);
             }
+        }
+
+        public override IEnumerable GetCustomAttribute()
+        {
+            return Enum.GetValues(typeof(HitMeasure)).Cast<HitMeasure>();
         }
     }
 }

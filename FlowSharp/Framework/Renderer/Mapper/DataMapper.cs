@@ -24,6 +24,11 @@ namespace FlowSharp
             SLA
         };
 
+        public enum DefaultEnum
+        {
+            None
+        };
+
         /// <summary>
         /// One function will generate a set of renderables based on the set parameters. Corresponds to the Disply/Preset setting.
         /// </summary>
@@ -314,7 +319,8 @@ namespace FlowSharp
             public Sign Graph = Sign.NEGATIVE;
             [FieldOffset(112)]
             public CoreAlgorithm Core;
-
+            [FieldOffset(116)]
+            public int Custom;
 
             public string GetFilename()
             {
@@ -378,7 +384,8 @@ namespace FlowSharp
                 DimY,
                 Flat,
                 Graph,
-                Core
+                Core,
+                Custom
             }
 
             public Setting(Setting cpy)
@@ -414,6 +421,7 @@ namespace FlowSharp
                 Flat = cpy.Flat;
                 Graph = cpy.Graph;
                 Core = cpy.Core;
+                Custom = cpy.Custom;
             }
 
             public Setting() { }
@@ -527,6 +535,11 @@ namespace FlowSharp
             }
         }
 
+        public virtual System.Collections.IEnumerable GetCustomAttribute()
+        {
+            return Enum.GetValues(typeof(DefaultEnum)).Cast<DefaultEnum>();
+        }
+
         #region SettingChanged
         public virtual bool LineSettingChanged { get { return _currentSetting.LineSetting != _lastSetting.LineSetting; } }
         public virtual bool SliceTimeMainChanged { get { return _currentSetting.SliceTimeMain != _lastSetting.SliceTimeMain; } }
@@ -557,9 +570,10 @@ namespace FlowSharp
         public virtual bool FlatChanged { get { return _currentSetting.Flat != _lastSetting.Flat; } }
         public virtual bool GraphChanged { get { return _currentSetting.Graph != _lastSetting.Graph; } }
         public virtual bool CoreChanged { get { return _currentSetting.Core != _lastSetting.Core; } }
-#endregion SettingChanged
+        public virtual bool CustomChanged { get { return _currentSetting.Custom != _lastSetting.Custom; } }
+        #endregion SettingChanged
 
-#region CurrentSetting
+        #region CurrentSetting
         protected Context.DisplayLines LineSetting
         { get { return _currentSetting.LineSetting; } }
 
@@ -622,7 +636,10 @@ namespace FlowSharp
 
         protected CoreAlgorithm Core
         { get { return _currentSetting.Core; } }
-#endregion CurrentSetting
+
+        protected int Custom
+        { get { return _currentSetting.Custom; } }
+        #endregion CurrentSetting
 
     }
 

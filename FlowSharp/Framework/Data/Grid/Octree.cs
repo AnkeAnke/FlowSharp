@@ -90,7 +90,7 @@ namespace FlowSharp
             return tree;
         }
 
-        public static Octree LoadOrComputeWrite(VectorData data, int maxNumVertices, int maxDepth, Aneurysm.GeometryPart part, float maxdist)
+        public static Octree LoadOrComputeWrite(VectorData data, int maxNumVertices, int maxDepth, Aneurysm.GeometryPart part, float maxdist, string customPraefix = "")
         {
             Octree tree = ReadOctree(maxNumVertices, maxDepth, part, maxdist);
             if (tree == null)
