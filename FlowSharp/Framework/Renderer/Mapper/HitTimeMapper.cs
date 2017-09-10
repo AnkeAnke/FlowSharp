@@ -90,7 +90,8 @@ namespace FlowSharp
                 ColormapChanged ||
                 WindowStartChanged ||
                 WindowWidthChanged ||
-                LineXChanged)
+                LineXChanged ||
+                CustomChanged)
             {
                 _wall.LowerBound = WindowStart;
                 _wall.UpperBound = WindowStart + WindowWidth;

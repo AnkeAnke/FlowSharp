@@ -15,6 +15,7 @@ namespace FlowSharp
 
         static DataMapper tetTreeMapper;
         static DataMapper hitMapper;
+        static DataMapper stressMapper;
 
         public static void LoadData()
         {
@@ -42,16 +43,24 @@ namespace FlowSharp
 
             hitMapper = new HitTimeMapper(basePlane);
 
+            stressMapper = new WallShearMapper(basePlane);
+
             Console.WriteLine("Computed all data necessary.");
         }
 
         public static void CreateRenderables()
         {
-            Aneurysm.Singleton.SetMapper(Aneurysm.Display.View_Tetrahedrons, tetTreeMapper);
             Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Quantity_Hits,
+                Aneurysm.Display.View_Tetrahedrons,
+                tetTreeMapper);
+
+            Aneurysm.Singleton.SetMapper(
+                Aneurysm.Display.Particle_Hits,
                 hitMapper);
-            
+
+            Aneurysm.Singleton.SetMapper(
+                Aneurysm.Display.Wall_Shear_Stress,
+                stressMapper);
         }
     }
 }

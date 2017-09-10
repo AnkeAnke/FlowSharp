@@ -19,9 +19,8 @@ namespace FlowSharp
             Matrix tet = new Matrix();
             for (int i = 0; i < 4; ++i)
             {
-                tet.set_Columns(i, new Vector4(vertices[cell[i]][1], vertices[cell[i]][2], vertices[cell[i]][3], 1));
+                tet.set_Columns(i, new Vector4(vertices[cell[i]][0], vertices[cell[i]][1], vertices[cell[i]][2], 1));
             }
-
 
             bary = Vector4.Zero;
             float d0 = tet.Determinant();

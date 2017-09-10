@@ -7,18 +7,31 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using SlimDX;
 using System.Runtime.InteropServices;
+using System.Collections;
 
 namespace FlowSharp
 {
     class WallShearMapper : IntegrationMapper
     {
-        Mesh _viewGeom;
+        public enum ShearMeasure
+        {
+            WSS_Given,
+            WSS_Sample,
+            WSS_Jacobi,
+            WNS_Sample,
+            WNS_Jacobi,
+        }
+
+        Mesh _wall;
 
         ColormapRenderable _test;
         UnstructuredGeometry _geometryWall;
-        VectorData _wallShearStressSample, _wallNormalStressSample;
-        VectorData _wallShearStressJacobi, _wallNormalStressJacobi;
-        VectorData _attributeCurrent;
+        //VectorData _wallShearStressSample, _wallNormalStressSample;
+        //VectorData _wallShearStressJacobi, _wallNormalStressJacobi;
+        VectorData[] _attributesStress;
+        VectorData _attributeCurrent{
+            get { return _attributesStress[Custom]; }
+            set { _attributesStress[Custom] = value; } }
 
         VectorField _vectorField;
         List<LineSet> _streamLines;
@@ -29,7 +42,7 @@ namespace FlowSharp
 
         public WallShearMapper(Plane plane) : base()
         {
-            Mapping = ShowSide;
+            Mapping = ShowWall;
             BasePlane = plane;
 
             var geomLoader = new LoaderVTU(Aneurysm.GeometryPart.Wall);
@@ -41,129 +54,57 @@ namespace FlowSharp
 
             TIMESTEP = 0;
 
+            _attributesStress = new VectorData[Enum.GetValues(typeof(ShearMeasure)).Length];
             LoadOrCreateWallShearStress();
+
+            //foreach (VectorData data in _attributesStress)
+            //    data.ExtractMinMax();
         }
 
-        public List<Renderable> ShowSide()
+        public List<Renderable> ShowWall()
         {
-            bool updateCubes = false;
-            // Assemble renderables.
-            var wire = new List<Renderable>(5);
-            if (_lastSetting == null || GeometryPartChanged)
+            List<Renderable> renderables = new List<Renderable>(16);
+
+            if (_lastSetting == null || CustomChanged)
             {
-                LoaderVTU geomLoader = new LoaderVTU(GeometryPart);
-                var hexGrid = geomLoader.LoadGeometry();
-                if (hexGrid == null)
-                    Console.WriteLine("What?");
-
-
-
-                _geometry = geomLoader.Grid;
-
-                //update = false;
-                updateCubes = true;
-            }
-
-            if (_lastSetting == null ||
-                GeometryPartChanged ||
-                MeasureChanged)
-            {
-                //if (GeometryPart == Aneurysm.GeometryPart.Wall)
+                //_timeSteps = new VectorData[20];
+                //for (int s = 0; s < 20; s++)
                 //{
-                //    _attribute = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename("SplatQuant", Aneurysm.GeometryPart.Wall), 1);
+                //    _timeSteps[s] = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{s * 10}", Aneurysm.GeometryPart.Wall), 1);
+                //    _timeSteps[s].ExtractMinMax();
                 //}
-                //if (GeometryPart != Aneurysm.GeometryPart.Wall || _attribute == null)
-                //{
-                _attributeCurrent = null;
-
-                LoaderEnsight attribLoader = new LoaderEnsight(GeometryPart);
-
-                if (Measure == Aneurysm.Measure.x_wall_shear)
-                    _attributeCurrent = _canvasQuant;
-                if (Measure == Aneurysm.Measure.y_wall_shear)
-                    _attributeCurrent = _canvasAnglePerp;
-                if (Measure == Aneurysm.Measure.z_wall_shear)
-                    _attributeCurrent = _canvasAngleShear;
-
-                if (_attributeCurrent == null)
-                    _attributeCurrent = attribLoader.LoadAttribute((Aneurysm.Variable)(int)Measure, 0);
-                //}
+                Console.WriteLine("Custom: " + Custom);
                 _attributeCurrent.ExtractMinMax();
-                updateCubes = true;
+
+                _wall = new Mesh(
+                    BasePlane,
+                    _geometryWall,
+                    _attributeCurrent,
+                    Mesh.RenderEffect.DEFAULT,
+                    Colormap);
             }
-
-            if (updateCubes)
-            {
-                _viewGeom = new Mesh(BasePlane, _geometry, _attributeCurrent);
-            }
-
-            if (_streamLines != null &&
-                _streamLines.Count > 0 &&
-                (_lastSetting == null ||
-                _streamBall == null))
-            {
-                _streamBall = new List<LineBall>(_streamLines.Count);
-                foreach (LineSet lines in _streamLines)
-                {
-                    _streamBall.Add(new LineBall(BasePlane, lines, LineBall.RenderEffect.HEIGHT));
-
-                    foreach (LineBall ball in _streamBall)
-                    {
-                        ball.LowerBound = 0;
-                    }
-                }
-            }
-
-            if (_streamBall != null)
-                wire.AddRange(_streamBall);
 
             if (_lastSetting == null ||
-                GeometryPartChanged ||
-                WindowWidthChanged ||
-                WindowStartChanged ||
                 ColormapChanged ||
-                updateCubes)
+                WindowStartChanged ||
+                WindowWidthChanged ||
+                CustomChanged)
             {
-                _viewGeom.LowerBound = WindowStart;
-                _viewGeom.UpperBound = WindowStart + WindowWidth;
-                _viewGeom.UsedMap = Colormap;
-
-                if (_streamBall != null)
-                {
-                    foreach (LineBall ball in _streamBall)
-                    {
-                        ball.UsedMap = ColorMapping.GetComplementary(Colormap);
-                        ball.LowerBound = WindowStart;
-                        ball.UpperBound = WindowStart + WindowWidth;
-                    }
-                    if (_streamBall.Count > 0)
-                        _streamBall[0].UsedMap = Colormap.Red;
-                    if (_streamBall.Count > 1)
-                        _streamBall[1].UsedMap = Colormap.Green;
-                }
+                _wall.LowerBound = WindowStart;
+                _wall.UpperBound = WindowStart + WindowWidth;
+                _wall.UsedMap = Colormap;
             }
 
-            wire.Add(_viewGeom);
-
-            if (_test != null)
-                wire.Add(_test);
+            renderables.Add(_wall);
 
             var axes = BasePlane.GenerateOriginAxisGlyph();
-            wire.AddRange(axes);
-            return wire;
+            renderables.AddRange(axes);
 
+            return renderables;
         }
 
         private int[] LoadOrCreateWriteSolidWallMapping(out UnstructuredGeometry geometrySolid, out Octree treeSolid)
         {
-            geometrySolid = null;
-            treeSolid = null;
-            string filename = Aneurysm.Singleton.OctreeFolderFilename + "MapWallToSolid.intarray";
-
-            int[] mapWallToSolid = BinaryFile.ReadFileArray<int>(filename);
-            if (mapWallToSolid != null)
-                return mapWallToSolid;
-
             // Load Geometry.
             LoaderVTU loader = new LoaderVTU(Aneurysm.GeometryPart.Solid);
             geometrySolid = loader.LoadGeometry();
@@ -171,7 +112,13 @@ namespace FlowSharp
             float eps = (geometrySolid.Vertices[1] - geometrySolid.Vertices[0]).LengthEuclidean() * 0.001f;
 
             // Build Tree.
-            treeSolid = Octree.LoadOrComputeWrite(geometrySolid.Vertices, 10, 10, Aneurysm.GeometryPart.Solid, 20, "Vertices");
+            treeSolid = Octree.LoadOrComputeWrite(geometrySolid.Vertices, 10, 7, Aneurysm.GeometryPart.Solid, 20, "Vertices");
+
+            string filename = Aneurysm.Singleton.OctreeFolderFilename + "MapWallToSolid.intarray";
+
+            int[] mapWallToSolid = BinaryFile.ReadFileArray<int>(filename);
+            if (mapWallToSolid != null)
+                return mapWallToSolid;
 
             // Stab Tree. Map Vertices.
             mapWallToSolid = new int[_geometryWall.Vertices.Length];
@@ -182,15 +129,21 @@ namespace FlowSharp
             for (int v = 0; v < _geometryWall.Vertices.Length; v++)
             {
                 VectorRef pos = _geometryWall.Vertices[v];
-                treeSolid.StabCell((Vector3)_geometryWall.Vertices[v], out leaf);
-                foreach (int vertSolid in leaf.GetData(treeSolid))
-                    if ((geometrySolid.Vertices[vertSolid] - pos).LengthEuclidean() < eps)
-                    {
-                        mapWallToSolid[v] = vertSolid;
-                        break;
-                    }
+                //treeSolid.StabCell((Vector3)_geometryWall.Vertices[v], out leaf);
+                var possibleVerts = treeSolid.FindWithinRadius((Vector3)pos, eps);
+                if (possibleVerts.Count < 1)
+                    Console.WriteLine("Whut");
+
+                var vertsList = possibleVerts.ToList();
+                vertsList.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
+
+                mapWallToSolid[v] = vertsList[0].Key;
+
                 if (mapWallToSolid[v] < 0)
+                {
                     Console.WriteLine($"Did not find wall vertex {v} at position {_geometryWall.Vertices[v]}");
+                    throw new Exception();
+                }
             }
 
             BinaryFile.WriteFileArray(filename, mapWallToSolid);
@@ -220,20 +173,35 @@ namespace FlowSharp
             string filenameJacobi = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
             string filenameSampleNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressSample_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
             string filenameJacobiNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
-            _wallShearStressSample  = BinaryFile.ReadFile(filenameSample, 3);
-            _wallShearStressJacobi  = BinaryFile.ReadFile(filenameJacobi, 3);
-            _wallNormalStressSample = BinaryFile.ReadFile(filenameSampleNormal, 3);
-            _wallNormalStressJacobi = BinaryFile.ReadFile(filenameJacobiNormal, 3);
+            _attributesStress[(int)ShearMeasure.WSS_Sample] =
+                BinaryFile.ReadFile(filenameSample, 1);
+            _attributesStress[(int)ShearMeasure.WSS_Jacobi] =
+                BinaryFile.ReadFile(filenameJacobi, 1);
+            _attributesStress[(int)ShearMeasure.WNS_Sample] =
+                BinaryFile.ReadFile(filenameSampleNormal, 1);
+            _attributesStress[(int)ShearMeasure.WNS_Jacobi] =
+                BinaryFile.ReadFile(filenameJacobiNormal, 1);
 
-            if (_wallShearStressSample != null || _wallShearStressSample != null)
+            // Load the given WSS.
+            LoaderEnsight loader = new LoaderEnsight(Aneurysm.GeometryPart.Wall);
+            _attributesStress[(int)ShearMeasure.WSS_Given] =
+                loader.LoadAttribute(Aneurysm.Variable.wall_shear, TIMESTEP);
+                
+
+            if (_attributesStress[(int)ShearMeasure.WSS_Sample] != null ||
+                _attributesStress[(int)ShearMeasure.WSS_Jacobi] != null)
                 return;
 
             // Loading did not work. Compute and save.
 
-            _wallShearStressSample  = new VectorBuffer(_geometryWall.Vertices.Length, 3);
-            _wallShearStressJacobi  = new VectorBuffer(_geometryWall.Vertices.Length, 3);
-            _wallNormalStressSample = new VectorBuffer(_geometryWall.Vertices.Length, 3);
-            _wallNormalStressJacobi = new VectorBuffer(_geometryWall.Vertices.Length, 3);
+            _attributesStress[(int)ShearMeasure.WSS_Sample] =
+                new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            _attributesStress[(int)ShearMeasure.WSS_Jacobi] =
+                new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            _attributesStress[(int)ShearMeasure.WNS_Sample] =
+                new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            _attributesStress[(int)ShearMeasure.WNS_Jacobi] =
+                new VectorBuffer(_geometryWall.Vertices.Length, 1);
 
 
             // Map tets to vertices.
@@ -253,7 +221,7 @@ namespace FlowSharp
 
             // Read/Comute Normals.
             VectorData normals = LoadOrCreateWriteWallNormals();
-            float eps = (geometrySolid.Vertices[1] - geometrySolid.Vertices[0]).LengthEuclidean() * 0.001f;
+            //float eps = (geometrySolid.Vertices[1] - geometrySolid.Vertices[0]).LengthEuclidean() * 0.01f;
 
             // Stab Octree.
             Vector4 bary;
@@ -264,18 +232,29 @@ namespace FlowSharp
             VectorData velocity = velo.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
             for (int v = 0; v < _geometryWall.Vertices.Length; ++v)
             {
-                pointInside = _geometryWall.Vertices[v] + normals[v] * eps;
+                
                 normal = normals[v];
                 List<int> possibleTets = mapVertToTets[mapWallToSolid[v]];
 
                 // Test all tetrahedrons touching the wall vertex.
-                foreach (int tet in possibleTets)
+                bool anyWorked = false;
+                for (int sign = -1; sign <= 1; sign += 2)
                 {
-                    bool worked = UtilTet.ToBaryCoord(geometrySolid.Vertices, geometrySolid.Primitives, tet, (Vector3)pointInside, out bary);
-                    if (worked)
+                    if (anyWorked)
+                        break;
+                    
+                    foreach (int tet in possibleTets)
                     {
-                        Vector fieldSample = Util.WeightCombine(geometrySolid.Vertices, new Vector(bary), geometrySolid.Primitives[tet]);
+                        float eps = (geometrySolid.Vertices[geometrySolid.Primitives[tet][0]] - geometrySolid.Vertices[geometrySolid.Primitives[tet][1]]).LengthEuclidean() * 0.5f;
+                        pointInside = _geometryWall.Vertices[v] + normals[v] * sign * eps;
+
+                        bool worked = UtilTet.ToBaryCoord(geometrySolid.Vertices, geometrySolid.Primitives, tet, (Vector3)pointInside, out bary);
+                        if (!worked)
+                            continue;
                         
+                        anyWorked = true;
+                        Vector fieldSample = Util.WeightCombine(geometrySolid.Vertices, new Vector(bary), geometrySolid.Primitives[tet]);
+
                         // We want the wall vertex at the first position to simplyfy computation with the Jacobian.
                         Index indexTet = geometrySolid.Primitives[tet];
                         for (int i = 0; i < 4; ++i)
@@ -285,13 +264,12 @@ namespace FlowSharp
                                 indexTet[0] = v;
                                 break;
                             }
-
                         // Compute stress by sample inside of cell.
                         Vector wns = VectorRef.Dot(fieldSample, normal) * normal;
                         Vector wss = fieldSample - wns;
 
-                        _wallNormalStressSample[v] = wns / eps;
-                        _wallShearStressSample[v]  = wss / eps;
+                        _attributesStress[(int)ShearMeasure.WNS_Sample][v] = (Vector)wns.LengthEuclidean() / eps;
+                        _attributesStress[(int)ShearMeasure.WSS_Sample][v] = (Vector)wss.LengthEuclidean() / eps;
 
                         // Compute stress using the Jacobian.
                         // TODO: Maybe combine all adjacent Jacobians?
@@ -301,22 +279,29 @@ namespace FlowSharp
                         wns = VectorRef.Dot(fieldSample, normal) * normal;
                         wss = fieldSample - wns;
 
-                        _wallNormalStressJacobi[v] = wns;
-                        _wallShearStressJacobi[v]  = wss;
+                        _attributesStress[(int)ShearMeasure.WNS_Jacobi][v] = (Vector)wns.LengthEuclidean();
+                        _attributesStress[(int)ShearMeasure.WSS_Jacobi][v] = (Vector)wss.LengthEuclidean();
+                        break;
+                        
                     }
                 }
             }
 
-            BinaryFile.WriteFile(filenameSample, _wallShearStressSample);
-            BinaryFile.WriteFile(filenameJacobi, _wallShearStressJacobi);
-            BinaryFile.WriteFile(filenameSampleNormal, _wallNormalStressSample);
-            BinaryFile.WriteFile(filenameJacobiNormal, _wallNormalStressJacobi);
+            BinaryFile.WriteFile(filenameSample, _attributesStress[(int)ShearMeasure.WSS_Sample]);
+            BinaryFile.WriteFile(filenameJacobi, _attributesStress[(int)ShearMeasure.WSS_Jacobi]);
+            BinaryFile.WriteFile(filenameSampleNormal, _attributesStress[(int)ShearMeasure.WNS_Sample]);
+            BinaryFile.WriteFile(filenameJacobiNormal, _attributesStress[(int)ShearMeasure.WNS_Jacobi]);
         }
 
         //private void ComputeStress(UnstructuredGeometry geometrySolid, int vertexWall, int indexTet)
         //{
 
         //}
+
+        public override IEnumerable GetCustomAttribute()
+        {
+            return Enum.GetValues(typeof(ShearMeasure)).Cast<ShearMeasure>();
+        }
 
         public override bool IsUsed(Setting.Element element)
         {
@@ -327,6 +312,7 @@ namespace FlowSharp
                 case Setting.Element.WindowWidth:
                 case Setting.Element.Measure:
                 case Setting.Element.GeometryPart:
+                case Setting.Element.Custom:
                     return true;
                 default:
                     return false;
