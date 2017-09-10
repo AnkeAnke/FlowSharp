@@ -455,19 +455,21 @@ namespace FlowSharp
             float? length = _mapper.GetMax(DataMapper.Setting.Element.WindowStart);
             if (start != null && length != null)
             {
-                //double relativeSelection = (WindowStart.Value - WindowStart.Minimum) / (WindowStart.Maximum - WindowStart.Minimum);
+                double relativeSelection = (WindowStart.Value - WindowStart.Minimum) / (WindowStart.Maximum - WindowStart.Minimum);
+                if (Double.IsNaN(relativeSelection))
+                    relativeSelection = 0;
                 WindowStart.Minimum = (float)start;
                 WindowStart.Maximum = (float)length;
 
                 double range = WindowStart.Maximum - WindowStart.Minimum;
 
-                //if (double.IsNaN(range / 100) || double.IsNaN(WindowStart.Minimum + relativeSelection * range))
-                //    Console.WriteLine("Found {0} for start {1} and end {2}, relative selection {3}", range / 100, WindowStart.Minimum, WindowStart.Maximum, relativeSelection);
+                if (double.IsNaN(range / 100) || double.IsNaN(WindowStart.Minimum + relativeSelection * range))
+                    Console.WriteLine("Found {0} for start {1} and end {2}, relative selection {3}", range / 100, WindowStart.Minimum, WindowStart.Maximum, relativeSelection);
 
-                //WindowStart.Value = WindowStart.Minimum + 0.5 * range; // relativeSelection * range;
+                WindowStart.Value = WindowStart.Minimum + relativeSelection * range;
 
-                WindowStart.SmallChange = 1; //ouble.IsNaN(range)? 1 : range / 100;
-                WindowStart.LargeChange = 0.1; //Double.IsNaN(range) ? 0.1 : range / 10;
+                WindowStart.SmallChange = Double.IsNaN(range)? 1 : range / 100;
+                WindowStart.LargeChange = Double.IsNaN(range) ? 0.1 : range / 10;
             }
 
             // Update slider ranges.
@@ -476,6 +478,9 @@ namespace FlowSharp
             if (start != null && length != null)
             {
                 double relativeSelection = (WindowWidth.Value - WindowWidth.Minimum) / (WindowWidth.Maximum - WindowWidth.Minimum);
+                if (Double.IsNaN(relativeSelection))
+                    relativeSelection = 1;
+
                 WindowWidth.Minimum = (float)start;
                 WindowWidth.Maximum = (float)length;
 

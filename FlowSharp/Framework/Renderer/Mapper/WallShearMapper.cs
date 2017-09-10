@@ -73,7 +73,6 @@ namespace FlowSharp
                 //    _timeSteps[s] = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{s * 10}", Aneurysm.GeometryPart.Wall), 1);
                 //    _timeSteps[s].ExtractMinMax();
                 //}
-                Console.WriteLine("Custom: " + Custom);
                 _attributeCurrent.ExtractMinMax();
 
                 _wall = new Mesh(
@@ -173,12 +172,16 @@ namespace FlowSharp
             string filenameJacobi = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
             string filenameSampleNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressSample_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
             string filenameJacobiNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
+
             _attributesStress[(int)ShearMeasure.WSS_Sample] =
                 BinaryFile.ReadFile(filenameSample, 1);
+
             _attributesStress[(int)ShearMeasure.WSS_Jacobi] =
                 BinaryFile.ReadFile(filenameJacobi, 1);
+
             _attributesStress[(int)ShearMeasure.WNS_Sample] =
                 BinaryFile.ReadFile(filenameSampleNormal, 1);
+
             _attributesStress[(int)ShearMeasure.WNS_Jacobi] =
                 BinaryFile.ReadFile(filenameJacobiNormal, 1);
 
@@ -196,10 +199,13 @@ namespace FlowSharp
 
             _attributesStress[(int)ShearMeasure.WSS_Sample] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
             _attributesStress[(int)ShearMeasure.WSS_Jacobi] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
             _attributesStress[(int)ShearMeasure.WNS_Sample] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
             _attributesStress[(int)ShearMeasure.WNS_Jacobi] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
 
@@ -221,7 +227,7 @@ namespace FlowSharp
 
             // Read/Comute Normals.
             VectorData normals = LoadOrCreateWriteWallNormals();
-            //float eps = (geometrySolid.Vertices[1] - geometrySolid.Vertices[0]).LengthEuclidean() * 0.01f;
+            float eps = (geometrySolid.Vertices[1] - geometrySolid.Vertices[0]).LengthEuclidean() * 0.01f;
 
             // Stab Octree.
             Vector4 bary;
@@ -230,6 +236,7 @@ namespace FlowSharp
 
             LoaderEnsight velo = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
             VectorData velocity = velo.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
+            VectorData givenShear = velo.LoadAttribute(Aneurysm.Variable.wall_shear, TIMESTEP);
             for (int v = 0; v < _geometryWall.Vertices.Length; ++v)
             {
                 
@@ -245,16 +252,7 @@ namespace FlowSharp
                     
                     foreach (int tet in possibleTets)
                     {
-                        float eps = (geometrySolid.Vertices[geometrySolid.Primitives[tet][0]] - geometrySolid.Vertices[geometrySolid.Primitives[tet][1]]).LengthEuclidean() * 0.5f;
-                        pointInside = _geometryWall.Vertices[v] + normals[v] * sign * eps;
-
-                        bool worked = UtilTet.ToBaryCoord(geometrySolid.Vertices, geometrySolid.Primitives, tet, (Vector3)pointInside, out bary);
-                        if (!worked)
-                            continue;
-                        
-                        anyWorked = true;
-                        Vector fieldSample = Util.WeightCombine(geometrySolid.Vertices, new Vector(bary), geometrySolid.Primitives[tet]);
-
+                        // Swizzle wall vertex to index 0.
                         // We want the wall vertex at the first position to simplyfy computation with the Jacobian.
                         Index indexTet = geometrySolid.Primitives[tet];
                         for (int i = 0; i < 4; ++i)
@@ -264,29 +262,47 @@ namespace FlowSharp
                                 indexTet[0] = v;
                                 break;
                             }
-                        // Compute stress by sample inside of cell.
-                        Vector wns = VectorRef.Dot(fieldSample, normal) * normal;
-                        Vector wss = fieldSample - wns;
 
-                        _attributesStress[(int)ShearMeasure.WNS_Sample][v] = (Vector)wns.LengthEuclidean() / eps;
-                        _attributesStress[(int)ShearMeasure.WSS_Sample][v] = (Vector)wss.LengthEuclidean() / eps;
+                        //float eps = (geometrySolid.Vertices[indexTet[1]] + geometrySolid.Vertices[indexTet[2]] + geometrySolid.Vertices[indexTet[3]] - geometrySolid.Vertices[v]*3).LengthEuclidean() / 6;
+                        pointInside = _geometryWall.Vertices[v] + normals[v] * sign * eps;
+
+                        bool worked = UtilTet.ToBaryCoord(geometrySolid.Vertices, geometrySolid.Primitives, tet, (Vector3)pointInside, out bary);
+                        if (!worked)
+                            continue;
+                        
+                        anyWorked = true;
+                        Vector fieldSample = Util.WeightCombine(velocity, new Vector(bary), geometrySolid.Primitives[tet]);
+
+                        
+                        // Compute stress by sample inside of cell.
+                        float wns = VectorRef.Dot(fieldSample, normal);
+                        Vector wss = fieldSample - wns * normal;
+
+                        //_attributesStress[(int)ShearMeasure.WNS_Sample][v] = (Vector)wns;
+                        _attributesStress[(int)ShearMeasure.WNS_Sample][v] = (Vector)(wns * normal).LengthEuclidean();
+                        _attributesStress[(int)ShearMeasure.WSS_Sample][v] = (Vector)wss.LengthEuclidean();
+
 
                         // Compute stress using the Jacobian.
                         // TODO: Maybe combine all adjacent Jacobians?
                         SquareMatrix jacobian = UtilTet.Jacobian(geometrySolid.Vertices, velocity, indexTet);
 
                         fieldSample = jacobian * normal;
-                        wns = VectorRef.Dot(fieldSample, normal) * normal;
-                        wss = fieldSample - wns;
+                        wns = VectorRef.Dot(fieldSample, normal);
+                        wss = fieldSample - wns * normal;
 
-                        _attributesStress[(int)ShearMeasure.WNS_Jacobi][v] = (Vector)wns.LengthEuclidean();
+                        _attributesStress[(int)ShearMeasure.WNS_Jacobi][v] = (Vector)wns;
                         _attributesStress[(int)ShearMeasure.WSS_Jacobi][v] = (Vector)wss.LengthEuclidean();
+
+                        // TESTS
+                        _attributesStress[(int)ShearMeasure.WSS_Jacobi][v] = (Vector)jacobian.EuclideanNorm();
                         break;
                         
                     }
                 }
             }
 
+            Console.WriteLine("Computed Stress Measures.");
             BinaryFile.WriteFile(filenameSample, _attributesStress[(int)ShearMeasure.WSS_Sample]);
             BinaryFile.WriteFile(filenameJacobi, _attributesStress[(int)ShearMeasure.WSS_Jacobi]);
             BinaryFile.WriteFile(filenameSampleNormal, _attributesStress[(int)ShearMeasure.WNS_Sample]);
@@ -318,19 +334,6 @@ namespace FlowSharp
                     return false;
             }
         }
-
-        //public override string GetName(Setting.Element element)
-        //{
-        //    switch (element)
-        //    {
-        //        case Setting.Element.WindowWidth:
-        //            return 0;
-        //        case Setting.Element.WindowStart:
-        //            return min;
-        //        default:
-        //            return base.GetMin(element);
-        //    }
-        //}
 
         public override float? GetMin(Setting.Element element)
         {
