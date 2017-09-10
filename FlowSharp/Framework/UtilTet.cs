@@ -75,7 +75,16 @@ namespace FlowSharp
                 vertices[cell[2]] - originPosition,
                 vertices[cell[3]] - originPosition });
 
-            return function * direction.Inverse();
+            SquareMatrix result =  function * direction.Inverse();
+
+            //Console.WriteLine("Index " + cell);
+            //Console.WriteLine("Function:\n" + function);
+            //Console.WriteLine("\nDirections:\n" + direction);
+            //Console.WriteLine("\nInverse Direction:\n" + direction.Inverse());
+
+            //Console.WriteLine("\nControl Identity:\n" + direction * direction.Inverse());
+            //Console.WriteLine("\nResult:\n" + result);
+            return result;
         }
     }
 }

@@ -235,7 +235,7 @@ namespace FlowSharp
             VectorRef normal;
 
             LoaderEnsight velo = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
-            VectorData velocity = velo.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
+            VectorData velocitySolid = velo.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP);
             VectorData givenShear = velo.LoadAttribute(Aneurysm.Variable.wall_shear, TIMESTEP);
             for (int v = 0; v < _geometryWall.Vertices.Length; ++v)
             {
@@ -271,7 +271,7 @@ namespace FlowSharp
                             continue;
                         
                         anyWorked = true;
-                        Vector fieldSample = Util.WeightCombine(velocity, new Vector(bary), geometrySolid.Primitives[tet]);
+                        Vector fieldSample = Util.WeightCombine(velocitySolid, new Vector(bary), geometrySolid.Primitives[tet]);
 
                         
                         // Compute stress by sample inside of cell.
@@ -285,7 +285,7 @@ namespace FlowSharp
 
                         // Compute stress using the Jacobian.
                         // TODO: Maybe combine all adjacent Jacobians?
-                        SquareMatrix jacobian = UtilTet.Jacobian(geometrySolid.Vertices, velocity, indexTet);
+                        SquareMatrix jacobian = UtilTet.Jacobian(geometrySolid.Vertices, velocitySolid, indexTet);
 
                         fieldSample = jacobian * normal;
                         wns = VectorRef.Dot(fieldSample, normal);
@@ -295,7 +295,8 @@ namespace FlowSharp
                         _attributesStress[(int)ShearMeasure.WSS_Jacobi][v] = (Vector)wss.LengthEuclidean();
 
                         // TESTS
-                        _attributesStress[(int)ShearMeasure.WSS_Jacobi][v] = (Vector)jacobian.EuclideanNorm();
+                        _attributesStress[(int)ShearMeasure.WSS_Jacobi][v] = fieldSample;
+                        _attributesStress[(int)ShearMeasure.WNS_Jacobi][v] = (Vector)jacobian[0].LengthEuclidean();
                         break;
                         
                     }

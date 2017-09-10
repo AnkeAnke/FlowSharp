@@ -246,7 +246,7 @@ namespace FlowSharp
                 }
             }
             float det = -this[0][0] * inv[0][0] + this[0][1] * inv[0][1] - this[0][2] * inv[0][2];
-            return inv/det;
+            return inv/-det;
         }
 
         public SquareMatrix ToMat2x2()
