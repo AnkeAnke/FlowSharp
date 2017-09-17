@@ -262,14 +262,36 @@ namespace FlowSharp
             {
                 Line line = Lines[idx];
 
-                //if (line.Length > 0)
-                //    Console.WriteLine($"Line {idx} ends with {line.Status}\n\tPoint {line.EndPoint}, ie {line.Last}");
-                //Vector3 inertia = (Lines[idx].Positions.Length >= 2) ?
-                //        Util.Convert(Lines[idx].Positions.Last() - Lines[idx].Positions[Lines[idx].Length - 2]) : Vector3.Zero;
                 if (line.Length > 0 && line.Status == select)
                     points.Add(line.EndPoint ?? new Vector(line.Positions.Last()));
             }
             return points;
+        }
+
+        public List<Vector> GetEndPointsInTimeRange(VectorField.Integrator.Status select, int start, int end)
+        {
+            List<Vector> points = new List<Vector>(Lines.Length);
+            for (int idx = 0; idx < Lines.Length; ++idx)
+            {
+                Line line = Lines[idx];
+
+                if (line.Length > 0 && line.Status == select)
+                    points.Add(line.EndPoint ?? new Vector(line.Positions.Last()));
+            }
+            return points;
+        }
+
+        public VectorBuffer GetEndPointBuffer()
+        {
+            List<Vector> points = new List<Vector>(Lines.Length);
+            for (int idx = 0; idx < Lines.Length; ++idx)
+            {
+                Line line = Lines[idx];
+                if (line.Length > 0)
+                    points.Add(line.EndPoint);
+            }
+            VectorList vl = new VectorList(points);
+            return new VectorBuffer(vl);
         }
 
         //public void TimeComponentToAttribute()

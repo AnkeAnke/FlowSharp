@@ -9,7 +9,7 @@ using System.Collections;
 namespace FlowSharp
 {
     
-    class HitTimeMapper : DataMapper
+    class HitAttributeMapper : DataMapper
     {
         UnstructuredGeometry _wallGrid;
         Mesh _wall;
@@ -25,7 +25,7 @@ namespace FlowSharp
         }
 
 
-        public HitTimeMapper(Plane plane/*, HitMeasure splatMeasure*/) : base()
+        public HitAttributeMapper(Plane plane/*, HitMeasure splatMeasure*/) : base()
         {
             Mapping = ShowWall;
             BasePlane = plane;

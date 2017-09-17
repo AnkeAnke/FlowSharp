@@ -14,6 +14,7 @@ using WPFHost;
 
 namespace FlowSharp
 {
+    using System.IO;
 #if true
     using Context = Aneurysm;
 #endif
@@ -148,8 +149,8 @@ namespace FlowSharp
 
             if (state.IsPressed(Key.P))
             {
-
-                Context.Singleton.WPFWindow.Screenshot(Context.Singleton.SnapFileName + "Snape_" + Context.Singleton.EnsightFilename + ".png");
+                string filename = Path.Combine(Context.Singleton.SnapFileName, "Snape_" + Context.Singleton.EnsightFilename + ".png");
+                Context.Singleton.WPFWindow.Screenshot(filename);
             }
 
             // Map mouse movement to angles.

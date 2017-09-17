@@ -7,9 +7,10 @@ namespace FlowSharp
 {
     class VectorList : VectorData
     {
-        private Vector[] _data;
+        private List<Vector> _data;
+
         public override int VectorLength { get { return _data[0].Length; } protected set { } }
-        public override int Length { get { return _data.Length; } }
+        public override int Length { get { return _data.Count; } }
         public override VectorRef this[int index]
         {
             get
@@ -31,12 +32,18 @@ namespace FlowSharp
         }
 
         public VectorList() { }
-        public VectorList(int length) { _data = new Vector[length]; }
+        public VectorList(int length) { _data = new List<Vector>(length); }
+
+        public VectorList(List<Vector> points)
+        {
+            _data = points;
+        }
+
         public override void SetSize(int numElements, int vectorLength)
         {
-            _data = new Vector[numElements];
+            _data = new List<Vector>(numElements);
             for (int n = 0; n < numElements; ++n)
-                _data[n] = new Vector(vectorLength);
+                _data.Add(new Vector(vectorLength));
         }
 
         public override void ChangeEndian()

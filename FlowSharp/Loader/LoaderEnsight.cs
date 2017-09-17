@@ -292,11 +292,7 @@ namespace FlowSharp
             return vertices;
         }
 
-        /// <summary>
-        /// Load a stack of 30 field. This should be small enough to have memory free for other operations.
-        /// </summary>
-        /// <param name="startStep">The start step. Running continuously. 0 1 2 3 ...</param>
-        public void LoadFieldTimeBatch(Aneurysm.Variable measure, FieldGrid grid, int startStep, int numSteps, int everyNthTimestep = 1)
+        public VectorDataArray<VectorChannels> LoadFieldTimeBatch(Aneurysm.Variable measure, int startStep, int numSteps, int everyNthTimestep = 1)
         {
             // Fields to build unsteady vector field from.
             VectorChannels[] batch = new VectorChannels[numSteps];
@@ -310,10 +306,12 @@ namespace FlowSharp
                 batch[field] = LoadAttribute(measure, step);
             }
 
-            VectorFieldUnsteady velocity = new VectorFieldUnsteady(new VectorDataUnsteady<VectorChannels>(batch), grid, batch.Length);
-            velocity.TimeOrigin = startStep;
-//            velocity.ScaleToGrid(new Vec2((RedSea.Singleton.TimeScale * _everyNthTimestep) / RedSea.Singleton.NumSubsteps));
+            //VectorFieldUnsteady velocity = new VectorFieldUnsteady(new VectorDataUnsteady<VectorChannels>(batch), grid, batch.Length);
+            //velocity.TimeOrigin = startStep;
+            //            velocity.ScaleToGrid(new Vec2((RedSea.Singleton.TimeScale * _everyNthTimestep) / RedSea.Singleton.NumSubsteps));
+            return new VectorDataArray<VectorChannels>(batch);
         }
+
         //public HexGrid LoadGrid()
         //{
         //    string filename = Aneurysm.Singleton.GridFilename;

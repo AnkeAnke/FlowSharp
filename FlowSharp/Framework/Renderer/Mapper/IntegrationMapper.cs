@@ -4,12 +4,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
+using System.Management;
+using Microsoft.VisualBasic.Devices;
 
 namespace FlowSharp
 {
     abstract class IntegrationMapper : DataMapper
     {
-        protected static int STEPS_IN_MEMORY = 10;
+        protected static int STEPS_IN_MEMORY = 50;
         protected float RESPONSE_TIME = 0.25f;
         protected int TIMESTEP = 0;
 
@@ -36,12 +39,11 @@ namespace FlowSharp
             return field;
         }
 
-        protected LineSet IntegratePoints<P>(VectorField.Integrator integrator, FieldGrid grid, PointSet<P> points, int startStep = 0) where P : Point
+        protected LineSet IntegratePoints<P>(VectorField.Integrator integrator, FieldGrid grid, PointSet<P> points) where P : Point
         {
-            if (startStep != 0)
-                points.SetTime(Aneurysm.Singleton.TimeScale * startStep);
+            int startStep = 0;
 
-            // Load some attribute.
+            // Load n time steps.
             // 0.005 is the timestep of the data. Overall they add up to 1 second.
             integrator.Field = LoadToVectorField(grid, startStep, 0);
             startStep += integrator.Field.Size.T - 1;
@@ -50,13 +52,6 @@ namespace FlowSharp
             timeIntegrate.Stop();
 
             List<Vector> validPoints = set.GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
-            //foreach (Line l in set.Lines)
-            //{
-            //    Console.Write(l.Status);
-            //    if (l.Length > 0)
-            //        Console.Write(" at time " + l.Last.W + ", length " + l.Length);
-            //    Console.Write('\n');
-            //}
 
             Console.WriteLine($"=== {validPoints.Count} Remaining Lines");
             int numIteration = 0;
@@ -72,13 +67,6 @@ namespace FlowSharp
 
                     validPoints = set.GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
                     Console.WriteLine($"=== {validPoints.Count} Remaining Lines");
-                    //foreach (Line l in set.Lines)
-                    //{
-                    //    Console.Write(l.Status);
-                    //    if (l.Length > 0)
-                    //        Console.Write(" at time " + l.Last.W + ", length " + l.Length);
-                    //    Console.Write('\n');
-                    //}
                 }
 
                 startStep = 0;
@@ -87,7 +75,18 @@ namespace FlowSharp
 
             Console.WriteLine($"Total loading time: {timeLoad.Elapsed}\nTotal integaration time: {timeIntegrate.Elapsed}");
             return set;
-        } 
+        }
 
+        public static void ComputeChunkSizeFromMemory()
+        {
+            ComputerInfo CI = new ComputerInfo();
+            ulong totalMemory = ulong.Parse(CI.TotalPhysicalMemory.ToString());
+
+            int filesize = Aneurysm.Singleton.StepInBytes;
+            ulong fourGB = 4ul * 1024 * 1024 * 1024;
+            Console.WriteLine($"Total available memory is {string.Format("{0:0.##}", (double)totalMemory / 1024 / 1024 / 1024)} GB");
+            STEPS_IN_MEMORY = (int)((totalMemory - fourGB) / (ulong)filesize); // Leave some space for integration.
+            Console.WriteLine($"Fitting {STEPS_IN_MEMORY} time steps into memory at once");
+        }
     }
 }

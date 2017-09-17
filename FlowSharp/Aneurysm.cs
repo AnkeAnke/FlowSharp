@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using PointSet = FlowSharp.PointSet<FlowSharp.Point>;
+using System.IO;
 
 namespace FlowSharp
 {
@@ -25,6 +26,7 @@ namespace FlowSharp
         public string OctreeFolderFilename;
 
         public int NumSteps = 200;
+        public int StepInBytes = 63000000;
         public float TimeScale { get { return 0.005f; } }
         /// <summary>
         /// Relevant variables of Read Sea file.
@@ -133,40 +135,35 @@ namespace FlowSharp
 
         public string GridFilename { get
             {
-                return EnsightFolderFilename + EnsightGeoFilename;
-                //if (_mappers[(int)_currentMapper] == null)
-                //    return "Default";
-                //string name = _currentMapper.ToString();
-                //name += '_' + _mappers[(int)_currentMapper].CurrentSetting.GetFilename();
-                //return name;
+                return Path.Combine(EnsightFolderFilename, EnsightGeoFilename);
                     } }
         private string EnsightVariableFilename(Variable variable, int slice)
         {
             string filename = $"ruptured ({slice+1}).";
             if (variable == Variable.velocity)
-                filename += "vel";
+                filename = filename+ "vel";
             else
-                filename += "scl" + (int)variable;
+                filename = filename + "scl" + (int)variable;
             return filename;   
         }
         public string EnsightVariableFileName(Variable variable, int slice)
         {
-                return EnsightFolderFilename + EnsightVariableFilename(variable, slice);
+                return Path.Combine(EnsightFolderFilename, EnsightVariableFilename(variable, slice));
         }
 
         public string VtuCompleteFilename(int timestep, GeometryPart geom)
         {
-            return VtuFolderFilename + VtuDataFilename + (((int)geom)-1) + "_0.vtu";
+            return Path.Combine(VtuFolderFilename, VtuDataFilename + (((int)geom)-1) + "_0.vtu");
         }
 
         public string OctreeFilename(int maxVerts, int maxLevels, GeometryPart part, string customPraefix = "")
         {
-            return OctreeFolderFilename + customPraefix + part + "_vert" + maxVerts + "_lvl" + maxLevels + ".octree";
+            return Path.Combine(OctreeFolderFilename, customPraefix + part + "_vert" + maxVerts + "_lvl" + maxLevels + ".octree");
         }
 
         public string CustomAttributeFilename(string custom, GeometryPart part)
         {
-            return OctreeFolderFilename + "Attribute/" + custom + "_" + part + ".attribute";
+            return Path.Combine(OctreeFolderFilename, "Attribute/" + custom + "_" + part + ".attribute");
         }
 
         private Aneurysm()

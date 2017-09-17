@@ -41,9 +41,12 @@ namespace FlowSharp
 
             tetTreeMapper = new AneurysmViewMapper(basePlane);
 
-            hitMapper = new HitTimeMapper(basePlane);
+            hitMapper = new HitAttributeMapper(basePlane);
 
             stressMapper = new WallShearMapper(basePlane);
+
+            IntegrationMapper.ComputeChunkSizeFromMemory();
+            var tmp = new TetGridMapper(basePlane);
 
             Console.WriteLine("Computed all data necessary.");
         }

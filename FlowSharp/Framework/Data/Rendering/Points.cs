@@ -233,8 +233,10 @@ namespace FlowSharp
         public int Length { get { return Points.Length; } }
 
         private Vector4? _minPosition, _maxPosition;
-        public Vector4 MinPosition {
-            get {
+        public Vector4 MinPosition
+        {
+            get
+            {
                 if (_minPosition == null)
                     ExtractMinMax();
                 return (Vector4)_minPosition;
@@ -291,6 +293,14 @@ namespace FlowSharp
 
             _minPosition = minPos;
             _maxPosition = maxPos;
+        }
+
+        public void RandomizeTimes(int timeStart, int timeEnd)
+        {
+            Random rand = new Random();
+            int range = timeEnd - timeStart;
+            for (int p = 0; p < Length; ++p)
+                Points[p].Position.W = (float)(rand.NextDouble() * range + timeStart);
         }
     }
 

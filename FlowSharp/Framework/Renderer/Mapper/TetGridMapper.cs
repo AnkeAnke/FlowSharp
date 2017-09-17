@@ -63,8 +63,10 @@ namespace FlowSharp
             integrator.MaxNumSteps = 1000000;
             integrator.EpsCriticalPoint = 0;
 
-            for (int offset = 0; offset < 10; ++offset)
-                for (TIMESTEP = 0; TIMESTEP < 200; TIMESTEP += 10)
+            //for (int offset = 0; offset < 10; ++offset)
+            //    for (TIMESTEP = 0; TIMESTEP < 200; TIMESTEP += 10)
+            int offset = 0;
+            TIMESTEP = 0;
                 {
 
                     //if (TIMESTEP == 0 && offset == 0)
@@ -77,9 +79,9 @@ namespace FlowSharp
                     //_vectorField = new VectorField(attribLoader.LoadAttribute(Aneurysm.Variable.velocity, TIMESTEP), _grid);
 
 
-                    _canvasQuant = LoadOrCreateEmptyWallCanvas($"SplatQuantity", TIMESTEP);
-                    _canvasAnglePerp = LoadOrCreateEmptyWallCanvas($"SplatPerpendicular", TIMESTEP);
-                    _canvasAngleShear = LoadOrCreateEmptyWallCanvas($"SplatShear", TIMESTEP);
+                    _canvasQuant = Util.LoadOrCreateEmptyWallCanvas($"SplatQuantity", TIMESTEP);
+                    _canvasAnglePerp = Util.LoadOrCreateEmptyWallCanvas($"SplatPerpendicular", TIMESTEP);
+                    _canvasAngleShear = Util.LoadOrCreateEmptyWallCanvas($"SplatShear", TIMESTEP);
 
                     //for (int offset = 0; offset < 10; offset++)
                     //int offset = 0;
@@ -103,7 +105,7 @@ namespace FlowSharp
                         RESPONSE_TIME = 0.000001821f;
                         integrator.StepSize = 0.5f;
 
-                        _streamLines.Add(this.IntegratePoints(integrator, _grid, points, TIMESTEP));
+                        _streamLines.Add(this.IntegratePoints(integrator, _grid, points));
                         _streamLines.Last().Color = Vector3.UnitZ;
 
                         watch.Stop();
@@ -288,15 +290,6 @@ namespace FlowSharp
             _canvasQuant.MaxValue = null; //(Vector)50;
             _canvasQuant.MinValue = (Vector)0;
             _canvasQuant.ExtractMinMax();
-        }
-
-        private VectorBuffer LoadOrCreateEmptyWallCanvas(string name, int step)
-        {
-            VectorBuffer buff = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(name + $"_{step}", Aneurysm.GeometryPart.Wall), 1);
-            if (buff == null)
-                buff = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
-
-            return buff;
         }
 
         public override bool IsUsed(Setting.Element element)

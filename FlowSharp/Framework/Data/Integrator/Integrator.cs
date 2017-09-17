@@ -53,7 +53,9 @@ namespace FlowSharp
 
             public virtual Line IntegrateLineForRendering(Vector pos, float? maxTime = null)
             {
+                // Integrate.
                 StreamLine<Vector> streamline = IntegrateLine(pos, maxTime);
+
                 Line line4 = new Line(streamline.Points.Count);
                 
                 for (int p = 0; p < streamline.Points.Count; ++p)
@@ -63,8 +65,8 @@ namespace FlowSharp
                 line4.LineLength = streamline.LineLength;
                 if (streamline.Points.Count > 0)
                     line4.EndPoint = streamline.Points.Last();
-                else
-                    line4.Status = Status.BORDER;
+                //else
+                //    line4.Status = Status.BORDER;
 
                 return line4;
 
@@ -75,15 +77,15 @@ namespace FlowSharp
                 if (StepSize <= 0)
                     Console.WriteLine("StepSize is " + StepSize);
 
-                //line.Points.Add((Vector3)pos);
                 var unsteadyField = (Field as VectorFieldUnsteady);
                 float timeBorder = maxTime ?? ((unsteadyField == null) ? float.MaxValue : unsteadyField.TimeEnd);
-                //if (pos.T == 0.005f * 9)
-                //{
-                //    Console.WriteLine(pos);
-                //}
 
                 Vector point = new Vector(pos);
+                if (!Field.InTime(point.T))
+                {
+                    line.Status = Status.TIME_BORDER;
+                    return line;
+                }
 
                 int step = -1;
                 float stepLength;
@@ -186,7 +188,7 @@ namespace FlowSharp
 
             public void IntegrateFurther(LineSet positions, float? maxTime = null)
             {
-                Debug.Assert(Field.NumVectorDimensions <= 3);
+                Debug.Assert(Field.NumVectorDimensions <= 4);
 
                 //int validPoints = 0;
                 Parallel.For(0, positions.Length, index =>
@@ -195,21 +197,10 @@ namespace FlowSharp
                     if (positions[index].Status != Status.TIME_BORDER)
                         return;
 
-                    //if (positions[index].Length == 0 || positions[index].EndPoint == null || (positions[index].Status != Status.TIME_BORDER && positions[index].Status != Status.OK))
-                    //{
-                    //    positions[index].Status = Status.INVALID;
-                    //    return;
-                    //}
-
-                    //Console.WriteLine($"EndPoint {Field.ToPosition(positions[index].EndPoint)}, Status {positions[index].Status}");
-
                     Line append = IntegrateLineForRendering(
                         (positions[index].EndPoint),
                         maxTime);
-                    //Console.WriteLine($"\tIntegration ended with Status {append.Status} at {append.Positions.Last()}");
                     positions[index] = positions[index].Append(append);
-
-                    //Console.WriteLine($"EndPoint {Field.ToPosition(positions[index].EndPoint)}, Status {positions[index].Status}");
                 });
             }
 

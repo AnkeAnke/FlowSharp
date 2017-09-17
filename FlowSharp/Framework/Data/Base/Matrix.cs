@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using SlimDX;
 
 namespace FlowSharp
 {
@@ -63,10 +64,10 @@ namespace FlowSharp
                 Columns[row] = new Vector(0, length);
         }
 
-        public VectorRef this[int index]
+        public VectorRef this[int column]
         {
-            get { return Columns[index]; }
-            set { Debug.Assert(value.Length == Length); Columns[index] = value; }
+            get { return Columns[column]; }
+            set { Debug.Assert(value.Length == Length); Columns[column] = value; }
         }
 
         public float this[Int2 index]
@@ -75,9 +76,9 @@ namespace FlowSharp
             set { this[index.X][index.Y] = value; }
         }
 
-        public VectorRef Column(int index)
+        public VectorRef Column(int column)
         {
-            return this[index];
+            return this[column];
         }
 
         public Vector Row(int index)
@@ -230,23 +231,36 @@ namespace FlowSharp
 
         public SquareMatrix Inverse()
         {
-            Debug.Assert(Length == 3, "Only implemented 3x3.");
-            SquareMatrix inv = new SquareMatrix(Length);
+            //Debug.Assert(Length == 3, "Only implemented 3x3.");
+            //SquareMatrix inv = new SquareMatrix(Length);
 
-            for (int c = 0; c < 3; ++c)
-            {
-                for (int r = 0; r < 3; ++r)
-                {
-                    int col0 = (c + 1) % 3;
-                    int col1 = (c + 2) % 3;
-                    int row0 = (r + 1) % 3;
-                    int row1 = (r + 2) % 3;
-                    int sign = (c + r) % 2 == 0 ? 1 : -1;
-                    inv[r][c] = (this[col0][row0] * this[col1][row1] - this[col0][row1] * this[col1][row0]);
-                }
-            }
-            float det = -this[0][0] * inv[0][0] + this[0][1] * inv[0][1] - this[0][2] * inv[0][2];
-            return inv/-det;
+            //for (int c = 0; c < 3; ++c)
+            //{
+            //    for (int r = 0; r < 3; ++r)
+            //    {
+            //        int col0 = (c + 1) % 3;
+            //        int col1 = (c + 2) % 3;
+            //        int row0 = (r + 1) % 3;
+            //        int row1 = (r + 2) % 3;
+            //        int sign = (c + r) % 2 == 0 ? 1 : -1;
+            //        inv[r][c] = (this[col0][row0] * this[col1][row1] - this[col0][row1] * this[col1][row0]);
+            //    }
+            //}
+            //float det = -this[0][0] * inv[0][0] + this[0][1] * inv[0][1] - this[0][2] * inv[0][2];
+            //return inv/-det;
+
+            Matrix slimMat = Matrix.Identity;
+            for (int c = 0; c < Length; ++c)
+                for (int r = 0; r < Length; ++r)
+                    slimMat[r, c] = this[c][r];
+
+            slimMat.Invert();
+            SquareMatrix inv = new SquareMatrix(Length);
+            for (int c = 0; c < Length; ++c)
+                for (int r = 0; r < Length; ++r)
+                    inv[c][r] = slimMat[r, c];
+
+            return inv;
         }
 
         public SquareMatrix ToMat2x2()

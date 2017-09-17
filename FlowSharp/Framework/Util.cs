@@ -115,5 +115,14 @@ namespace FlowSharp
 
             return result;
         }
+
+        public static VectorBuffer LoadOrCreateEmptyWallCanvas(string name, int step)
+        {
+            VectorBuffer buff = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(name + $"_{step}", Aneurysm.GeometryPart.Wall), 1);
+            if (buff == null)
+                buff = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
+
+            return buff;
+        }
     }
 }
