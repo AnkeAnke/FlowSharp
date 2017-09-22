@@ -262,7 +262,7 @@ namespace FlowSharp
             {
                 Line line = Lines[idx];
 
-                if (line.Length > 0 && line.Status == select)
+                if (line.Status == select && (line.Length > 0 || line.EndPoint != null))
                     points.Add(line.EndPoint ?? new Vector(line.Positions.Last()));
             }
             return points;

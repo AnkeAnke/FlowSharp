@@ -66,7 +66,8 @@ namespace FlowSharp
             None,
             View_Tetrahedrons,
             Particle_Hits,
-            Wall_Shear_Stress
+            Wall_Shear_Stress,
+            Last_Particles
         }
 
         public enum DisplayLines : int

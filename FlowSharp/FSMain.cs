@@ -7,7 +7,7 @@ using System.IO;
 
 namespace FlowSharp
 {
-    class FSMain
+    static class FSMain
     {
         static VectorField velocity;
 
@@ -16,6 +16,7 @@ namespace FlowSharp
         static DataMapper tetTreeMapper;
         static DataMapper hitMapper;
         static DataMapper stressMapper;
+        static DataMapper particleMapper;
 
         public static void LoadData()
         {
@@ -46,7 +47,7 @@ namespace FlowSharp
             stressMapper = new WallShearMapper(basePlane);
 
             IntegrationMapper.ComputeChunkSizeFromMemory();
-            var tmp = new TetGridMapper(basePlane);
+            particleMapper = new ParticleMapper(basePlane);
 
             Console.WriteLine("Computed all data necessary.");
         }
@@ -64,6 +65,11 @@ namespace FlowSharp
             Aneurysm.Singleton.SetMapper(
                 Aneurysm.Display.Wall_Shear_Stress,
                 stressMapper);
+
+            if (particleMapper != null)
+                Aneurysm.Singleton.SetMapper(
+                    Aneurysm.Display.Last_Particles,
+                    particleMapper);
         }
     }
 }

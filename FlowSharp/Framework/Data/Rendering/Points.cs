@@ -295,10 +295,10 @@ namespace FlowSharp
             _maxPosition = maxPos;
         }
 
-        public void RandomizeTimes(int timeStart, int timeEnd)
+        public void RandomizeTimes(float timeStart, float timeEnd)
         {
             Random rand = new Random();
-            int range = timeEnd - timeStart;
+            float range = timeEnd - timeStart;
             for (int p = 0; p < Length; ++p)
                 Points[p].Position.W = (float)(rand.NextDouble() * range + timeStart);
         }

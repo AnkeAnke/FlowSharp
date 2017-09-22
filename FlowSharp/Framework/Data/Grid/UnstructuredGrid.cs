@@ -146,7 +146,7 @@ namespace FlowSharp
         }
 
         #region Sample
-        static Random RandomSampler = new Random();
+        static Random RandomSampler = new Random(1337);
         public PointSet<DirectionPoint> SampleRandom(int numSamples, VectorData data)
         {
             DirectionPoint[] positions = new DirectionPoint[numSamples];

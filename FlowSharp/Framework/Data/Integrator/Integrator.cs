@@ -65,8 +65,8 @@ namespace FlowSharp
                 line4.LineLength = streamline.LineLength;
                 if (streamline.Points.Count > 0)
                     line4.EndPoint = streamline.Points.Last();
-                //else
-                //    line4.Status = Status.BORDER;
+                else if(line4.Status == Status.TIME_BORDER)
+                    line4.EndPoint = pos;
 
                 return line4;
 
