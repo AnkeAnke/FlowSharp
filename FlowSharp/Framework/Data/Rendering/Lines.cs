@@ -287,8 +287,11 @@ namespace FlowSharp
             for (int idx = 0; idx < Lines.Length; ++idx)
             {
                 Line line = Lines[idx];
-                if (line.Length > 0)
+                //if (line.Length > 0)
+                if (line?.EndPoint != null)
                     points.Add(line.EndPoint);
+                else
+                    Console.WriteLine("No endpoint at Index" + idx);
             }
             VectorList vl = new VectorList(points);
             return new VectorBuffer(vl);

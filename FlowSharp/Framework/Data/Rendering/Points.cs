@@ -51,6 +51,12 @@ namespace FlowSharp
 
         public DirectionPoint() { }
 
+        public DirectionPoint(VectorRef vec)
+        {
+            Position = new Vector4(vec[0], vec[1], vec[2], vec[6]);
+            Direction = new Vector3(vec[3], vec[4], vec[5]);
+        }
+
         public override Vector ToVector()
         {
             Vector vec = new Vector(7);

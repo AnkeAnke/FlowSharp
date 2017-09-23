@@ -17,6 +17,7 @@ namespace FlowSharp
         static DataMapper hitMapper;
         static DataMapper stressMapper;
         static DataMapper particleMapper;
+        static DataMapper hitPointMapper;
 
         public static void LoadData()
         {
@@ -46,6 +47,8 @@ namespace FlowSharp
 
             stressMapper = new WallShearMapper(basePlane);
 
+            hitPointMapper = new HitSampleMapper(basePlane);
+
             IntegrationMapper.ComputeChunkSizeFromMemory();
             particleMapper = new ParticleMapper(basePlane);
 
@@ -59,12 +62,16 @@ namespace FlowSharp
                 tetTreeMapper);
 
             Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Particle_Hits,
+                Aneurysm.Display.Particle_Splat_Hits,
                 hitMapper);
 
             Aneurysm.Singleton.SetMapper(
                 Aneurysm.Display.Wall_Shear_Stress,
                 stressMapper);
+
+            Aneurysm.Singleton.SetMapper(
+                Aneurysm.Display.Particle_Hits,
+                hitPointMapper);
 
             if (particleMapper != null)
                 Aneurysm.Singleton.SetMapper(

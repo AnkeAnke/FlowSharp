@@ -5,17 +5,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
+using System.IO;
 
 namespace FlowSharp
 {
-    
+
     class HitSampleMapper : DataMapper
     {
         UnstructuredGeometry _wallGrid;
         Mesh _wall;
-        //VectorData[] _timeSteps;
-        VectorData _timeStep;
-        string _splatName;
+        PointSet<DirectionPoint> _hits;
+        PointCloud _hitCloud;
 
         public enum HitMeasure
         {
@@ -36,69 +36,32 @@ namespace FlowSharp
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, _wallGrid.Vertices);
             BasePlane.PointSize = 0.1f;
 
-            
+            string filenameHits = Aneurysm.Singleton.CustomAttributeFilename("ParticleHits", Aneurysm.GeometryPart.Wall);
+            if (!File.Exists(filenameHits))
+                return;
+            float[] pointData = BinaryFile.ReadAllFileArrays<float>(filenameHits);
+            VectorBuffer pointsBuffer = new VectorBuffer(pointData, 7);
+            DirectionPoint[] points = new DirectionPoint[pointsBuffer.Length];
+            for (int p = 0; p < points.Length; ++p)
+                points[p] = new DirectionPoint(pointsBuffer[p]);
 
-            // Load Time Steps
-            
+            _hits = new PointSet<DirectionPoint>(points);
         }
 
         public List<Renderable> ShowWall()
         {
             List<Renderable> renderables = new List<Renderable>(16);
 
-            if (_lastSetting == null || CustomChanged)
+            if (_lastSetting == null)
             {
-                switch ((HitMeasure)Custom)
-                {
-                    case HitMeasure.Hits:
-                        _splatName = "SplatQuantity";
-                        break;
-                    case HitMeasure.Perpendicular:
-                        _splatName = "SplatPerpendicular";
-                        break;
-                    case HitMeasure.Shear:
-                        _splatName = "SplatShear";
-                        break;
-                    default:
-                        _splatName = "Error";
-                        break;
-                }
+                _wall = new Mesh(BasePlane, _wallGrid);
+                _hitCloud = new PointCloud(BasePlane, _hits.ToBasicSet());
             }
 
-            if (_lastSetting == null || LineXChanged || CustomChanged)
-            {
-                //_timeSteps = new VectorData[20];
-                //for (int s = 0; s < 20; s++)
-                //{
-                //    _timeSteps[s] = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{s * 10}", Aneurysm.GeometryPart.Wall), 1);
-                //    _timeSteps[s].ExtractMinMax();
-                //}
-                _timeStep = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{LineX * 10}", Aneurysm.GeometryPart.Wall), 1);
-                if (_timeStep == null)
-                    Console.WriteLine("Whaaat?");
-                _timeStep.ExtractMinMax();
-
-                _wall = new Mesh(
-                    BasePlane,
-                    _wallGrid,
-                    _timeStep,
-                    Mesh.RenderEffect.DEFAULT,
-                    Colormap);
-            }
-
-            if (_lastSetting == null ||
-                ColormapChanged ||
-                WindowStartChanged ||
-                WindowWidthChanged ||
-                LineXChanged ||
-                CustomChanged)
-            {
-                _wall.LowerBound = WindowStart;
-                _wall.UpperBound = WindowStart + WindowWidth;
-                _wall.UsedMap = Colormap;
-            }
+            
 
             renderables.Add(_wall);
+            renderables.Add(_hitCloud);
 
             var axes = BasePlane.GenerateOriginAxisGlyph();
             renderables.AddRange(axes);
@@ -135,59 +98,9 @@ namespace FlowSharp
         #region GUI
         public override bool IsUsed(Setting.Element element)
         {
-            switch (element)
-            {
-                case Setting.Element.Colormap:
-                //case Setting.Element.GeometryPart:
-                //case Setting.Element.IntegrationTime:
-                case Setting.Element.LineX:
-                case Setting.Element.WindowStart:
-                case Setting.Element.WindowWidth:
-                case Setting.Element.Custom:
-                    return true;
-                default:
-                    return false;
-            }
+            return false;
         }
 
-        public override string GetName(Setting.Element element)
-        {
-            switch (element)
-            {
-                case Setting.Element.LineX:
-                    return "Time Slice";
-                default:
-                    return base.GetName(element);
-            }
-        }
-
-        public override float? GetMin(Setting.Element element)
-        {
-            switch (element)
-            {
-                case Setting.Element.LineX:
-                    return 0;
-                case Setting.Element.WindowStart:
-                    return 0;
-                default:
-                    return base.GetMin(element);
-            }
-        }
-
-        public override float? GetMax(Setting.Element element)
-        {
-            switch (element)
-            {
-                case Setting.Element.LineX:
-                    return 20;
-                case Setting.Element.WindowWidth:
-                    return _timeStep?.MaxValue[0] ?? 20;
-                case Setting.Element.WindowStart:
-                    return _timeStep?.MaxValue[0] ?? 20;
-                default:
-                    return base.GetMin(element);
-            }
-        }
 
         public override IEnumerable GetCustomAttribute()
         {

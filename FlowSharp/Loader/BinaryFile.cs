@@ -79,7 +79,7 @@ namespace FlowSharp
                 BinaryFormatter formatter = new BinaryFormatter();
                 try
                 {
-                    List<T[]> arrays = new List<T[]>(1);
+                    List<T[]> arrays = new List<T[]>(4);
                     while(fs.Position < fs.Length)
                     {
                         arrays.Add((T[])formatter.Deserialize(fs));

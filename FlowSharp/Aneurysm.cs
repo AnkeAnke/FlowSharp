@@ -66,6 +66,7 @@ namespace FlowSharp
             None,
             View_Tetrahedrons,
             Particle_Hits,
+            Particle_Splat_Hits,
             Wall_Shear_Stress,
             Last_Particles
         }

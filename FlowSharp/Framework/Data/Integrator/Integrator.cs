@@ -74,11 +74,9 @@ namespace FlowSharp
             public virtual StreamLine<Vector> IntegrateLine(Vector pos, float? maxTime = null)
             {
                 StreamLine<Vector> line = new StreamLine<Vector>();
-                if (StepSize <= 0)
-                    Console.WriteLine("StepSize is " + StepSize);
 
                 var unsteadyField = (Field as VectorFieldUnsteady);
-                float timeBorder = maxTime ?? ((unsteadyField == null) ? float.MaxValue : unsteadyField.TimeEnd);
+                float timeBorder = maxTime ?? unsteadyField?.TimeEnd ?? float.MaxValue; // ((unsteadyField == null) ? float.MaxValue : unsteadyField.TimeEnd);
 
                 Vector point = new Vector(pos);
                 if (!Field.InTime(point.T))
@@ -96,7 +94,7 @@ namespace FlowSharp
                     // Make one step. The step depends on the explicit integrator.
                     line.Status = Step(ref point, out stepLength);
 
-                    if (point.T >= timeBorder)
+                    if (point.T > timeBorder)
                     {
                         line.Status = Status.TIME_BORDER;
                         break;
@@ -108,7 +106,7 @@ namespace FlowSharp
                         line.Points.Add(new Vector(point));
                     }
 
-                } while (line.Status == Status.OK && step < MaxNumSteps && point.T <= timeBorder);
+                } while (line.Status == Status.OK && step < MaxNumSteps && point.T < timeBorder);
                 //Console.WriteLine($"Status now {line.Status}");
                 if (line.Points.Count < 1)
                 {

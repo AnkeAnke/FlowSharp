@@ -49,7 +49,10 @@ namespace FlowSharp
 
             protected bool ScaleAndCheckVector(Vector sample)
             {
-                float length = Field.ToPosition(sample).LengthEuclidean();
+                Vector timeless = new Vector(sample);
+                if (Field.IsUnsteady())
+                    timeless.T = 0;
+                float length = Field.ToPosition(timeless).LengthEuclidean();
                 if (NormalizeField)
                     sample = sample / length;
                 sample *= StepSize * (int)Direction;

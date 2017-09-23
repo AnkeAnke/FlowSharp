@@ -123,6 +123,11 @@ namespace FlowSharp
                 _meshWall.UsedMap = Colormap;
             }
 
+
+            renderables.Add(_streamBall);
+            renderables.Add(_streamBallSelected);
+            renderables.Add(_meshWall);
+
             return renderables;
         }
 

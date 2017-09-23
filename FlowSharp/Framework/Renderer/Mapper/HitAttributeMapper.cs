@@ -17,6 +17,8 @@ namespace FlowSharp
         VectorData _timeStep;
         string _splatName;
 
+
+
         public enum HitMeasure
         {
             Hits,
@@ -36,10 +38,6 @@ namespace FlowSharp
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, _wallGrid.Vertices);
             BasePlane.PointSize = 0.1f;
 
-            
-
-            // Load Time Steps
-            
         }
 
         public List<Renderable> ShowWall()
@@ -73,7 +71,7 @@ namespace FlowSharp
                 //    _timeSteps[s] = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{s * 10}", Aneurysm.GeometryPart.Wall), 1);
                 //    _timeSteps[s].ExtractMinMax();
                 //}
-                _timeStep = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{LineX * 10}", Aneurysm.GeometryPart.Wall), 1);
+                _timeStep = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{LineX}", Aneurysm.GeometryPart.Wall), 1);
                 if (_timeStep == null)
                     Console.WriteLine("Whaaat?");
                 _timeStep.ExtractMinMax();
