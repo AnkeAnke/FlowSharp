@@ -47,7 +47,7 @@ namespace FlowSharp
 
             stressMapper = new WallShearMapper(basePlane);
 
-            hitPointMapper = new HitSampleMapper(basePlane);
+            //hitPointMapper = new HitSampleMapper(basePlane);
 
             IntegrationMapper.ComputeChunkSizeFromMemory();
             particleMapper = new ParticleMapper(basePlane);
@@ -69,6 +69,7 @@ namespace FlowSharp
                 Aneurysm.Display.Wall_Shear_Stress,
                 stressMapper);
 
+            if (hitPointMapper != null)
             Aneurysm.Singleton.SetMapper(
                 Aneurysm.Display.Particle_Hits,
                 hitPointMapper);

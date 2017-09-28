@@ -57,7 +57,7 @@ namespace FlowSharp
                     sample = sample / length;
                 sample *= StepSize * (int)Direction;
 
-                if (length < EpsCriticalPoint)
+                if (length <= EpsCriticalPoint)
                     return false;
 
                 return true;

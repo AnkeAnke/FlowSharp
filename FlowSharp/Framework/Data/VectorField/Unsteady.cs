@@ -15,9 +15,10 @@ namespace FlowSharp
 
         public override bool InTime(float t)
         {
-            float time = t - (float)(TimeOrigin??0f);
-            time /= TimeScale;
-            return time >= 0 && time < Size.T - 1;
+            return t >= TimeOrigin && t < TimeEnd;
+            //float time = t - (float)(TimeOrigin??0f);
+            //time /= TimeScale;
+            //return time >= 0 && time < Size.T - 1;
         }
 
         public float? TimeOrigin

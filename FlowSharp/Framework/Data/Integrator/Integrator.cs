@@ -65,7 +65,7 @@ namespace FlowSharp
                 line4.LineLength = streamline.LineLength;
                 if (streamline.Points.Count > 0)
                     line4.EndPoint = streamline.Points.Last();
-                else if(line4.Status == Status.TIME_BORDER)
+                else //if(line4.Status == Status.TIME_BORDER)
                     line4.EndPoint = pos;
 
                 return line4;
@@ -112,6 +112,7 @@ namespace FlowSharp
                 {
                     line.Points.Clear();
                     line.LineLength = 0;
+                    line.Status = Status.CP;
                     return line;
                 }
 
@@ -186,9 +187,6 @@ namespace FlowSharp
 
             public void IntegrateFurther(LineSet positions, float? maxTime = null)
             {
-                Debug.Assert(Field.NumVectorDimensions <= 4);
-
-                //int validPoints = 0;
                 Parallel.For(0, positions.Length, index =>
                 //for (int index = 0; index < positions.Length; ++index)
                 {

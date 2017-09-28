@@ -50,7 +50,7 @@ namespace FlowSharp
             integrator.StepSize = _grid.CellSizeReference / 2;
             integrator.NormalizeField = true;
             integrator.MaxNumSteps = 1000000;
-            integrator.EpsCriticalPoint = 0;
+            integrator.EpsCriticalPoint = 0.00000f;
 
             // Load all inlet velocity time steps to sample initial speed.
             LoaderEnsight inletAttributeLoader = new LoaderEnsight(Aneurysm.GeometryPart.Inlet);

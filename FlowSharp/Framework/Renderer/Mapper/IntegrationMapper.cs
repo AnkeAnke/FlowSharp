@@ -58,14 +58,14 @@ namespace FlowSharp
             List<Vector> validPoints = set.GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
 
             //Console.WriteLine($"=== {validPoints.Count} Remaining Lines");
-            while (validPoints.Count > 0 && startStep < 400)
+            while (validPoints.Count > 0 && startStep < 300)
             {
                 Console.WriteLine($"=== {validPoints.Count} Remaining Lines\n\tTook {timeIntegrate.Elapsed} so far");
 
                 for (int l = 0; l < set.Lines.Length; ++l)
                 {
                     if (set.Lines[l].Status == VectorField.Integrator.Status.TIME_BORDER)
-                        Console.WriteLine($"\t\t{l}: Time {set[l].EndPoint?.T.ToString() ?? "None"}, length so far {set[l].Length}, pos {set[l].EndPoint.SubVec(3)}");
+                        Console.WriteLine($"\t\t{l}: Time {set[l].EndPoint?.T.ToString() ?? "None"}, length so far {set[l].Length}, pos {set[l].EndPoint}");
                 }
 
                 integrator.Field = LoadToVectorField(grid, startStep);
