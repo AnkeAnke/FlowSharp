@@ -46,6 +46,25 @@ namespace FlowSharp
                 points[p] = new DirectionPoint(pointsBuffer[p]);
 
             _hits = new PointSet<DirectionPoint>(points);
+
+            for (int i = 0; i < _hits.Length; ++i)
+                if (_hits[i].Position.W > 5)
+                {
+                    _hits[i].Color = Vector3.UnitX;
+                    _hits[i].Radius *= 0.8f;
+                    Console.WriteLine($"Position at {i}: {_hits[i].Position} -> {_hits[i].Direction}");
+                }
+            //_hits[26].Color = Vector3.UnitX;
+            //_hits[33].Color = Vector3.UnitX;
+            //_hits[45].Color = Vector3.UnitX;
+            //_hits[48].Color = Vector3.UnitX;
+            //_hits[58].Color = Vector3.UnitX;
+
+            //Console.WriteLine($"Position at 26: {_hits[26].Position} -> {_hits[26].Direction}");
+            //Console.WriteLine($"Position at 33: {_hits[33].Position} -> {_hits[33].Direction}");
+            //Console.WriteLine($"Position at 45: {_hits[45].Position} -> {_hits[45].Direction}");
+            //Console.WriteLine($"Position at 48: {_hits[48].Position} -> {_hits[48].Direction}");
+            //Console.WriteLine($"Position at 58: {_hits[58].Position} -> {_hits[58].Direction}");
         }
 
         public List<Renderable> ShowWall()

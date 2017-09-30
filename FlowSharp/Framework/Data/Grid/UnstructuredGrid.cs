@@ -146,7 +146,7 @@ namespace FlowSharp
         }
 
         #region Sample
-        static Random RandomSampler = new Random(1337);
+        static Random RandomSampler = new Random();
         public PointSet<DirectionPoint> SampleRandom(int numSamples, VectorData data)
         {
             DirectionPoint[] positions = new DirectionPoint[numSamples];
@@ -167,6 +167,8 @@ namespace FlowSharp
                 }
                 pos /= barySum;
                 dataSample /= barySum;
+
+                pos += dataSample * 0.0001f;
                 positions[sample] = new DirectionPoint((Vector4)pos, (Vector3)dataSample);
             }
             return new PointSet<DirectionPoint>(positions);
