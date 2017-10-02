@@ -21,6 +21,8 @@ namespace FlowSharp
             NormalStress_Sample,
             ShearStress_Jacobi,
             NormalStress_Jacobi,
+            ShearStress_TimeDerivative,
+            NormalStress_TimeDerivative,
         }
 
         Mesh _wall;
@@ -56,9 +58,6 @@ namespace FlowSharp
 
 
             _attributesStress = new VectorData[Enum.GetValues(typeof(ShearMeasure)).Length];
-
-            //foreach (VectorData data in _attributesStress)
-            //    data.ExtractMinMax();
         }
 
         public List<Renderable> ShowWall()
@@ -174,8 +173,11 @@ namespace FlowSharp
             // Try to load.
             string filenameSample = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressSample_{TIMESTEP}",  Aneurysm.GeometryPart.Wall);
             string filenameJacobi = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
+            string filenameTime = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressTime_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
+
             string filenameSampleNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressSample_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
             string filenameJacobiNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
+            string filenameTimeNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressTime_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
 
             _attributesStress[(int)ShearMeasure.ShearStress_Sample] =
                 BinaryFile.ReadFile(filenameSample, 1);
@@ -183,11 +185,19 @@ namespace FlowSharp
             _attributesStress[(int)ShearMeasure.ShearStress_Jacobi] =
                 BinaryFile.ReadFile(filenameJacobi, 1);
 
+            _attributesStress[(int)ShearMeasure.ShearStress_TimeDerivative] =
+                BinaryFile.ReadFile(filenameTime, 1);
+
+
+
             _attributesStress[(int)ShearMeasure.NormalStress_Sample] =
                 BinaryFile.ReadFile(filenameSampleNormal, 1);
 
             _attributesStress[(int)ShearMeasure.NormalStress_Jacobi] =
                 BinaryFile.ReadFile(filenameJacobiNormal, 1);
+
+            _attributesStress[(int)ShearMeasure.NormalStress_Jacobi] =
+                BinaryFile.ReadFile(filenameTimeNormal, 1);
 
             // Load the given WSS.
             LoaderEnsight loader = new LoaderEnsight(Aneurysm.GeometryPart.Wall);
@@ -209,11 +219,13 @@ namespace FlowSharp
             _attributesStress[(int)ShearMeasure.ShearStress_Jacobi] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
 
+
             _attributesStress[(int)ShearMeasure.NormalStress_Sample] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
 
             _attributesStress[(int)ShearMeasure.NormalStress_Jacobi] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
 
 
             // Map tets to vertices.
@@ -308,6 +320,13 @@ namespace FlowSharp
                     }
                 }
             }
+
+
+            _attributesStress[(int)ShearMeasure.ShearStress_TimeDerivative] =
+                new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
+            _attributesStress[(int)ShearMeasure.NormalStress_TimeDerivative] =
+                new VectorBuffer(_geometryWall.Vertices.Length, 1);
 
             Console.WriteLine("Computed Stress Measures.");
             BinaryFile.WriteFile(filenameSample, _attributesStress[(int)ShearMeasure.ShearStress_Sample]);

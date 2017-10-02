@@ -23,7 +23,7 @@ namespace FlowSharp
             return new ScalarFieldUnsteady();
         }
 
-        public void LoadGridSizes()
+        public static void LoadGridSizes()
         {
             if (NumVerticesPerPart != null)
                 return;
@@ -419,7 +419,7 @@ namespace FlowSharp
         //    return new HexGrid(vertices, indices);
         //}
 
-        private string ReadBlock(BinaryReader reader)
+        private static string ReadBlock(BinaryReader reader)
         {
             char[] block = reader.ReadChars(80);
             int b = 0;

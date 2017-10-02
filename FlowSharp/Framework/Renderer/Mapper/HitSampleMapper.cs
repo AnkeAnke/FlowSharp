@@ -46,6 +46,8 @@ namespace FlowSharp
                 points[p] = new DirectionPoint(pointsBuffer[p]);
 
             _hits = new PointSet<DirectionPoint>(points);
+
+            Console.WriteLine($"===== # End Points {_hits.Length}");
         }
 
         public List<Renderable> ShowWall()
