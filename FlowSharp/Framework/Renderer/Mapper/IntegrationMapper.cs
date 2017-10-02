@@ -21,10 +21,14 @@ namespace FlowSharp
         Stopwatch timeIntegrate = new Stopwatch();
 
 
-        protected VectorField LoadToVectorField(FieldGrid grid, int startStep, VectorField last = null)
+        protected VectorField LoadToVectorField(FieldGrid grid, int startStep, VectorFieldUnsteady last = null)
         {
             if (last != null && STEPS_IN_MEMORY >= Aneurysm.Singleton.NumSteps - 1)
+            {
+                last.TimeOrigin = startStep * Aneurysm.Singleton.TimeScale;
                 return last;
+            }
+
             timeLoad.Start();
             LoaderEnsight attribLoader = new LoaderEnsight(Aneurysm.GeometryPart.Solid);
             
@@ -49,8 +53,8 @@ namespace FlowSharp
 
             // Load n time steps.
             // 0.005 is the timestep of the data. Overall they add up to 1 second.
-            integrator.Field = LoadToVectorField(grid, startStep);
-            startStep += integrator.Field.Size.T - 1;
+            integrator.Field = LoadToVectorField(grid, startStep, integrator.Field as VectorFieldUnsteady);
+            startStep += integrator.Field.Size.T - 2;
             timeIntegrate.Start();
             LineSet set = integrator.Integrate(points, false)[0];
             timeIntegrate.Stop();
@@ -58,17 +62,17 @@ namespace FlowSharp
             List<Vector> validPoints = set.GetEndPoints(VectorField.Integrator.Status.TIME_BORDER);
 
             //Console.WriteLine($"=== {validPoints.Count} Remaining Lines");
-            while (validPoints.Count > 0 && startStep < 300)
+            while (validPoints.Count > 0 && startStep < 1500)
             {
                 Console.WriteLine($"=== {validPoints.Count} Remaining Lines\n\tTook {timeIntegrate.Elapsed} so far");
 
-                for (int l = 0; l < set.Lines.Length; ++l)
-                {
-                    if (set.Lines[l].Status == VectorField.Integrator.Status.TIME_BORDER)
-                        Console.WriteLine($"\t\t{l}: Time {set[l].EndPoint?.T.ToString() ?? "None"}, length so far {set[l].Length}, pos {set[l].EndPoint}");
-                }
+                //for (int l = 0; l < set.Lines.Length; ++l)
+                //{
+                //    if (set.Lines[l].Status == VectorField.Integrator.Status.TIME_BORDER)
+                //        Console.WriteLine($"\t\t{l}: Time {set[l].EndPoint?.T.ToString() ?? "None"}, length so far {set[l].Length}, pos {set[l].EndPoint}");
+                //}
 
-                integrator.Field = LoadToVectorField(grid, startStep);
+                integrator.Field = LoadToVectorField(grid, startStep, integrator.Field as VectorFieldUnsteady);
                 startStep += integrator.Field.Size.T - 2;
                 timeIntegrate.Start();
                 integrator.IntegrateFurther(set);
@@ -87,9 +91,13 @@ namespace FlowSharp
             ulong totalMemory = ulong.Parse(CI.TotalPhysicalMemory.ToString());
 
             int filesize = Aneurysm.Singleton.StepInBytes;
-            ulong reservedSpace = 4ul * 1024 * 1024 * 1024;
+            ulong reservedSpace = 3ul * 1024 * 1024 * 1024;
             Console.WriteLine($"Total available memory is {string.Format("{0:0.##}", (double)totalMemory / 1024 / 1024 / 1024)} GB");
             STEPS_IN_MEMORY = (int)((totalMemory - reservedSpace) / (ulong)filesize); // Leave some space for integration.
+
+            // If there is enough space, only load the field once.
+            if (STEPS_IN_MEMORY >= Aneurysm.Singleton.NumSteps)
+                STEPS_IN_MEMORY = Aneurysm.Singleton.NumSteps + 2;
 
             //if (STEPS_IN_MEMORY < Aneurysm.Singleton.NumSteps - 1)
             //    STEPS_IN_MEMORY = 20;

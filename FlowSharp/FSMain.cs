@@ -29,7 +29,7 @@ namespace FlowSharp
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
 
-            int rupture = 1;
+            int rupture = 2;
 
             string mainFolder = $"C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_0{rupture}/";
             Aneurysm.Singleton.EnsightFolderFilename = mainFolder;
@@ -41,33 +41,37 @@ namespace FlowSharp
             Aneurysm.Singleton.OctreeFolderFilename = mainFolder;
             basePlane = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
-            tetTreeMapper = new AneurysmViewMapper(basePlane);
+            //tetTreeMapper = new AneurysmViewMapper(basePlane);
 
-            hitMapper = new HitAttributeMapper(basePlane);
+            //hitMapper = new HitAttributeMapper(basePlane);
 
-            stressMapper = new WallShearMapper(basePlane);
+            //stressMapper = new WallShearMapper(basePlane);
 
-            //hitPointMapper = new HitSampleMapper(basePlane);
 
             IntegrationMapper.ComputeChunkSizeFromMemory();
-            particleMapper = new ParticleMapper(basePlane);
+            particleMapper = new ParticleMapper(basePlane, 1000);
+
+//            hitPointMapper = new HitSampleMapper(basePlane);
 
             Console.WriteLine("Computed all data necessary.");
         }
 
         public static void CreateRenderables()
         {
-            Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.View_Tetrahedrons,
-                tetTreeMapper);
+            if (tetTreeMapper != null)
+                Aneurysm.Singleton.SetMapper(
+                    Aneurysm.Display.View_Tetrahedrons,
+                    tetTreeMapper);
 
-            Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Particle_Splat_Hits,
-                hitMapper);
+            if (tetTreeMapper != null)
+                Aneurysm.Singleton.SetMapper(
+                    Aneurysm.Display.Particle_Splat_Hits,
+                    hitMapper);
 
-            Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Wall_Shear_Stress,
-                stressMapper);
+            if (tetTreeMapper != null)
+                Aneurysm.Singleton.SetMapper(
+                    Aneurysm.Display.Wall_Shear_Stress,
+                    stressMapper);
 
             if (hitPointMapper != null)
             Aneurysm.Singleton.SetMapper(
