@@ -65,6 +65,10 @@ namespace FlowSharp
 
                     string l5_poss_ext = ReadBlock(reader);
 
+                    int numVerts = 0;
+                    string elementType;
+                    int l7_part_num;
+
                     while (reader.BaseStream.Position < reader.BaseStream.Length)
                     {
                         string l6_part;
@@ -75,10 +79,19 @@ namespace FlowSharp
                         else
                         {
                             l6_part = ReadBlock(reader);
-                            Debug.Assert(l6_part.Equals("part"), "Expected \'part\' identifier");
+
+                            if (!l6_part.Equals("part"))
+                            {
+                                numVerts = 0;
+                                elementType = l6_part;
+                                l7_part_num = maxIdx + 1;
+
+                                goto Append;
+                            }
+                            //Debug.Assert(l6_part.Equals("part"), "Expected \'part\' identifier");
                         }
 
-                        int l7_part_num = reader.ReadInt32();
+                        l7_part_num = reader.ReadInt32();
                         string l8_desc = ReadBlock(reader);
 
                         // Console.WriteLine(l8_desc + ", part nr. " + l7_part_num);
@@ -86,17 +99,14 @@ namespace FlowSharp
                         Debug.Assert(l9_cord.Equals("coordinates"), "Expected \'coordinates\' identifier.");
 
                         // Read vertex positions.
-                        int numVerts = reader.ReadInt32();
+                        numVerts = reader.ReadInt32();
 
                         reader.BaseStream.Position += numVerts * 4 * 3;
 
-                        //string elementType = ReadBlock(reader);
-                        //Console.WriteLine("Element Type: " + elementType);
-                        //if (!elementType.Equals("hexa8"))
-                        //    throw new NotImplementedException("Only hexagonal grids so far");
-
                         //int numVerticesPerCell = 8;
-                        string elementType = ReadBlock(reader);
+                        elementType = ReadBlock(reader);
+
+                        Append:
                         int numIdxPerCell = elementType[elementType.Length-1] - '0';
                         //if (!elementType.Equals("hexa8"))
                         //    throw new NotImplementedException("Only hexagonal grids so far");
@@ -105,7 +115,9 @@ namespace FlowSharp
 
                         l5_poss_ext = "";
 
-                        numVerticesPerPart.Add(l7_part_num, numVerts);
+                        if (numVerts > 0) 
+                            numVerticesPerPart.Add(l7_part_num, numVerts);
+                        //Console.WriteLine($"Part {l7_part_num}: {numVerts}");
                         maxIdx = Math.Max(maxIdx, l7_part_num);
                     }
                 }
@@ -217,6 +229,7 @@ namespace FlowSharp
 
         public VectorChannels LoadAttribute(Aneurysm.Variable variable, int timeslice)
         {
+            Console.WriteLine($"Loading {variable} at time {timeslice}");
             LoadGridSizes();
 
             string filename = Aneurysm.Singleton.EnsightVariableFileName(variable, timeslice);
@@ -246,7 +259,7 @@ namespace FlowSharp
                     while (currentPart != (int)_part)
                     {
                         string l1_poss_ext = ReadBlock(reader);
-                        Debug.Assert(l1_poss_ext.Equals("part"));
+                        //Debug.Assert(l1_poss_ext.Equals("part"));
 
                         currentPart = reader.ReadInt32();
 

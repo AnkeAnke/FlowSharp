@@ -57,9 +57,22 @@ namespace FlowSharp
             if (_lastSetting == null)
             {
                 _wall = new Mesh(BasePlane, _wallGrid);
-                _hitCloud = new PointCloud(BasePlane, _hits.ToBasicSet());
+               // _hitCloud = new PointCloud(BasePlane, _hits.ToBasicSet());
             }
 
+            if (_lastSetting == null || LineXChanged)
+            {
+                List<Point> selected = new List<Point>(_hits.Length);
+                //float timeX = Aneurysm.Singleton.TimeScale * LineX;
+                foreach (DirectionPoint p in _hits.Points)
+                //for (int pIdx = 0; pIdx < 100; ++pIdx)
+                {
+                    if (Math.Abs((p.Position.W / 0.05f) + 200 - LineX) % 200 <= 4)
+                        selected.Add(p);
+                }
+
+                _hitCloud = new PointCloud(BasePlane, new PointSet<Point>(selected.ToArray()));
+            }
             
 
             renderables.Add(_wall);
@@ -100,6 +113,8 @@ namespace FlowSharp
         #region GUI
         public override bool IsUsed(Setting.Element element)
         {
+            if (element == Setting.Element.LineX)
+                return true;
             return false;
         }
 

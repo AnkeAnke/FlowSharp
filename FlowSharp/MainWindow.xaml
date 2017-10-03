@@ -34,7 +34,7 @@
         </StackPanel>
         <StackPanel x:Name="LineXBlock" HorizontalAlignment="Right" Height="66" Margin="0,420,17.6,0" VerticalAlignment="Top" Width="259">
             <TextBlock x:Name="LineXText" HorizontalAlignment="Left" TextWrapping="Wrap" Text="Comparison Line Position X / Neighbor ID" VerticalAlignment="Top" Width="200" FontSize="10"/>
-            <Slider x:Name="LineSlider" Maximum="19" Minimum ="0" TickPlacement="BottomRight" TickFrequency="15" Height="32" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine" Margin="0,0,0.2,0"/>
+            <Slider x:Name="LineSlider" Maximum="199" Minimum ="0" TickPlacement="BottomRight" TickFrequency="10" Height="32" SmallChange="1" LargeChange="1" AutoToolTipPlacement="BottomRight" ValueChanged="OnChangeVerticalLine" Margin="0,0,0.2,0"/>
             <TextBox Text="{Binding Value, ElementName=LineSlider, UpdateSourceTrigger=PropertyChanged}" DockPanel.Dock="Left" TextAlignment="Right" Margin="96,0" />
         </StackPanel>
 

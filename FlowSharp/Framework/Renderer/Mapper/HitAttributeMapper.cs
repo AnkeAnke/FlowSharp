@@ -37,7 +37,6 @@ namespace FlowSharp
 
             this.BasePlane = Plane.FitToPoints(Vector3.Zero, 4, _wallGrid.Vertices);
             BasePlane.PointSize = 0.1f;
-
         }
 
         public List<Renderable> ShowWall()
@@ -73,7 +72,7 @@ namespace FlowSharp
                 //}
                 _timeStep = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{LineX}", Aneurysm.GeometryPart.Wall), 1);
                 if (_timeStep == null)
-                    Console.WriteLine("Whaaat?");
+                    Console.WriteLine($"Whaaat? Could not load file {_splatName}_{LineX}");
                 _timeStep.ExtractMinMax();
 
                 _wall = new Mesh(
