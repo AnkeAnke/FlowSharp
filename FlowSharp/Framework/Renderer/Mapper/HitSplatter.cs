@@ -33,7 +33,7 @@ namespace FlowSharp
 
 
 
-            SplatToAttribute(treeWall, normals, endPoints, treeWall.Extent.Max() * 0.05f, 3);
+            SplatToAttribute(treeWall, normals, endPoints, treeWall.Extent.Max() * 0.02f, 3);
 
             //timeWrite.Start();
             //BinaryFile.WriteFile(
@@ -72,101 +72,87 @@ namespace FlowSharp
             //    return;
             //}
 
-            VectorData[] canvasQuant      = new VectorData[Aneurysm.Singleton.NumSteps];
-            VectorData[] canvasAnglePerp  = new VectorData[Aneurysm.Singleton.NumSteps];
-            VectorData[] canvasAngleShear = new VectorData[Aneurysm.Singleton.NumSteps];
-
-            // Create a canvas for each measure/time.
-
+            // Create a canvas for each measure.
             LoaderEnsight.LoadGridSizes();
+            VectorData canvasQuant = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
+            VectorData canvasAnglePerp = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
+            VectorData canvasAngleShear = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
+            VectorData canvasVelocity = new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
 
-            for (int t = 0; t < canvasQuant.Length; ++t)
-            {
 
-                canvasQuant[t] = 
-                    new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
-
-                canvasAnglePerp[t] = 
-                    new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
-
-                canvasAngleShear[t] = 
-                    new VectorBuffer(LoaderEnsight.NumVerticesPerPart[(int)Aneurysm.GeometryPart.Wall], 1, 0);
-            }
 
             // Splat the points.
 
             Stopwatch watchSplat = new Stopwatch();
             watchSplat.Start();
 
-            Parallel.ForEach(points, pointVec =>
-            //for (int p = 0; p < points.Length; ++p)
-            //Parallel.For(0, 1000 /*points.Length/20*/, p =>
-            {
-               // VectorRef pointVec = points[p];
-                //if (p % (points.Length/100) == 0)
-                //    Console.WriteLine($"\tSplatted {(p * 100) / points.Length}%");
+            Stopwatch watchWrite = new Stopwatch();
 
-                //if (p % 100 == 0)
+            //Parallel.ForEach(points, pointVec =>
+            //for (int p = 0; p < points.Length/100; ++p)
+            for (int r  = 0; r < 100; ++r)
+            { 
+                Parallel.For(r * points.Length / 100,  Math.Min(points.Length, points.Length * (r+1)/100), p =>
+                {
+                    VectorRef pointVec = points[p];
+                    //if (p % (points.Length/100) == 0)
+                    //    Console.WriteLine($"\tSplatted {(p * 100) / points.Length}%");
+
+                    //if (p % 100 == 0)
                     //Console.WriteLine($"Splatted {p} / {points.Length}");
 
-                DirectionPoint point = new DirectionPoint(pointVec);
-                int firstTimeSlice = (int)(pointVec.T / Aneurysm.Singleton.TimeScale - radiusTime + Aneurysm.Singleton.NumSteps) %
-                                        Aneurysm.Singleton.NumSteps;
+                    DirectionPoint point = new DirectionPoint(pointVec);
 
-                //Console.WriteLine($"{p}:\n\tT = {pointVec.T}\n\tt = {pointVec.T / Aneurysm.Singleton.TimeScale}\n\ts = {firstTimeSlice}\n\tS = {firstTimeSlice + radiusTime * 2 + 1}");
+                    //Console.WriteLine($"{p}:\n\tT = {pointVec.T}\n\tt = {pointVec.T / Aneurysm.Singleton.TimeScale}\n\ts = {firstTimeSlice}\n\tS = {firstTimeSlice + radiusTime * 2 + 1}");
 
 
-                Dictionary<int, float> verts = attributeTree.FindWithinRadius((Vector3)pointVec, radiusSpatial);
-                foreach (var v in verts)
-                {
-                    float weightSpatial = v.Value / radiusSpatial;
-                    weightSpatial = 1.0f - weightSpatial * weightSpatial;
-
-                    Vector incident = new Vector(point.Direction);
-                    incident.Normalize();
-                    float angle = VectorRef.Dot(normals[v.Key], incident);
-                    angle = (float)(Math.Cosh(Math.Abs(angle)) / Math.PI);
-
-                    // Go over all time slices in time radius.
-                    for (int timeSlice = firstTimeSlice; timeSlice < firstTimeSlice + radiusTime * 2 + 1; ++timeSlice)
+                    Dictionary<int, float> verts = attributeTree.FindWithinRadius((Vector3)pointVec, radiusSpatial);
+                    foreach (var v in verts)
                     {
-                        float weightTime = Math.Abs(pointVec.T / Aneurysm.Singleton.TimeScale - (float)timeSlice) / radiusTime;
-                        float weightTotal = Math.Max(0, weightSpatial - weightTime);
+                        float weightSpatial = v.Value / radiusSpatial;
+                        weightSpatial = Math.Max(0, 1.0f - weightSpatial * weightSpatial);
+
+                        Vector incident = new Vector(point.Direction);
+                        incident.Normalize();
+                        float angle = Math.Abs(VectorRef.Dot(normals[v.Key], incident));
+                        angle = (float)(Math.Cosh(Math.Abs(angle)) / Math.PI);
 
 
                         //Console.WriteLine($"\tslice = {timeSlice}\n\ttdist = {Math.Abs(timeSlice - pointVec.T / Aneurysm.Singleton.TimeScale)}\n\tweigh = {weightTime}\n\ttotal = {weightTotal}\n");
-                        canvasQuant[timeSlice % Aneurysm.Singleton.NumSteps][v.Key] += (Vector)weightTotal;
+                        canvasQuant[v.Key] += (Vector)weightSpatial;
 
-                        canvasAnglePerp[timeSlice % Aneurysm.Singleton.NumSteps][v.Key] += (Vector)(weightTotal * angle);
-                        canvasAngleShear[timeSlice % Aneurysm.Singleton.NumSteps][v.Key] += (Vector)(weightTotal * (1.0f - angle));
+                        canvasAnglePerp[v.Key] += (Vector)(weightSpatial * angle);
+                        canvasAngleShear[v.Key] += (Vector)(weightSpatial * (1.0f - angle));
+                        canvasVelocity[v.Key] += (Vector)point.Direction.Length();
                     }
-                }
-            } );
+                } );
 
-            watchSplat.Stop();
-            Console.WriteLine($"===== Time to splat: {watchSplat.Elapsed}");
+                watchSplat.Stop();
+                Console.WriteLine($"===== Time to splat {r}/100: {watchSplat.Elapsed}");
 
-            // Write results to files.
+                // Write results to files.
 
-            Stopwatch watchWrite = new Stopwatch();
-            watchWrite.Start();
+                watchWrite.Start();
 
-            for (int t = 0; t < canvasQuant.Length; ++t)
-            {
-                BinaryFile.WriteFile(
-                    Aneurysm.Singleton.CustomAttributeFilename($"SplatQuantity_{t}", Aneurysm.GeometryPart.Wall),
-                    canvasQuant[t]);
 
                 BinaryFile.WriteFile(
-                    Aneurysm.Singleton.CustomAttributeFilename($"SplatPerpendicular_{t}", Aneurysm.GeometryPart.Wall),
-                    canvasAnglePerp[t]);
+                    Aneurysm.Singleton.CustomAttributeFilename($"SplatQuantity", Aneurysm.GeometryPart.Wall),
+                    canvasQuant);
 
                 BinaryFile.WriteFile(
-                    Aneurysm.Singleton.CustomAttributeFilename($"SplatShear_{t}", Aneurysm.GeometryPart.Wall),
-                    canvasAngleShear[t]);
+                    Aneurysm.Singleton.CustomAttributeFilename($"SplatPerpendicular", Aneurysm.GeometryPart.Wall),
+                    canvasAnglePerp);
+
+                BinaryFile.WriteFile(
+                    Aneurysm.Singleton.CustomAttributeFilename($"SplatShear", Aneurysm.GeometryPart.Wall),
+                    canvasAngleShear);
+
+                BinaryFile.WriteFile(
+                        Aneurysm.Singleton.CustomAttributeFilename($"SplatVelocity", Aneurysm.GeometryPart.Wall),
+                        canvasVelocity);
+
+                watchWrite.Stop();
             }
-
-            watchWrite.Stop();
             Console.WriteLine($"===== Time to write: {watchWrite.Elapsed}");
         }
 

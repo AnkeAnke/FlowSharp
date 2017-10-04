@@ -23,7 +23,8 @@ namespace FlowSharp
         {
             Hits,
             Shear,
-            Perpendicular
+            Perpendicular,
+            Velocity
         }
 
 
@@ -56,13 +57,16 @@ namespace FlowSharp
                     case HitMeasure.Shear:
                         _splatName = "SplatShear";
                         break;
+                    case HitMeasure.Velocity:
+                        _splatName = "SplatVelocity";
+                        break;
                     default:
                         _splatName = "Error";
                         break;
                 }
             }
 
-            if (_lastSetting == null || LineXChanged || CustomChanged)
+            if (_lastSetting == null || CustomChanged)
             {
                 //_timeSteps = new VectorData[20];
                 //for (int s = 0; s < 20; s++)
@@ -70,9 +74,9 @@ namespace FlowSharp
                 //    _timeSteps[s] = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{s * 10}", Aneurysm.GeometryPart.Wall), 1);
                 //    _timeSteps[s].ExtractMinMax();
                 //}
-                _timeStep = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{LineX}", Aneurysm.GeometryPart.Wall), 1);
+                _timeStep = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName, Aneurysm.GeometryPart.Wall), 1);
                 if (_timeStep == null)
-                    Console.WriteLine($"Whaaat? Could not load file {_splatName}_{LineX}");
+                    Console.WriteLine($"Whaaat? Could not load file {_splatName}");
                 _timeStep.ExtractMinMax();
 
                 _wall = new Mesh(
@@ -87,7 +91,6 @@ namespace FlowSharp
                 ColormapChanged ||
                 WindowStartChanged ||
                 WindowWidthChanged ||
-                LineXChanged ||
                 CustomChanged)
             {
                 _wall.LowerBound = WindowStart;
@@ -110,7 +113,7 @@ namespace FlowSharp
                 case Setting.Element.Colormap:
                 //case Setting.Element.GeometryPart:
                 //case Setting.Element.IntegrationTime:
-                case Setting.Element.LineX:
+                //case Setting.Element.LineX:
                 case Setting.Element.WindowStart:
                 case Setting.Element.WindowWidth:
                 case Setting.Element.Custom:

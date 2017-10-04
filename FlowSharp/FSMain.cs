@@ -43,15 +43,16 @@ namespace FlowSharp
 
             //tetTreeMapper = new AneurysmViewMapper(basePlane);
 
-            //hitMapper = new HitAttributeMapper(basePlane);
 
             //stressMapper = new WallShearMapper(basePlane);
 
+            //IntegrationMapper.ComputeChunkSizeFromMemory();
+            //particleMapper = new ParticleMapper(basePlane, 1000);
 
-            IntegrationMapper.ComputeChunkSizeFromMemory();
-            particleMapper = new ParticleMapper(basePlane, 1000);
+            //hitPointMapper = new HitSampleMapper(basePlane);
 
-//            hitPointMapper = new HitSampleMapper(basePlane);
+            HitSplatter.SplatHits();
+            hitMapper = new HitAttributeMapper(basePlane);
 
             Console.WriteLine("Computed all data necessary.");
         }
@@ -63,20 +64,20 @@ namespace FlowSharp
                     Aneurysm.Display.View_Tetrahedrons,
                     tetTreeMapper);
 
-            if (tetTreeMapper != null)
+            if (hitMapper != null)
                 Aneurysm.Singleton.SetMapper(
                     Aneurysm.Display.Particle_Splat_Hits,
                     hitMapper);
 
-            if (tetTreeMapper != null)
+            if (stressMapper != null)
                 Aneurysm.Singleton.SetMapper(
                     Aneurysm.Display.Wall_Shear_Stress,
                     stressMapper);
 
             if (hitPointMapper != null)
-            Aneurysm.Singleton.SetMapper(
-                Aneurysm.Display.Particle_Hits,
-                hitPointMapper);
+                Aneurysm.Singleton.SetMapper(
+                    Aneurysm.Display.Particle_Hits,
+                    hitPointMapper);
 
             if (particleMapper != null)
                 Aneurysm.Singleton.SetMapper(
