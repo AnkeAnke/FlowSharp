@@ -68,6 +68,22 @@ namespace FlowSharp
 
         public abstract float[] GetData();
 
+        public delegate Vector LocalFunction(VectorRef a, VectorRef b);
+
+        public static VectorBuffer Apply(LocalFunction func, VectorData a, VectorData b)
+        {
+            return null;
+        }
+
+        public VectorData ApplyTo(LocalFunction func, VectorData other)
+        {
+            Parallel.For(0, Length, idx =>
+            {
+                this[idx] = func(this[idx], other[idx]);
+            });
+            return this;
+        }
+
         #region Enumerator
         public IEnumerator<VectorRef> GetEnumerator()
         {

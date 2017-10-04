@@ -78,7 +78,9 @@ namespace FlowSharp
             renderables.Add(_wall);
             renderables.Add(_hitCloud);
 
-            var axes = BasePlane.GenerateOriginAxisGlyph();
+            Plane cpy = new Plane(BasePlane);
+            cpy.PointSize *= 10;
+            var axes = cpy.GenerateOriginAxisGlyph();
             renderables.AddRange(axes);
 
             return renderables;

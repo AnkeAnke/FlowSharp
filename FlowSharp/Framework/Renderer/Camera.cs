@@ -29,6 +29,7 @@ namespace FlowSharp
         protected bool _changed = false;
         protected Constants _globals;
         protected Device _device;
+        protected bool _sphereCam = false;
         public Matrix View
         {
             get { return _globals.View; }
@@ -114,6 +115,10 @@ namespace FlowSharp
         { 
             Projection = Matrix.PerspectiveFovLH(_fov, _aspect, 0.0001f, 100000);
         }
+        public void SetSphereCam(bool sphere)
+        {
+            _sphereCam = sphere;
+        }
 
         // Movement factors.
         private readonly float rotationSpeed = 0.001f;
@@ -142,6 +147,14 @@ namespace FlowSharp
         /// Updates the Camera 
         /// </summary>
         public void Update(float passedTimeSinceLastFrame, Device device, DPFCanvas canvas)
+        {
+            if (_sphereCam)
+                UpdateSphere(passedTimeSinceLastFrame, device, canvas);
+            else
+                UpdateFree(passedTimeSinceLastFrame, device, canvas);
+        }
+        
+        public void UpdateFree(float passedTimeSinceLastFrame, Device device, DPFCanvas canvas)
         {
             KeyboardState state = keyboard.GetCurrentState();
             if (state.IsPressed(Key.R))
@@ -183,6 +196,61 @@ namespace FlowSharp
 
             // Compute view matrix.
             View = Matrix.LookAtLH(position, position + viewDirection, upVec);
+            UpdateResources(device);
+        }
+
+        float camDistance = 5;
+        public void UpdateSphere(float passedTimeSinceLastFrame, Device device, DPFCanvas canvas)
+        {
+            KeyboardState state = keyboard.GetCurrentState();
+            if (state.IsPressed(Key.R))
+                ResetCamera();
+
+            if (state.IsPressed(Key.P))
+            {
+                string filename = Path.Combine(Context.Singleton.SnapFileName, "Snape_" + Context.Singleton.EnsightFilename + ".png");
+                Context.Singleton.WPFWindow.Screenshot(filename);
+            }
+
+            // Map mouse movement to angles.
+            UpdateThetaPhiFromMouse(passedTimeSinceLastFrame, canvas);
+            
+
+            // Compute view direction from angles.
+            viewDirection = new Vector3((float)(System.Math.Cos(phi) * System.Math.Sin(theta)),
+                                        (float)(System.Math.Cos(theta)),
+                                        (float)(System.Math.Sin(phi) * System.Math.Sin(theta)));
+            // Compute up vector.
+            float theta2 = (float)theta + (float)System.Math.PI / 2.0f;
+            upVec = new Vector3((float)(System.Math.Cos(phi) * System.Math.Sin(theta2)),
+                                (float)(System.Math.Cos(theta2)),
+                                (float)(System.Math.Sin(phi) * System.Math.Sin(theta2)));
+            rightVec = Vector3.Cross(upVec, viewDirection);
+
+            // Update.
+            // Forward movement.
+            float forward = (state.IsPressed(Key.W) || state.IsPressed(Key.UpArrow) ? 1.0f : 0.0f) - (state.IsPressed(Key.S) || state.IsPressed(Key.DownArrow) ? 1.0f : 0.0f);
+            camDistance -= forward * forwardSpeed;
+
+            // Side movement.
+            float side = (state.IsPressed(Key.D) ? 1.0f : 0.0f) - (state.IsPressed(Key.A) ? 1.0f : 0.0f);
+            position += side * sideSpeed * rightVec;
+
+            // Upward movement.
+            float up = state.IsPressed(Key.Space) ? 1.0f : 0.0f - (state.IsPressed(Key.LeftAlt) ? 1.0f : 0.0f);
+            position += up * upSpeed * upVec;
+
+            // HAAAACKY
+            Vector3 center = Vector3.Zero;
+            if (Aneurysm.Singleton.Rupture == 3)
+                center = new Vector3(2, 1, 2);
+            if (Aneurysm.Singleton.Rupture == 2)
+                center = new Vector3(1.5f, 0.5f, 1.8f);
+            if (Aneurysm.Singleton.Rupture == 1)
+                center = new Vector3(3, 1, 2.2f);
+            position = center - viewDirection * camDistance;
+            // Compute view matrix.
+            View = Matrix.LookAtLH(position, center, upVec);
             UpdateResources(device);
         }
 

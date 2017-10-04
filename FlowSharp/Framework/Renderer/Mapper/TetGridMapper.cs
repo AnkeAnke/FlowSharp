@@ -260,10 +260,12 @@ namespace FlowSharp
             if (_vertices != null)
                 wire.Add(_vertices);
 
-            var axes = BasePlane.GenerateOriginAxisGlyph();
+            Plane cpy = new Plane(BasePlane);
+            cpy.PointSize *= 10;
+            var axes = cpy.GenerateOriginAxisGlyph();
             wire.AddRange(axes);
-            return wire;
 
+            return wire;
         }
 
         private void SplatToAttribute(Octree attributeTree, VectorData normals, PointSet<DirectionPoint> points, float radius) 

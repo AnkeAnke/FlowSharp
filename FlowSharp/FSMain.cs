@@ -29,9 +29,9 @@ namespace FlowSharp
             Console.WriteLine("Output works.");
             Console.WriteLine("Using " + (Environment.Is64BitProcess ? "x64" : "x32"));
 
-            int rupture = 2;
+            Aneurysm.Singleton.Rupture = 3;
 
-            string mainFolder = $"C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_0{rupture}/";
+            string mainFolder = $"C:/Users/Anke/Documents/Vis/Data/Aneurysm/Rupture_0{Aneurysm.Singleton.Rupture}/";
             Aneurysm.Singleton.EnsightFolderFilename = mainFolder;
             Aneurysm.Singleton.EnsightGeoFilename = "ruptured.geo";
             Aneurysm.Singleton.SnapFileName = "C:/Users/Anke/Documents/Vis/Data/Aneurysm/Screenshots/";
@@ -41,18 +41,20 @@ namespace FlowSharp
             Aneurysm.Singleton.OctreeFolderFilename = mainFolder;
             basePlane = new Plane(Vector3.Zero, Vector3.UnitX, Vector3.UnitY, -Vector3.UnitZ, 10f/*10f/size*/, 10f);
 
-            //tetTreeMapper = new AneurysmViewMapper(basePlane);
+            tetTreeMapper = new AneurysmViewMapper(basePlane);
 
+            HitSplatter.SplatHits();
+            hitMapper = new HitAttributeMapper(basePlane);
 
-            //stressMapper = new WallShearMapper(basePlane);
+            stressMapper = new WallShearMapper(basePlane);
 
             //IntegrationMapper.ComputeChunkSizeFromMemory();
             //particleMapper = new ParticleMapper(basePlane, 1000);
 
-            //hitPointMapper = new HitSampleMapper(basePlane);
+            //IntegrationMapper.ComputeChunkSizeFromMemory();
+            //particleMapper = new ParticleMapper(basePlane, 1000);
 
-            HitSplatter.SplatHits();
-            hitMapper = new HitAttributeMapper(basePlane);
+            hitPointMapper = new HitSampleMapper(basePlane);
 
             Console.WriteLine("Computed all data necessary.");
         }

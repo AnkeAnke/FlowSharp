@@ -100,7 +100,9 @@ namespace FlowSharp
 
             renderables.Add(_wall);
 
-            var axes = BasePlane.GenerateOriginAxisGlyph();
+            Plane cpy = new Plane(BasePlane);
+            cpy.PointSize *= 10;
+            var axes = cpy.GenerateOriginAxisGlyph();
             renderables.AddRange(axes);
 
             return renderables;
@@ -152,11 +154,11 @@ namespace FlowSharp
             switch (element)
             {
                 case Setting.Element.LineX:
-                    return 20;
+                    return 200;
                 case Setting.Element.WindowWidth:
-                    return _timeStep?.MaxValue[0] ?? 20;
+                    return 200;// _timeStep?.MaxValue[0] ?? 200;
                 case Setting.Element.WindowStart:
-                    return _timeStep?.MaxValue[0] ?? 20;
+                    return 200;// _timeStep?.MaxValue[0] ?? 200;
                 default:
                     return base.GetMin(element);
             }

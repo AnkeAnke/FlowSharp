@@ -518,6 +518,9 @@ namespace FlowSharp
 
             // Front Face Culling.
             Renderer.Singleton.CullFront = cull.IsChecked ?? false;
+
+            // Spherical cam.
+            Renderer.Singleton.Camera.SetSphereCam(Sphere.IsChecked ?? false);
         }
     }
 }

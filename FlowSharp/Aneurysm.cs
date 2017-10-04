@@ -28,6 +28,8 @@ namespace FlowSharp
         public int NumSteps = 200;
         public int StepInBytes = 63000000;
         public float TimeScale { get { return 0.005f; } }
+
+        public int Rupture;
         /// <summary>
         /// Relevant variables of Read Sea file.
         /// </summary>
@@ -144,6 +146,8 @@ namespace FlowSharp
             string filename = $"ruptured ({slice+1}).";
             if (variable == Variable.velocity)
                 filename = filename+ "vel";
+            else if (Rupture == 3 && variable != Variable.pressure)
+                filename = filename + "scl" + ((int)variable - (1));
             else
                 filename = filename + "scl" + (int)variable;
             return filename;   

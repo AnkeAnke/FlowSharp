@@ -16,13 +16,13 @@ namespace FlowSharp
     {
         public enum ShearMeasure
         {
+            ShearStress_OscillatoryIndex,
             ShearStress_Given,
             ShearStress_Sample,
             NormalStress_Sample,
             ShearStress_Jacobi,
             NormalStress_Jacobi,
-            ShearStress_TimeDerivative,
-            NormalStress_TimeDerivative,
+            //NormalStress_TimeDerivative,
         }
 
         Mesh _wall;
@@ -58,6 +58,8 @@ namespace FlowSharp
 
 
             _attributesStress = new VectorData[Enum.GetValues(typeof(ShearMeasure)).Length];
+
+            LoadOrCreateOSI();
         }
 
         public List<Renderable> ShowWall()
@@ -66,14 +68,9 @@ namespace FlowSharp
 
             if (_lastSetting == null || CustomChanged || LineXChanged)
             {
-                //_timeSteps = new VectorData[20];
-                //for (int s = 0; s < 20; s++)
-                //{
-                //    _timeSteps[s] = BinaryFile.ReadFile(Aneurysm.Singleton.CustomAttributeFilename(_splatName + $"_{s * 10}", Aneurysm.GeometryPart.Wall), 1);
-                //    _timeSteps[s].ExtractMinMax();
-                //}
-                TIMESTEP = LineX * 10;
-                LoadOrCreateWallShearStress();
+                TIMESTEP = LineX;
+                if (Custom != (int)ShearMeasure.ShearStress_OscillatoryIndex)
+                    LoadOrCreateWallShearStress();
 
                 _attributeCurrent.ExtractMinMax();
 
@@ -99,7 +96,9 @@ namespace FlowSharp
 
             renderables.Add(_wall);
 
-            var axes = BasePlane.GenerateOriginAxisGlyph();
+            Plane cpy = new Plane(BasePlane);
+            cpy.PointSize *= 10;
+            var axes = cpy.GenerateOriginAxisGlyph();
             renderables.AddRange(axes);
 
             return renderables;
@@ -168,16 +167,62 @@ namespace FlowSharp
             return normals;
         }
 
+        private void LoadOrCreateOSI()
+        {
+            string filenameTime = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressTime", Aneurysm.GeometryPart.Wall);
+            //string filenameTimeNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressTime", Aneurysm.GeometryPart.Wall);
+
+            _attributesStress[(int)ShearMeasure.ShearStress_OscillatoryIndex] = BinaryFile.ReadFile(filenameTime, 1);
+            //_attributesStress[(int)ShearMeasure.NormalStress_TimeDerivative] = BinaryFile.ReadFile(filenameTime, 1);
+
+            if (_attributesStress[(int)ShearMeasure.ShearStress_OscillatoryIndex] != null)
+                //&& _attributesStress[(int)ShearMeasure.NormalStress_TimeDerivative] != null)
+                return;
+
+            Console.WriteLine("===== Computing Oscillatory Shear Index");
+            //_attributesStress[(int)ShearMeasure.ShearStress_TimeDerivative]  = new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            //_attributesStress[(int)ShearMeasure.NormalStress_TimeDerivative] = new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            var denomShearOSI = new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            //var denomNormalOSI = new VectorBuffer(_geometryWall.Vertices.Length, 1);
+            var nomShearOSI = new VectorBuffer(_geometryWall.Vertices.Length, 3);
+            //var nomNormalOSI = new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
+            VectorData.LocalFunction addFunc = (x, y) => { return x + y; };
+            VectorData.LocalFunction addNormFunc = (x, y) => { return x + y.LengthEuclidean(); };
+
+            for (int t = 0; t < Aneurysm.Singleton.NumSteps; ++t)
+            {
+                LoaderEnsight velo = new LoaderEnsight(Aneurysm.GeometryPart.Wall);
+                //VectorData givenShear = new VectorDataArray<VectorChannels>(
+                //    new VectorChannels[] {
+                //    velo.LoadAttribute(Aneurysm.Variable.x_wall_shear, t),
+                //    velo.LoadAttribute(Aneurysm.Variable.y_wall_shear, t),
+                //    velo.LoadAttribute(Aneurysm.Variable.z_wall_shear, t) });
+
+                VectorData givenShear = new VectorChannels(
+                   new float[][] {
+                    velo.LoadAttribute(Aneurysm.Variable.x_wall_shear, t).GetChannel(0),
+                    velo.LoadAttribute(Aneurysm.Variable.y_wall_shear, t).GetChannel(0),
+                    velo.LoadAttribute(Aneurysm.Variable.z_wall_shear, t).GetChannel(0) });
+                nomShearOSI.ApplyTo(addFunc, givenShear);
+                denomShearOSI.ApplyTo(addNormFunc, givenShear);
+            }
+
+            denomShearOSI.ApplyTo((x, y) => { return (Vector)(0.5f * (1.0f - y.LengthEuclidean() / x[0])); }, nomShearOSI);
+
+            _attributesStress[(int)ShearMeasure.ShearStress_OscillatoryIndex] = denomShearOSI;
+
+            BinaryFile.WriteFile(filenameTime, _attributesStress[(int)ShearMeasure.ShearStress_OscillatoryIndex]);
+        }
+
         private void LoadOrCreateWallShearStress()
         {
             // Try to load.
             string filenameSample = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressSample_{TIMESTEP}",  Aneurysm.GeometryPart.Wall);
             string filenameJacobi = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
-            string filenameTime = Aneurysm.Singleton.CustomAttributeFilename($"WallShearStressTime_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
 
             string filenameSampleNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressSample_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
             string filenameJacobiNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressJacobi_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
-            string filenameTimeNormal = Aneurysm.Singleton.CustomAttributeFilename($"WallNormalStressTime_{TIMESTEP}", Aneurysm.GeometryPart.Wall);
 
             _attributesStress[(int)ShearMeasure.ShearStress_Sample] =
                 BinaryFile.ReadFile(filenameSample, 1);
@@ -185,19 +230,11 @@ namespace FlowSharp
             _attributesStress[(int)ShearMeasure.ShearStress_Jacobi] =
                 BinaryFile.ReadFile(filenameJacobi, 1);
 
-            _attributesStress[(int)ShearMeasure.ShearStress_TimeDerivative] =
-                BinaryFile.ReadFile(filenameTime, 1);
-
-
-
             _attributesStress[(int)ShearMeasure.NormalStress_Sample] =
                 BinaryFile.ReadFile(filenameSampleNormal, 1);
 
             _attributesStress[(int)ShearMeasure.NormalStress_Jacobi] =
                 BinaryFile.ReadFile(filenameJacobiNormal, 1);
-
-            _attributesStress[(int)ShearMeasure.NormalStress_Jacobi] =
-                BinaryFile.ReadFile(filenameTimeNormal, 1);
 
             // Load the given WSS.
             LoaderEnsight loader = new LoaderEnsight(Aneurysm.GeometryPart.Wall);
@@ -218,6 +255,7 @@ namespace FlowSharp
 
             _attributesStress[(int)ShearMeasure.ShearStress_Jacobi] =
                 new VectorBuffer(_geometryWall.Vertices.Length, 1);
+
 
 
             _attributesStress[(int)ShearMeasure.NormalStress_Sample] =
@@ -320,13 +358,6 @@ namespace FlowSharp
                     }
                 }
             }
-
-
-            _attributesStress[(int)ShearMeasure.ShearStress_TimeDerivative] =
-                new VectorBuffer(_geometryWall.Vertices.Length, 1);
-
-            _attributesStress[(int)ShearMeasure.NormalStress_TimeDerivative] =
-                new VectorBuffer(_geometryWall.Vertices.Length, 1);
 
             Console.WriteLine("Computed Stress Measures.");
             BinaryFile.WriteFile(filenameSample, _attributesStress[(int)ShearMeasure.ShearStress_Sample]);

@@ -32,8 +32,10 @@ namespace FlowSharp
             //VectorData canvasAngleShear = LoadOrCreateEmptyWallCanvas($"SplatShear", TIMESTEP);
 
 
-
-            SplatToAttribute(treeWall, normals, endPoints, treeWall.Extent.Max() * 0.02f, 3);
+            float extent = treeWall.Extent.Max() * 0.02f;
+            if (Aneurysm.Singleton.Rupture == 3)
+                extent *= 2;
+            SplatToAttribute(treeWall, normals, endPoints, extent, 3);
 
             //timeWrite.Start();
             //BinaryFile.WriteFile(

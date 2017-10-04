@@ -144,8 +144,8 @@ namespace FlowSharp
             if (_test != null)
                 wire.Add(_test);
 
-            var axes = BasePlane.GenerateOriginAxisGlyph();
-            wire.AddRange(axes);
+            //var axes = BasePlane.GenerateOriginAxisGlyph();
+            //wire.AddRange(axes);
             return wire;
 
         }
