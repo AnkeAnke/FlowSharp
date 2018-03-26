@@ -57,6 +57,8 @@ namespace FlowSharp
         }
 
         public Graph2D() { _x = new float[0]; _fx = new float[0]; }
+
+        public Graph2D(int size) { _x = new float[size]; _fx = new float[size]; }
         public Graph2D(float[] x, float[] fx)
         {
             Set(x, fx);
@@ -210,7 +212,7 @@ namespace FlowSharp
         }
 
         public delegate float ValueOperator(float a, float b);
-        protected static Graph2D Operate(Graph2D g0, Graph2D g1, ValueOperator func)
+        public static Graph2D Operate(Graph2D g0, Graph2D g1, ValueOperator func)
         {
             if (g0.Length == 0 || g1.Length == 0)
             {
@@ -327,6 +329,39 @@ namespace FlowSharp
         {
             return Operate(g0, g1, (a, b) => (a + b));
         }
+
+        public static Graph2D operator *(Graph2D g0, Graph2D g1)
+        {
+            return Operate(g0, g1, (a, b) => (a * b));
+        }
+        public static Graph2D operator /(Graph2D g0, Graph2D g1)
+        {
+            return Operate(g0, g1, (a, b) => (a / b));
+        }
+
+        public static Graph2D operator /(Graph2D g, float f)
+        {
+            Graph2D result = new Graph2D(g);
+            for (int x = 0; x < result.Fx.Length; ++x)
+                result.Fx[x] /= f;
+
+            return result;
+        }
+
+        public static Graph2D operator *(Graph2D g, float f)
+        {
+            Graph2D result = new Graph2D(g);
+            for (int x = 0; x < result.Fx.Length; ++x)
+                result.Fx[x] *= f;
+
+            return result;
+        }
+        public static Graph2D operator *(float f, Graph2D g)
+        {
+            return g * f;
+        }
+
+
 
         public static Graph2D Distance(Graph2D a, Graph2D b, bool forward = true)
         {

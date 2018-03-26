@@ -180,7 +180,7 @@ namespace FlowSharp
             SquareMatrix vals, vecs;
             Eigenanalysis(out vals, out vecs);
 
-            return vals[0];
+            return new Vec2(vals.Ux, vals.Uy);
         }
 
         public SquareMatrix ToMat2x2()

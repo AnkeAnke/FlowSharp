@@ -177,6 +177,30 @@ namespace FlowSharp
             return new Tuple<FieldPlane, RectlinearGrid>(new FieldPlane(Plane, field, _currentSetting.Shader, _currentSetting.Colormap), grid);
         }
 
+        protected bool LoadGraph(string methodName, int id, out Graph2D[] graph, out LineSet graphData)
+        {
+            string corename = string.Format("{0}_{1}_{2}_{3}_{4}_{5}", RedSea.Singleton.DiskFileName, methodName, SliceTimeMain, LineX, Core, id);
+            if (System.IO.File.Exists(corename + ".line") && System.IO.File.Exists(corename + ".graph"))
+            {
+                GeometryWriter.ReadFromFile(corename + ".line", out graphData);
+                GeometryWriter.ReadFromFile(corename + ".graph", out graph);
+                Console.WriteLine("Reading disk file");
+                return true;
+            }
+
+            graphData = null;
+            graph = null;
+            return false;
+        }
+
+        protected void WriteGraph(string methodName, int id, Graph2D[] graph, LineSet graphData)
+        {
+            string corename = string.Format("{0}_{1}_{2}_{3}_{4}_{5}", RedSea.Singleton.DiskFileName, methodName, SliceTimeMain, LineX, Core, id);
+            GeometryWriter.WriteToFile(corename + ".line", graphData);
+            if (graph != null)
+                GeometryWriter.WriteToFile(corename + ".graph", graph);
+        }
+
         #region IntersectionPlane
         private float _planeOffsetZ_intern = 0;
         protected float _planeOffsetZ

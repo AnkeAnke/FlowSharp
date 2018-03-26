@@ -33,7 +33,7 @@ namespace FlowSharp
         /// <param name="yAxis"></param>
         /// <param name="scale">Scaling the field extent.</param>
         /// <param name="field"></param>
-        public LineBall(Plane plane, LineSet lines, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula, bool flatten = false)
+        public LineBall(Plane plane, LineSet lines, RenderEffect effect = RenderEffect.DEFAULT, Colormap colormap = Colormap.Parula, bool flatten = false, float flattenToTime = 0)
         {
             _thickness = lines.Thickness * plane.PointSize;
             _color = lines.Color;
@@ -47,7 +47,7 @@ namespace FlowSharp
             if (!flatten)
                 GenerateGeometry(plane, lines);
             else
-                GenerateGeometryFlatXY(plane, lines);
+                GenerateGeometryFlatXY(plane, lines, flattenToTime);
 
             //this._technique = _lineEffect.GetTechniqueByName("Render");
             UsedMap = colormap;
@@ -104,26 +104,34 @@ namespace FlowSharp
             stream.Dispose();
         }
 
-        protected void GenerateGeometryFlatXY(Plane plane, LineSet lines)
+        protected void GenerateGeometryFlatXY(Plane plane, LineSet lines, float toTime = 0)
         {
             // Write poition and UV-map data.
             var stream = new DataStream(_numVertices * _vertexSizeBytes, true, true);
             Vector3 zAxis = plane.ZAxis;
+
+            LowerBound = lines.Lines[0].Positions[0][2];
+            UpperBound = LowerBound;
+
+
             for (int index = 0; index < lines.Lines.Length; ++index)
             {
                 Line line = lines.Lines[index];
                 if (line.Length < 2)
                     continue;
                 Debug.Assert(line.Length == lines.Lines[index].Length);
-                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] ), line.Positions[0][2]));
+                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[0][0] + plane.YAxis * line.Positions[0][1] + plane.ZAxis * toTime), line.Positions[0][2]));
                 for (int point = 1; point < line.Positions.Length - 1; ++point)
                 {
-                    Vector4 pos = new Vector4(plane.Origin + (plane.XAxis * line.Positions[point][0] + plane.YAxis * line.Positions[point][1]), line.Positions[point][2]);
+                    Vector4 pos = new Vector4(plane.Origin + (plane.XAxis * line.Positions[point][0] + plane.YAxis * line.Positions[point][1] + plane.ZAxis*toTime), line.Positions[point][2]);
                     stream.Write(pos);
                     stream.Write(pos);
+
+                    LowerBound = Math.Min(LowerBound, line.Positions[point][2]);
+                    UpperBound = Math.Max(UpperBound, line.Positions[point][2]);
                 }
                 int end = line.Positions.Length - 1;
-                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[end][0] + plane.YAxis * line.Positions[end][1]), line.Positions[end][2]));
+                stream.Write(new Vector4(plane.Origin + (plane.XAxis * line.Positions[end][0] + plane.YAxis * line.Positions[end][1] + plane.ZAxis * toTime), line.Positions[end][2]));
             }
             stream.Position = 0;
 

@@ -18,6 +18,7 @@ namespace FlowSharp
     {
         protected Buffer _globalConstants;
         public Buffer ConstantBuffer { get { return _globalConstants; } }
+
         /// <summary>
         /// Were the globals ever touched since the last update?
         /// </summary>
@@ -76,11 +77,11 @@ namespace FlowSharp
             device.ImmediateContext.PixelShader.SetConstantBuffer(_globalConstants, 0);
 
 
-            DirectInput input = new DirectInput();
-            keyboard = new Keyboard(input);
-            mouse = new Mouse(input);
-            keyboard.Acquire();
-            mouse.Acquire();
+            Input = new DirectInput();
+            Keyboard = new Keyboard(Input);
+            Mouse = new Mouse(Input);
+            Keyboard.Acquire();
+            Mouse.Acquire();
             lastMouseX = Cursor.Position.X;
             lastMouseY = Cursor.Position.Y;
 
@@ -131,22 +132,29 @@ namespace FlowSharp
         // Save each time when computing.
         private Vector3 upVec, rightVec;
 
-        private Keyboard keyboard;
-        private Mouse mouse;
+        public Keyboard Keyboard { get; protected set; }
+        public Mouse Mouse { get; protected set; }
+        public DirectInput Input { get; protected set; }
         /// <summary>
         /// Updates the Camera 
         /// </summary>
         public void Update(float passedTimeSinceLastFrame, Device device, DPFCanvas canvas)
         {
-            KeyboardState state = keyboard.GetCurrentState();
+            KeyboardState state = Keyboard.GetCurrentState();
             if (state.IsPressed(Key.R))
                 ResetCamera();
 
             if (state.IsPressed(Key.C))
-            {
-
                 RedSea.Singleton.WPFWindow.Screenshot(RedSea.Singleton.SnapFileName + "Snape_" + RedSea.Singleton.Filename + ".png");
+
+            if (state.IsPressed(Key.F12))
+            {
+                for (int t = 0; t <= 80; t += 10)
+                {
+                    RedSea.Singleton.WPFWindow.SetSliceTimeMain(t);
+                }
             }
+
 
             // Map mouse movement to angles.
             UpdateThetaPhiFromMouse(passedTimeSinceLastFrame, canvas);
@@ -186,8 +194,8 @@ namespace FlowSharp
         /// </summary>
         protected void UpdateThetaPhiFromMouse(float passedTimeSinceLastFrame, DPFCanvas canvas)
         {
-            MouseState stateMouse = mouse.GetCurrentState();
-            KeyboardState stateKeyboard = keyboard.GetCurrentState();
+            MouseState stateMouse = Mouse.GetCurrentState();
+            KeyboardState stateKeyboard = Keyboard.GetCurrentState();
 
             // Left button pressed. Perform plane intersection.
             if (stateMouse.IsPressed(0))

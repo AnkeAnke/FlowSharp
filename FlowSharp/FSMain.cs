@@ -37,8 +37,8 @@ namespace FlowSharp
         static LocalDiffusionMapper mapperLocalDiffusion;
 
         //}            string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
-        static string locDataFolder = "E:/Anke/Dev/Data/Shaheen_8/s"; //"E:/Anke/Dev/Data/First/s";
-        static string locDataFolderSubstep = "B:/RedSeaSubsteps/s";
+        static string locDataFolder = "D:/EddyData/s"; //"E:/Anke/Dev/Data/First/s";
+        static string locDataFolderSubstep = "E:/RedSeaSubsteps/s";
         static string locFileName = "/Posterior_Diag.nc";
         static string locFolderName = "/advance_temp";
         //        string locWFileName = ".0000000108.data";
@@ -120,10 +120,11 @@ namespace FlowSharp
 
             RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
             RedSea.Singleton.GetFilename = RedSeaFilenames;
-            RedSea.Singleton.DonutFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Donut";
-            RedSea.Singleton.CoreFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Core";
-            RedSea.Singleton.SnapFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Screenshots/";
-            RedSea.Singleton.RingFileName = "C:/Users/anke/Documents/VIS/Eddy/Results/Rings/";
+            RedSea.Singleton.DonutFileName = "D:/KTH/Projects/EddyRedo/Data/Donut";
+            RedSea.Singleton.DiskFileName = "D:/KTH/Projects/EddyRedo/Data/Disks/Disk";
+            RedSea.Singleton.CoreFileName =  "D:/KTH/Projects/EddyRedo/Data/Core";
+            RedSea.Singleton.SnapFileName =  "D:/KTH/Projects/EddyRedo/Data/Screenshots/";
+            RedSea.Singleton.RingFileName = "D:/KTH/Projects/EddyRedo/Data/Rings/";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
             //LoaderNCF ncFile = RedSea.Singleton.GetLoaderNCF(0);
@@ -267,22 +268,9 @@ namespace FlowSharp
 
             RedSea.Singleton.SetMapper(RedSea.Display.PLAYGROUND, new PlaygroundMapper(redSea));
 
-            //FieldAnalysis.AlphaStableFFF = 0;
-            //var f = new VectorField(velocity, FieldAnalysis.StableFFF, 3, true);
-            //Renderer.Singleton.AddRenderable(new FieldPlane(redSea, f.GetSlice(0), FieldPlane.RenderEffect.LIC));
-            //Random rnd = new Random();
-            //SquareMatrix x = new SquareMatrix(2);
-            //x.m00 = /*(float)rnd.NextDouble();//*/0.8f;
-            //x.m10 = /*(float)rnd.NextDouble();//*/-0.8f;
-            //x.m01 = /*(float)rnd.NextDouble();//*/-0.3f;
-            //x.m11 = /*(float)rnd.NextDouble();//*/1.6f;
 
-            //SquareMatrix xT = x.Transposed();
-            //SquareMatrix cauchy =  xT* x;
-            //SquareMatrix e, lambda;
-            //cauchy.Eigenanalysis(out lambda, out e);
-
-            //Vector lambda2 = cauchy.EigenvaluesReal();
+            DataMapper editor = new ConcentricEditorMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.AREA_EDITOR, editor);
         }
     }
 }

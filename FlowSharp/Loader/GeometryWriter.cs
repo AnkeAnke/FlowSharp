@@ -40,6 +40,34 @@ namespace FlowSharp
             }
         }
 
+        public static void WriteToFile(string file, Graph2D[] lines)
+        {
+            // Open the file. If it already exists, overwrite.
+            using (FileStream fs = File.Open(@file, FileMode.Create))
+            {
+                using (BinaryWriter writer = new BinaryWriter(fs))
+                {
+                    // Write number of lines.
+                    writer.Write(lines.Length);
+
+                    // Write line lengths in order.
+                    foreach (Graph2D line in lines)
+                        writer.Write(line.Length);
+
+                    // Write positions.
+                    foreach (Graph2D line in lines)
+                    {
+                        for (int idx = 0; idx < line.Length; ++idx)
+                        {
+                            writer.Write(line.X[idx]);
+                            writer.Write(line.Fx[idx]);
+                        }
+                    }
+
+                }
+            }
+        }
+
         public static void WriteHeightCSV(string file, LineSet lines)
         {
             // Open the file. If it already exists, overwrite.
@@ -122,7 +150,7 @@ namespace FlowSharp
             {
                 Console.WriteLine(e.Message);
             }
-}
+        }
 
         public static void ReadFromFile(string file, out LineSet lineset)
         {
@@ -157,6 +185,33 @@ namespace FlowSharp
             }
 
             lineset = new LineSet(lines);
+        }
+
+        public static void ReadFromFile(string file, out Graph2D[] lines)
+        {
+            // Open the file.
+            using (FileStream fs = File.Open(@file, FileMode.Open))
+            {
+                using (BinaryReader reader = new BinaryReader(fs))
+                {
+                    // Read number of lines.
+                    lines = new Graph2D[reader.ReadInt32()];
+
+                    // Read line lengths in order.
+                    for (int l = 0; l < lines.Length; ++l)
+                        lines[l] = new Graph2D(reader.ReadInt32());// { Positions = new Vector3[reader.ReadInt32()] };
+
+                    // Read positions.
+                    foreach (Graph2D line in lines)
+                    {
+                        for (int v = 0; v < line.Length; ++v)
+                        {
+                            line.X[v] = reader.ReadSingle();
+                            line.Fx[v] = reader.ReadSingle();
+                        }
+                    }
+                }
+            }
         }
     }
 }

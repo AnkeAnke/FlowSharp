@@ -354,7 +354,6 @@ namespace FlowSharp
                 Vector next = pos;
                 if (CheckPosition(next) != Status.OK)
                 {
-                    //line.Points.Add((Vector3)pos);
                     return line;
                 }
                 Status status;
@@ -374,6 +373,21 @@ namespace FlowSharp
                         line.LineLength += stepLength;
                 } while (status == Status.OK && step < MaxNumSteps && next.T <= timeBorder);
 
+                // If the time was exceeded, take a small step at the end.
+                if (next.T > timeBorder && (status == Status.OK || status == Status.BORDER))
+                {
+
+                    if (StepBorderTime(point, timeBorder, out next, out stepLength))
+                    {
+                        line.Points.Add((Vector3)next);
+                        line.LineLength += stepLength;
+                        status = Status.TIME_BORDER;
+                    }
+
+                    if (next[1] < 0)
+                        Console.WriteLine("Wut?");
+                }
+
                 // If a border was hit, take a small step at the end.
                 if (status == Status.BORDER)
                 {
@@ -384,20 +398,6 @@ namespace FlowSharp
                     }
                 }
 
-                // If the time was exceeded, take a small step at the end.
-                if (status == Status.OK && next.T > timeBorder)
-                {
-                    status = Status.TIME_BORDER;
-                    
-                    if (StepBorderTime(point, timeBorder, out next, out stepLength))
-                    {
-                        line.Points.Add((Vector3)next);
-                        line.LineLength += stepLength;
-                    }
-
-                    if (next[1] < 0)
-                        Console.WriteLine("Wut?");
-                }
                 // Single points are confusing for everybody.
                 if (line.Points.Count < 2)
                 {
@@ -426,8 +426,8 @@ namespace FlowSharp
                     lines[index].Status = streamline.Status;
                     lines[index].LineLength = streamline.LineLength;
 
-                    if ((index) % (positions.Length / 10) == 0)
-                        Console.WriteLine("Integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index * 100) / positions.Length);
+                    //if ((index) % (positions.Length / 10) == 0)
+                    //    Console.WriteLine("Integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index * 100) / positions.Length);
                 }
                 result[0] = new LineSet(lines) { Color = (Vector3)Direction };
 
@@ -466,8 +466,8 @@ namespace FlowSharp
                         positions[index].Status = streamline.Status;
                         positions[index].LineLength += streamline.LineLength;
 
-                        if ((index) % (positions.Length / 10) == 0)
-                            Console.WriteLine("Further integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index*100) / positions.Length);
+                        //if ((index) % (positions.Length / 10) == 0)
+                        //    Console.WriteLine("Further integrated {0}/{1} lines. {2}%", index, positions.Length, ((float)index*100) / positions.Length);
                         //validPoints++;
                     }
                     //return new LineSet(lines) { Color = (Vector3)Direction };
@@ -594,15 +594,18 @@ namespace FlowSharp
                     dir.Normalize();
 
                 // How big is the smallest possible scale to hit a maximum border?
-                Vector timeSize = (Vector)Field.Size - new Vector(1, Field.Size.Length);
-                timeSize.T = timeBorder - 1;
-                float scale = ((timeSize - position) / dir).MinPos();
+                //Vector timeSize = (Vector)Field.Size + - new Vector(1, Field.Size.Length);
+                float timeSize = timeBorder;
+                float scale = (timeSize - position.T) / dir.T; ;
                 scale = Math.Min(scale, (position / dir).MinPos());
 
                 if (scale >= StepSize)
                     return false;
 
                 stepped += dir * scale;
+                stepped.T = timeSize;
+                if (CheckPosition(stepped) != Status.OK)
+                    return false;
                 stepLength = dir.LengthEuclidean() * scale;
                 return true;
             }
@@ -623,36 +626,40 @@ namespace FlowSharp
                 Vector v0 = Field.Sample(pos);
                 if (!ScaleAndCheckVector(v0, out v0))
                     return Status.CP;
-                status = CheckPosition(pos + v0 / 2);
+                stepped = pos + v0 / 2;
+                status = CheckPosition(stepped);
                 if (status != Status.OK)
                     return status;
 
                 // v1
-                Vector v1 = Field.Sample(pos + v0 / 2);
+                Vector v1 = Field.Sample(stepped);
                 if (!ScaleAndCheckVector(v1, out v1))
                     return Status.CP;
-                status = CheckPosition(pos + v1 / 2);
+                stepped = pos + v1 / 2;
+                status = CheckPosition(stepped);
                 if (status != Status.OK)
                     return status;
 
                 // v2
-                Vector v2 = Field.Sample(pos + v1 / 2);
+                Vector v2 = Field.Sample(stepped);
                 if (!ScaleAndCheckVector(v2, out v2))
                     return Status.CP;
-                status = CheckPosition(pos + v2);
+                stepped = pos + v2;
+                status = CheckPosition(stepped);
                 if (status != Status.OK)
                     return status;
 
                 // v3
-                Vector v3 = Field.Sample(pos + v2);
+                Vector v3 = Field.Sample(stepped);
                 if (!ScaleAndCheckVector(v3, out v3))
                     return Status.CP;
-                status = CheckPosition(pos + v2);
+                stepped = pos + v3;
+                status = CheckPosition(stepped);
                 if (status != Status.OK)
                     return status;
 
                 Vector dir = (v0 + (v1 + v2) * 2 + v3) / 6;
-                stepped += dir;
+                stepped = new Vector(pos) + dir;
                 stepLength = dir.LengthEuclidean();
 
                 return CheckPosition(stepped);

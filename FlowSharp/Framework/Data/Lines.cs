@@ -288,5 +288,20 @@ namespace FlowSharp
                     l.CutHeight(maxZ);
             }
         }
+
+        public Tuple<float, float> GetRange(int dim)
+        {
+            float minVal = float.MaxValue;
+            float maxVal = float.MinValue;
+
+            foreach (var line in Lines)
+                foreach (var point in line.Positions)
+                {
+                    minVal = Math.Min(minVal, point[dim]);
+                    maxVal = Math.Max(maxVal, point[dim]);
+                }
+
+            return new Tuple<float, float>(minVal, maxVal);
+        }
     }
 }

@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace FlowSharp
 {
+    /// <summary>
+    /// For rendering the semi circles in a perfectly round vector field
+    /// </summary>
     class PlaygroundMapper : SelectionMapper
     {
         private static int NUM_CELLS = 200;
@@ -145,12 +148,6 @@ namespace FlowSharp
 
                     for(int p = 0; p < newLine.Length; ++p)
                     {
-                    //    if(angle[0].X[p] > _velocity.Size.T - 1)
-                    //    {
-                    //        newLine.Resize(p);
-                    //        break;
-                    //    }
-                        
                         Vector3 sph = FieldAnalysis.SphericalPosition(_core[0], (float)(angle[0].X[p] * 0.5f / Math.PI), angle[0].Fx[p]);
                         newLine[p] = new Vector3(sph.X, sph.Y, angle[0].X[p] - angle[0].X[0]);
                     }

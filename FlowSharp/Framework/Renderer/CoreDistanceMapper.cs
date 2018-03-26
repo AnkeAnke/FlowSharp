@@ -18,6 +18,9 @@ namespace FlowSharp
         protected static int STEPS_IN_MEMORY = 18;
         protected static int TIME_RANGE = 40;
 
+        protected static int NEIGHBOORHOOD_CP = 10;
+        protected static int ROUGH_MULTIPLIER = 10;
+
         #region NotMap
 
         protected virtual int _numSeeds
@@ -47,6 +50,7 @@ namespace FlowSharp
 
         protected LineBall _pathlines;
         protected LineSet _pathlinesTime;
+        protected LineSet _graphData;
         protected LineBall _graph;
         protected Line[] _coreDistanceGraph;
         protected Line[] _coreAngleGraph;
@@ -73,6 +77,8 @@ namespace FlowSharp
         protected float _lastActiveGraphScale = -1;
 
         protected bool _selectionChanged = false;
+        //protected bool _clicked = false;
+
         #endregion Properties
         public CoreDistanceMapper(int everyNthField, Plane plane)
         {
@@ -97,6 +103,7 @@ namespace FlowSharp
             }
 
             _allBoundaryPoints = new List<Point>(10000);
+            _selectedCore = 0;
         }
         /// <summary>
         /// Load a stack of 30 field. This should be small enough to have memory free for other operations.
@@ -155,10 +162,10 @@ namespace FlowSharp
             //ScalarField height = file.LoadFieldSlice();
 
             // Find core lines in first time step.
-            VectorFieldUnsteady pathlineCores = new VectorFieldUnsteady(_velocity, FieldAnalysis.PathlineCore, 3);
+//            VectorFieldUnsteady pathlineCores = new VectorFieldUnsteady(_velocity, FieldAnalysis., 3);
             //_debugCore = pathlineCores.GetTimeSlice(0);
             //LoadPlane(member, (startSubstep * RedSea.Singleton.NumSubsteps) / _everyNthTimestep,  )
-            _coreOrigins = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(pathlineCores.GetTimeSlice(0), 4, 0.3f, 0.001f);
+            _coreOrigins = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2D(_velocity.GetTimeSlice(0), 4, 0.3f, 0.001f);
 
             // Take only points which are changed SLA and "unique".
             _coreOrigins = new CriticalPointSet2D(FilterCores(_coreOrigins.Points).ToArray());
@@ -186,8 +193,8 @@ namespace FlowSharp
             else
             {
                 // Re-compute cores.
-                ComputeCoreOrigins(MemberMain, 0);
-                _coreOrigins = new CriticalPointSet2D( FilterCores(_coreOrigins.Points, SLA_RELAXED_THRESHOLD).ToArray() );
+//                ComputeCoreOrigins(MemberMain, 0);
+                //_coreOrigins = new CriticalPointSet2D( FilterCores(_coreOrigins.Points, SLA_RELAXED_THRESHOLD).ToArray() );
                 // How often do we have to load a VF stack? 
                 int numBlocks = (int)Math.Ceiling((float)(RedSea.Singleton.NumSubstepsTotal - startSubstep) / (_everyNthTimestep * STEPS_IN_MEMORY));
 
@@ -210,10 +217,18 @@ namespace FlowSharp
                     LoadField(startStep, member, numSteps);
 
                     _coreIntegrator = FieldAnalysis.PathlineCoreIntegrator(_velocity, integratorStep);
+                    PointSet<Point> myFavoriteCore = new PointSet<Point>(new Point[] { new Point(new Vector3(463.7249f, 54.188f, 0)) });
+
                     if (block == 0)
-                        _cores = _coreIntegrator.Integrate(_coreOrigins)[0];
+                        _cores = _coreIntegrator.Integrate(myFavoriteCore)[0];
                     else
                         _coreIntegrator.IntegrateFurther(_cores);
+
+                    //                    _coreIntegrator = FieldAnalysis.PathlineCoreIntegrator(_velocity, integratorStep);
+                    //                    if (block == 0)
+                    //                        _cores = _coreIntegrator.Integrate(_coreOrigins)[0];
+                    //                    else
+                    //                        _coreIntegrator.IntegrateFurther(_cores);
                     //// Generate Core Field.
                     //VectorFieldUnsteady pathlineCores = new VectorFieldUnsteady(_velocity, FieldAnalysis.PathlineCore, 3);
 
@@ -294,6 +309,7 @@ namespace FlowSharp
                 //Array.Resize(ref lines, numLines);
                 //_cores = new LineSet(lines);
                 GeometryWriter.WriteToFile(corename, _cores);
+                Console.WriteLine("Wrote Core.");
             }
             _coreBall = new LineBall(_linePlane, _cores);
         }
@@ -342,7 +358,99 @@ namespace FlowSharp
             return selected;
         }
 
+        protected void LoadCoreBySelection(int member = 0, int startSubstep = 0)
+        {
+            int rad = NEIGHBOORHOOD_CP * (Core == CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 4 : 1);
+            string corename = RedSea.Singleton.CoreFileName + member + Core.ToString() + "cc.line";
+            if (System.IO.File.Exists(corename))
+            {
+                GeometryWriter.ReadFromFile(corename, out _cores);
+                LoadField(0, MemberMain, 1);
+            }
+            else
+            {
+                Vec3[] bases = new Vec3[] {
+                    new Vec3(463.1f, 53.6f, 0),
+                    new Vec3(366.4f, 34.4f, 0),
+                    new Vec3(230.1f, 218.6f, 0)};
+
+                if (Core == CoreAlgorithm.CLICK)
+                {
+                    Line[] lines = new Line[bases.Length];
+                    for (int b = 0; b < bases.Length; ++b)
+                        lines[b] = new Line() { Positions = new Vector3[] { (Vector3)bases[b], (Vector3)bases[b] + Vector3.UnitZ * (float)(RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep) } };
+
+                    _cores = new LineSet(lines);
+                    LoadField(0, MemberMain, 1);
+                    return;
+                }
+
+
+
+                int numSlices = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep;
+                int stepSize = Core != CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 1 : ROUGH_MULTIPLIER; // RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1;
+                _cores = new LineSet(new Line[bases.Length]);
+                for (int b = 0; b < _cores.Length; ++b)
+                {
+                    _cores[b] = new Line((int)Math.Ceiling((float)(numSlices - 1) / stepSize) + 1);
+                }
+
+                int idx = 0;
+                // Connect to other slices.
+                for (int slice = 0; slice < numSlices; slice += stepSize)
+                {
+                    LoadField(Math.Min(slice, numSlices - 2), member, 2);
+
+                    VectorField field = _velocity;
+                    if (Core == CoreAlgorithm.PATHLINE)
+                    {
+                        var acc = new VectorFieldUnsteady(_velocity, FieldAnalysis.Acceleration, 2);
+                        field = acc.GetTimeSlice(slice);
+                    }
+                    else
+                    {
+                        field = _velocity.GetTimeSlice(slice);
+                    }
+
+                    for (int b = 0; b < _cores.Length; ++b)
+                    {
+                        Vector3 lastCP = idx > 0 ? _cores[b][idx - 1] : (Vector3)bases[b];
+                        Int2 x = new Int2((int)lastCP.X - rad, (int)Math.Ceiling(lastCP.X) + rad);
+                        Int2 y = new Int2((int)lastCP.Y - rad, (int)Math.Ceiling(lastCP.Y) + rad);
+                        CriticalPointSet2D points = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2DRange(field, x, y);
+
+                        float minDist = float.MaxValue;
+                        CriticalPoint2D nearest = null;
+
+                        foreach (CriticalPoint2D point in points.Points)
+                        {
+                            float dist = (lastCP - point.Position).LengthSquared();
+                            if (dist < minDist)
+                            {
+                                minDist = dist;
+                                nearest = point;
+                            }
+                        }
+
+                        _cores[b][idx] = nearest?.Position ?? lastCP;
+                        _cores[b].Positions[idx].Z = slice;
+                    }
+                    idx++;
+
+                    // Reverse-engineered: Always include the last possible slice.
+                    if (slice + stepSize >= numSlices && slice + 1 < numSlices)
+                        slice = numSlices - 1 - stepSize;
+                }
+                GeometryWriter.WriteToFile(corename, _cores);
+            }
+        }
+
         public override void ClickSelection(Vector2 pos)
+        {
+            ChangeSelection(pos, true);
+        }
+
+        private void ChangeSelection(Vector2 pos, bool mapAfterwards = false)
         {
             Vector3 selection3D = Vector3.Zero;
             if (pos.X >= 0 && pos.Y >= 0 && pos.X < _velocity.Size[0] && pos.Y < _velocity.Size[1])
@@ -388,6 +496,8 @@ namespace FlowSharp
                 }
                 Debug.Assert(_selectedCore >= 0 && _selectedCore < _cores.Length, "The nearest core is invalid.");
 
+                if(mapAfterwards && _lastSetting != null)
+                    Map();
             }
             else
                 Console.WriteLine("Selection not within field range.");
@@ -405,11 +515,24 @@ namespace FlowSharp
             else
                 _pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT);
         }
-#endregion NotMap
+        
+
+        protected bool LoadGraph(string methodName, out Graph2D[] graph)
+        {
+            return LoadGraph(methodName, _selectedCore, out graph, out _graphData);
+        }
+
+        protected void WriteGraph(string methodName, Graph2D[] graph)
+        {
+            WriteGraph(methodName, _selectedCore, graph, _graphData);
+        }
+        #endregion NotMap
+
         public List<Renderable> Map()
         {
             List<Renderable> renderables = new List<Renderable>(3 + LineX);
             int numLines = LineX;
+            //_clicked = false;
 
             #region BackgroundPlanes
             if (_lastSetting == null ||
@@ -419,14 +542,14 @@ namespace FlowSharp
                 CoreChanged)
             {
 
-                if (_lastSetting == null  && _cores == null||
+                if ((_lastSetting == null  && _cores == null) ||
                     CoreChanged ||
                     MemberMainChanged)
                 {
                     // Trace / load cores.
-                    TraceCore(MemberMain, SliceTimeMain);
+                    TraceCore(MemberMain, SliceTimeMain); // HERE HERE HERE
                     if(_selectedCore >= 0)
-                        ClickSelection(_selection);
+                        ChangeSelection(_selection);
 
                     // Reset boundaries.
                     _boundaries = new LineSet(new Line[(RedSea.Singleton.NumSubstepsTotal * 2) / _everyNthTimestep]);
@@ -434,16 +557,15 @@ namespace FlowSharp
                         _boundaries[l] = new Line() { Positions = new Vector3[0] };
                 }
 
+                if (_lastSetting != null && _cores != null && SliceTimeMainChanged && _selectedCore >= 0)
+                    ChangeSelection(_selection);
+
                 // Computing which field to load as background.
                 int totalTime = Math.Min(RedSea.Singleton.NumSubstepsTotal, SliceTimeMain);
                 int time = (totalTime * _everyNthTimestep) / RedSea.Singleton.NumSubsteps;
                 int subtime = (totalTime * _everyNthTimestep) % RedSea.Singleton.NumSubsteps;
 
-                //LoadField(SliceTimeMain, MemberMain, 2);
-
-                //VectorFieldUnsteady pathlineLength = new VectorFieldUnsteady(_velocity, FieldAnalysis.AccelerationLength, 1);
-                //VectorFieldUnsteady correctorF = new VectorFieldUnsteady(pathlineLength, FieldAnalysis.NegativeGradient, 2);
-                _timeSlice = /*new FieldPlane(Plane, correctorF.GetTimeSlice(SliceTimeMain), Shader, Colormap);//*/LoadPlane(MemberMain, time, subtime, true);
+                _timeSlice = LoadPlane(MemberMain, time, subtime, true);
                 _intersectionPlane = _timeSlice.GetIntersectionPlane();
             }
 
@@ -475,10 +597,6 @@ namespace FlowSharp
             
             // First item in list: plane.
             renderables.Add(_timeSlice);
-            //if (_coreCloud != null)
-            //    renderables.Add(_coreCloud);
-            //if (_coreBall != null)
-            //    renderables.Add(_coreBall);
             #endregion BackgroundPlanes
 
             // Add Point to indicate clicked position.
@@ -612,9 +730,6 @@ namespace FlowSharp
 
             bool output = false;
 
-            //float acceptanceRatio = 0.9f;
-            //float maxTimeDistance = 0.5f;
-
             // ~~~~~~~~~~~ Variable Initializations ~~~~~~~~~~~~~ \\
 
             // Find out: Where do we want the boundary to be?
@@ -624,7 +739,6 @@ namespace FlowSharp
             float maxRadius = 12;
             float minRadius = 1;
             float radiusGrowth = StepSize * 3;
-            //float avgBoundaryTime = 0;
             float stepSizeStreamlines = StepSize;
 
             // At which point did we find the Boundary?
@@ -689,6 +803,7 @@ namespace FlowSharp
 
                     // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
                     #region IntegratePathlines
+
                     // Do we need to load a field first?
                     if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
                         LoadField(SliceTimeMain, MemberMain);
@@ -873,47 +988,6 @@ namespace FlowSharp
                 _graph = new LineBall(_graphPlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap);
             }
         }
-        //protected void IntegrateLines(Line core, int time = 0)
-        //{
-        //    int numLines = LineX;
-
-        //    // Compute starting positions.
-        //    Point[] circle = new Point[numLines];
-        //    float offset = AlphaStable;
-        //    float angleDiff = 2 * (float)(Math.PI / numLines);
-        //    for (int dir = 0; dir < numLines; ++dir)
-        //    {
-        //        float x = (float)(Math.Sin(angleDiff * dir + Math.PI / 2));
-        //        float y = (float)(Math.Cos(angleDiff * dir + Math.PI / 2));
-        //        circle[dir] = new Point() { Position = new Vector3(_selection.X + x * offset, _selection.Y + y * offset, SliceTimeMain) };
-        //    }
-
-
-        //    VectorField.Integrator integrator = VectorField.Integrator.CreateIntegrator(_velocity, IntegrationType);
-        //    integrator.StepSize = StepSize;
-
-        //    // Do we need to load new data/is the selected time step in the currently loaded field?
-        //    LineSet[] lineSets;
-        //    if (_velocity.TimeOrigin > time || _velocity.Size.T < time)
-        //        LoadField(time, MemberMain);
-        //    integrator.Field = _velocity;
-        //    lineSets = integrator.Integrate<Point>(new PointSet<Point>(circle));
-
-        //    while (_currentEndStep < RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1)
-        //    {
-        //        LoadField(_currentEndStep, MemberMain);
-        //        integrator.Field = _velocity;
-        //        integrator.IntegrateFurther(lineSets[0]);
-        //    }
-        //    integrator.Field = _velocity;
-        //    integrator.IntegrateFurther(lineSets[0]);
-
-        //    if ((SliceTimeMain * _everyNthTimestep) / RedSea.Singleton.NumSubsteps > (_velocity.TimeOrigin ?? 0))
-        //        LoadField(SliceTimeMain, MemberMain, 2);
-
-        //    //Console.WriteLine(lineSets[0].Lines[0].Positions.Last());
-        //    _pathlinesTime = new LineSet[] { lineSets[0] };
-        //}
 
         #region IntegrationAndGraph
 
@@ -993,34 +1067,6 @@ namespace FlowSharp
 
             _coreDistanceGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, _pathlinesTime, StepSize, _everyNthTimestep, true);
             _coreAngleGraph = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, _pathlinesTime, StepSize, _everyNthTimestep, false);
-            //    LineSet set = new LineSet(_coreAngleGraph);
-            //    GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //    GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
-
-            //    set = new LineSet(_coreDistancesGraph);
-            //    GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //    GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
-
-            //    remap = true;
-            //}
-
-            //// Compute and show statistics. Since we computed the lines anew, they are not yet flat!
-            //if ((remap || FlatChanged || SliceTimeReferenceChanged) &&
-            //    Graph)
-            //{
-            //    LineSet graph = new LineSet(_coreAngleGraph);
-            //    if (SliceTimeReference > SliceTimeMain)
-            //    {
-            //        int length = SliceTimeReference - SliceTimeMain;
-            //        length = (int)((float)length / StepSize + 0.5f);
-            //        graph = FieldAnalysis.CutLength(graph, length);
-            //    }
-            //    //var graph = //FieldAnalysis.BuildGraph(Plane, new LineSet(starLines), values, IntegrationTime, LineSetting, Colormap);
-            //    _graph = new LineBall[] { new LineBall(_graphPlane, graph, LineBall.RenderEffect.HEIGHT, Colormap/*, !Flat*/) };
-            //    //_graph = graph.Concat(_graph).ToArray();
-            //}
-            //else
-            //    _graph = null;
         }
         protected void ExtractCurrentBoundary(int time = 0)
         {
@@ -1751,13 +1797,9 @@ namespace FlowSharp
                 return;
             _tube = _tube.OrderBy(o => o[0].Z).ToList();
 
-            //_boundaryBallSpacetime = new LineBall(new Plane(_graphPlane, Vector3.UnitZ * 0.01f), _boundariesSpacetime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
             LineSet rings = new LineSet(_tube.ToArray());
             rings.Thickness *= 0.5f;
             _boundaryBallSpacetime = new LineBall(_linePlane, rings, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), false);
-
-            //if (_tube.Count > 1)
-            //    _specialObject = new Mesh(_linePlane, new TileSurface(rings), Mesh.RenderEffect.DEFAULT, Colormap);
         }
         protected Line Boundary(int timestep)
         {
@@ -1837,32 +1879,6 @@ namespace FlowSharp
 
         protected override void UpdateBoundary()
         {
-            //if(_lastSetting != null && (_rebuilt || FlatChanged || GraphChanged) && (Flat && !Graph))
-            //{
-            //    Graph2D[] dist = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph);
-            //    Plane zPlane = new Plane(_graphPlane, Vector3.UnitZ * 2);
-            //    _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            //    //               _graph = new LineBall(zPlane, FieldAnalysis.WriteGraphsToCircles(dist, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            //    _rebuilt = false;
-            //}
-            //if (_lastSetting != null && (IntegrationTimeChanged || _rebuilt || Graph && GraphChanged && Flat))
-            //    BuildGraph();
-                //_graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            // new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            //LineSet cutLines;
-            ////if (SliceTimeReference > SliceTimeMain)
-            ////{
-            ////    // _graph = cut version of _coreAngleGraph.
-            ////    int length = SliceTimeReference - SliceTimeMain;
-            ////    length = (int)((float)length / StepSize + 0.5f);
-            ////    cutLines = FieldAnalysis.CutLength(new LineSet(_coreDistanceGraph), length);
-            ////}
-            ////else
-            ////    cutLines = new LineSet(_coreDistanceGraph);
-
-            //cutLines = new LineSet(FieldAnalysis.);
-
-            //_graph = new LineBall[] { new LineBall(_graphPlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap) };
         }
 
         public override string GetName(Setting.Element element)
@@ -1896,23 +1912,19 @@ namespace FlowSharp
             Mapping = Map;
         }
 
-        public List<Renderable> ConcentricMapping()
-        {
-            var res = Map();
-
-
-            return res;
-        }
-        //protected Line IntegrateCircle(float angle, float radius, out Graph2D graph, float time = 0)
-        //{
-        //}
-
         public override void ClickSelection(Vector2 pos)
         {
             base.ClickSelection(pos);
             Console.WriteLine("Selected core: " + _selectedCore);
         }
 
+        /// <summary>
+        /// Computing angle and distance for each point. Map angle to pathline color.
+        /// </summary>
+        /// <param name="radii"></param>
+        /// <param name="angles"></param>
+        /// <param name="graph"></param>
+        /// <param name="time"></param>
         protected void IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, int time = 0)
         {
             // ~~~~~~~~~~~~~~~~~~ Initialize seed points. ~~~~~~~~~~~~~~~~~~~~ \\
@@ -1993,39 +2005,24 @@ namespace FlowSharp
 
             // ~~~~~~~~~~~~ Get Boundary ~~~~~~~~~~~~~~~~~~~~~~~~ \\
             #region GetBoundary
-            // The two needes functions.
-            //Line[] distances = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, true);
-            //Line[] angles = FieldAnalysis.GetGraph(_cores[_selectedCore], _selection, pathlines, (StepSize * _everyNthTimestep) / 24.0f, _everyNthTimestep, false);
             if(_selectedCore != 2)
                 graph = FieldAnalysis.GetDistanceToAngle(_cores[_selectedCore], _selection, _pathlinesTime);
             else
                 graph = FieldAnalysis.GetDistanceToAngle(_cores[_selectedCore], _selection, _pathlinesTime, true);
-            //graph[0].CutGraph((float)(Math.PI * 2));
-            //Array.Resize(ref pathlines[0].Positions, graph[0].Length);
+
             FieldAnalysis.WriteXToLinesetAttribute(_pathlinesTime, graph);
 
             #endregion GetBoundary
-            //LineSet[] subsets = new LineSet[angles.Length];
-            //for(int s = 0; s < subsets.Length; ++ s)
-            //{
-            //    subsets[s] = new LineSet(pathlines, s * radii.Length, radii.Length);
-            //}
-            //return subsets;
- //           return pathlines;
-
-
-
-            //            LineSet set = new LineSet(_coreAngleGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
-
-            //            set = new LineSet(_coreDistanceGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
         }
 
         protected override void FindBoundary()
         {
+            if (LoadGraph("Concentric", out _errorGraph))
+            {
+                _graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, Flat, SliceTimeMain);
+                return;
+            }
+
             float angleDiff = (float)((Math.PI * 2) / _numSeeds);
             float[] offsets = new float[LineX];
             float[] angles = new float[_numSeeds];
@@ -2045,15 +2042,17 @@ namespace FlowSharp
 
             _distanceDistance = FieldAnalysis.GraphDifferenceForwardBreaknonSmoothAngle(_distanceAngleGraph, TIME_RANGE > 0);
             BuildGraph();
+
+            WriteGraph("Concentric", _errorGraph);
         }
         protected void BuildGraph()
         {
-            float cutValue = 2000.0f;
+            float cutValue = 10.0f;
 
             // Compute error.
             if (LineX == 0)
                 return;
-            if(_errorGraph == null || _errorGraph.Length != _numSeeds + 1)
+            if(_errorGraph == null || _errorGraph.Length != _numSeeds)
                 _errorGraph = new Graph2D[_numSeeds];
             _allBoundaryPoints = new List<Point>();
             for (int seed = 0; seed < _numSeeds; ++seed)
@@ -2067,59 +2066,28 @@ namespace FlowSharp
                     int index = seed * LineX + e;
                     if (_distanceDistance[index].Length <= 1)
                     {
-                        fx[e] = -0.01f;
+                        fx[e] = 20;
                         x[e] = _distanceDistance[index].Offset;
                     }
                     else
                     {
-                        fx[e] = _distanceDistance[index].RelativeSumOver(IntegrationTime);// / _distanceDistance[index].Length;
+                        fx[e] = _distanceDistance[index].RelativeSumOver(IntegrationTime);
                         x[e] = _distanceDistance[index].Offset;
+                        // TODO TODO HERE HERE HERE LOOKY LOOKY
                         if (fx[e] > cutValue || float.IsNaN(fx[e]) || float.IsInfinity(fx[e]))
                         {
-                            fx[e] = 0.01f;
+                            fx[e] = 10; // 0.01f;
                         }
                     }
                 }
 
                 _errorGraph[seed] = new Graph2D(x, fx);
-                _errorGraph[seed].SmoothLaplacian(0.8f);
-                _errorGraph[seed].SmoothLaplacian(0.8f);
+///                _errorGraph[seed].SmoothLaplacian(0.8f);
+///                _errorGraph[seed].SmoothLaplacian(0.8f);
 
-                //var maxs = _errorGraph[seed].Maxima();
-                //float angle = (float)((float)seed * Math.PI * 2 / _errorGraph.Length);
-                //foreach (int p in maxs)
-                //{
-                //    float px = _errorGraph[seed].X[p];
-                //    _allBoundaryPoints.Add(new Point(new Vector3(_selection.X + (float)(Math.Sin(angle + Math.PI / 2)) * px, _selection.Y + (float)(Math.Cos(angle + Math.PI / 2)) * px, cutValue)) { Color = Vector3.UnitX });
-                //}
-
-                //int[] errorBound = FieldAnalysis.FindBoundaryInError(_errorGraph[seed]);
-                //foreach (int bound in errorBound)
-                //    _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + bound][0]));
             }
-            //_boundariesSpacetime = FieldAnalysis.FindBoundaryInErrors(_errorGraph, new Vector3(_selection, SliceTimeMain));
-            //_boundaryBallSpacetime = new LineBall(_linePlane, _boundariesSpacetime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap));
-
-            //if (errorBound >= 0)
-            //    _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + errorBound][0]));
-            //GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
-            //Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
-            ////   _graphPlane.ZAxis = Plane.ZAxis * WindowWidth;
-            //_boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
-            //LineSet lineCpy = new LineSet(_pathlinesTime);
-            //lineCpy.CutAllHeight(_repulsion);
-            //_pathlines = new LineBall(_linePlane, lineCpy, LineBall.RenderEffect.HEIGHT, Colormap, false);
-            //int errorBound = FieldAnalysis.FindBoundaryInError(_errorGraph[0]);
-            //_pathlinesTime.Cut(errorBound);
-            // ~~~~~~~~~~~~ Get Boundary for Rendering ~~~~~~~~~~~~ \\
-
-   //         _pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
-
-            // _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, Flat);
-            LineSet line = FieldAnalysis.FindBoundaryInErrors3(_errorGraph, new Vector3(_selection, SliceTimeMain));
-            line.Thickness *= 0.5f;
-            _boundaryBallSpacetime = new LineBall(_linePlane, line, LineBall.RenderEffect.HEIGHT, Colormap, false);
+            _graphData = FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
+            _graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, Flat);
 
             _rebuilt = false;
         }
@@ -2128,127 +2096,20 @@ namespace FlowSharp
         {
             if (_lastSetting != null && (_rebuilt || FlatChanged || GraphChanged))
             {
-                Graph2D[] dist = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph);
-                Plane zPlane = new Plane(_graphPlane, Vector3.UnitZ * 2);
-                _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, Flat);
+                // Plane zPlane = new Plane(_graphPlane, Vector3.UnitZ * 2);
+                if (_graphData != null)
+                    _graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, Flat, SliceTimeMain);//FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, Flat);
                 //               _graph = new LineBall(zPlane, FieldAnalysis.WriteGraphsToCircles(dist, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
                 _rebuilt = false;
             }
-            if (_lastSetting != null && (IntegrationTimeChanged || _rebuilt || Graph && GraphChanged && Flat))
+            if (_lastSetting != null && (_rebuilt || Graph && GraphChanged && Flat))
                 BuildGraph();
-            //_graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            // new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            //LineSet cutLines;
-            ////if (SliceTimeReference > SliceTimeMain)
-            ////{
-            ////    // _graph = cut version of _coreAngleGraph.
-            ////    int length = SliceTimeReference - SliceTimeMain;
-            ////    length = (int)((float)length / StepSize + 0.5f);
-            ////    cutLines = FieldAnalysis.CutLength(new LineSet(_coreDistanceGraph), length);
-            ////}
-            ////else
-            ////    cutLines = new LineSet(_coreDistanceGraph);
-
-            //cutLines = new LineSet(FieldAnalysis.);
-
-            //_graph = new LineBall[] { new LineBall(_graphPlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap) };
         }
 
-
-        static int NEIGHBOORHOOD_CP = 10;
-        static int ROUGH_MULTIPLIER = 10;
         protected override void TraceCore(int member = 0, int startSubstep = 0)
         {
-            int rad = NEIGHBOORHOOD_CP * (Core == CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 4 : 1);
-            string corename = RedSea.Singleton.CoreFileName + member + Core.ToString() + "cc.line";
-            if (System.IO.File.Exists(corename))
-            {
-                GeometryWriter.ReadFromFile(corename, out _cores);
-                LoadField(0, MemberMain, 1);
-            }
-            else
-            {
-                Vec3[] bases = new Vec3[] {
-                    new Vec3(463.1f, 53.6f, 0),
-                    new Vec3(366.4f, 34.4f, 0),
-                    new Vec3(230.1f, 218.6f, 0)};
-
-                if (Core == CoreAlgorithm.CLICK)
-                {
-                    Line[] lines = new Line[bases.Length];
-                    for(int b = 0; b < bases.Length; ++b)
-                        lines[b] = new Line() { Positions = new Vector3[] { (Vector3)bases[b], (Vector3)bases[b] + Vector3.UnitZ * (float)(RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep) } };
-
-                    _cores = new LineSet(lines);
-                    LoadField(0, MemberMain, 1);
-                    return;
-                }
-
-
-
-                int numSlices = RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep;
-                int stepSize = Core != CoreAlgorithm.ROUGH_STREAM_CONNECTION ? 1 : ROUGH_MULTIPLIER; // RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep - 1;
-                _cores = new LineSet(new Line[bases.Length]);
-                for (int b = 0; b < _cores.Length; ++b)
-                {
-                    _cores[b] = new Line((int)Math.Ceiling((float)(numSlices -1)/ stepSize)+1);
-                    //_cores[b][0] = (Vector3)bases[b];
-                }
-
-                int idx = 0;
-                // Connect to other slices.
-                for(int slice = 0; slice < numSlices; slice += stepSize)
-                {
-                    LoadField(Math.Min(slice, numSlices - 2), member, 2);
-
-                    VectorField field = _velocity;
-                    if (Core == CoreAlgorithm.PATHLINE)
-                    {
-                        var acc= new VectorFieldUnsteady(_velocity, FieldAnalysis.Acceleration, 2);
-                        field = acc.GetTimeSlice(slice);
-                    }
-                    else
-                    {
-                        field = _velocity.GetTimeSlice(slice);
-                    }
-
-                    for (int b = 0; b < _cores.Length; ++b)
-                    {
-                        Vector3 lastCP = idx > 0? _cores[b][idx-1] : (Vector3)bases[b];
-                        Int2 x = new Int2((int)lastCP.X - rad, (int)Math.Ceiling(lastCP.X) + rad);
-                        Int2 y = new Int2((int)lastCP.Y - rad, (int)Math.Ceiling(lastCP.Y) + rad);
-                        CriticalPointSet2D points = FieldAnalysis.ComputeCriticalPointsRegularSubdivision2DRange(field, x, y);
-
-                        float minDist = float.MaxValue;
-                        CriticalPoint2D nearest = null;
-
-                        foreach(CriticalPoint2D point in points.Points)
-                        {
-                            float dist = (lastCP - point.Position).LengthSquared();
-                            if(dist< minDist)
-                            {
-                                minDist = dist;
-                                nearest = point;
-                            }
-                        }
-
-                        _cores[b][idx] = nearest?.Position ?? lastCP;
-                        _cores[b].Positions[idx].Z = slice;
-                    }
-                    idx++;
-
-                    // Reverse-engineered: Always include the last possible slice.
-                    if (slice + stepSize >= numSlices && slice + 1 < numSlices)
-                        slice = numSlices - 1 - stepSize;
-                }
-                GeometryWriter.WriteToFile(corename, _cores);
-            }
+            LoadCoreBySelection(member, startSubstep);
         }
-
-        //private VectorField LoadAcceleration(int slice, int member, int numSlices)
-        //{
-        //    VectorField field = LoadField()
-        //}
 
         public override string GetName(Setting.Element element)
         {
@@ -2286,25 +2147,6 @@ namespace FlowSharp
 
             _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
 
-        }
-
-        protected override void UpdateBoundary()
-        {
-
-            //LineSet cutLines;
-            ////if (SliceTimeReference > SliceTimeMain)
-            ////{
-            ////    // _graph = cut version of _coreAngleGraph.
-            ////    int length = SliceTimeReference - SliceTimeMain;
-            ////    length = (int)((float)length / StepSize + 0.5f);
-            ////    cutLines = FieldAnalysis.CutLength(new LineSet(_coreDistanceGraph), length);
-            ////}
-            ////else
-            ////    cutLines = new LineSet(_coreDistanceGraph);
-
-            //cutLines = new LineSet(FieldAnalysis.);
-
-            //_graph = new LineBall[] { new LineBall(_graphPlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap) };
         }
     }
 
@@ -2418,7 +2260,7 @@ namespace FlowSharp
         {
             get
             {
-                return LineX;  //(int)(Math.PI * LineX * 2.0f);
+                return (int)(LineX * Math.PI);
             }
         }
         protected Graph2D[] _ftle;
@@ -2426,15 +2268,13 @@ namespace FlowSharp
         public MapperFTLE(int everyNthField, Plane plane) : base(everyNthField, plane)
         {
             Mapping = Map;
-            _linePlane = new Plane(_linePlane.Origin, _linePlane.XAxis, _linePlane.YAxis, _linePlane.ZAxis * 10, 1.0f);
+            _linePlane = new Plane(_linePlane.Origin, _linePlane.XAxis, _linePlane.YAxis, _linePlane.ZAxis, 1.0f);
         }
-
-        //protected Line IntegrateCircle(float angle, float radius, out Graph2D graph, float time = 0)
-        //{
-        //}
 
         protected LineSet IntegrateCircles(float[] radii, float[] angles, out Graph2D[] graph, float time = 0)
         {
+            float integrationLength = 40; // IntegrationTime;
+
             // ~~~~~~~~~~~~~~~~~~ Initialize seed points. ~~~~~~~~~~~~~~~~~~~~ \\
             PointSet<Point> circle = new PointSet<Point>(new Point[radii.Length * angles.Length * 4]);
             //float angleDiff = 2 * (float)(Math.PI / LineX);
@@ -2459,10 +2299,9 @@ namespace FlowSharp
             pathlineIntegrator.StepSize = StepSize;
             LineSet pathlines;
 
-            // Count out the runs for debugging.
-
             // ~~~~~~~~~~~~ Integrate Pathlines  ~~~~~~~~~~~~~~~~~~~~~~~~ \\
             #region IntegratePathlines
+
             // Do we need to load a field first?
             if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
                 LoadField(SliceTimeMain, MemberMain);
@@ -2470,40 +2309,39 @@ namespace FlowSharp
             // Integrate first few steps.
             pathlineIntegrator.Field = _velocity;
             Console.WriteLine("Starting integration of {0} pathlines", circle.Length);
-            pathlines = pathlineIntegrator.Integrate(circle, false, 10)[0];
+            pathlines = pathlineIntegrator.Integrate(circle, false, integrationLength)[0];
 
-            // Append integrated lines of next loaded vectorfield time slices.
-            //float timeEnd = (float)(12*15) / _everyNthTimestep + SliceTimeMain;
-            //while (_currentEndStep + 1 < timeEnd)
-            //{
-            //    // Don't load more steps than we need to!
-            //    int numSteps = (int)Math.Min(timeEnd - _currentEndStep, STEPS_IN_MEMORY);
-            //    pathlineIntegrator.Field = null;
-            //    LoadField(_currentEndStep, MemberMain, numSteps);
+            float timeLength = (int)Math.Min(Math.Ceiling(time + integrationLength), RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep);
+            while (_currentEndStep + 1 < timeLength)
+            {
+                // Don't load more steps than we need to!
+                int numSteps = (int)Math.Min(timeLength + 1 - _currentEndStep, STEPS_IN_MEMORY);
+                pathlineIntegrator.Field = null;
+                LoadField(_currentEndStep, MemberMain, numSteps);
 
-            //    // Integrate further.
-            //    pathlineIntegrator.Field = _velocity;
-            //    pathlineIntegrator.IntegrateFurther(pathlines);
-            //}
+                // Integrate further.
+                pathlineIntegrator.Field = _velocity;
+                pathlineIntegrator.IntegrateFurther(pathlines, timeLength);
+            }
+
             #endregion IntegratePathlines
+
             Console.WriteLine("Integrated all {0} pathlines", pathlines.Length);
-            graph = FieldAnalysis.ComputeFTLE2D(pathlines, new Vector3(_selection, time), angles, radii, time, IntegrationTime);
+
+            // Core algorithm.
+            graph = FieldAnalysis.ComputeFTLE2D(pathlines, new Vector3(_selection, time), angles, radii, time, timeLength - time);
 
             return pathlines;
-
-
-
-            //            LineSet set = new LineSet(_coreAngleGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Angle.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".angle", set);
-
-            //            set = new LineSet(_coreDistanceGraph);
-            //GeometryWriter.WriteHeightCSV(RedSea.Singleton.DonutFileName + "Distance.csv", set);
-            //            GeometryWriter.WriteToFile(RedSea.Singleton.DonutFileName + ".distance", set);
         }
 
         protected override void FindBoundary()
         {
+            if (LoadGraph("FTLE", out _ftle))
+            {
+                 _graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, Flat, SliceTimeMain);
+                return;
+            }
+
             float angleDiff = (float)((Math.PI * 2) / _numSeeds);
             float[] offsets = new float[LineX];
             float[] angles = new float[_numSeeds];
@@ -2521,53 +2359,29 @@ namespace FlowSharp
             _pathlinesTime = IntegrateCircles(offsets, angles, out _ftle, SliceTimeMain);
             _rebuilt = true;
 
-            //_distanceDistance = FieldAnalysis.GraphDifferenceForward(_distanceAngleGraph);
             BuildGraph();
+
+            WriteGraph("FTLE", _ftle);
         }
         protected void BuildGraph()
         {
             // Compute ftle.
             if (LineX == 0)
                 return;
-            //for (int seed = 0; seed < _numSeeds; ++seed)
-            //{
-            //    // Smaller field: the difference diminishes it by one line.
-            //    float[] fx = new float[LineX - 1];
-            //    float[] x = new float[LineX - 1];
-            //    for (int e = 0; e < fx.Length; ++e)
-            //    {
-            //        // Inbetween graphs, there is one useless one.
-            //        int index = seed * LineX + e;
-            //        if (_distanceDistance[index].Length <= 1)
-            //        {
-            //            fx[e] = float.MaxValue;
-            //            x[e] = _distanceDistance[index].Offset;
-            //        }
-            //        else
-            //        {
-            //            fx[e] = _distanceDistance[index].RelativeSumOver(IntegrationTime);// / _distanceDistance[index].Length;
-            //            x[e] = _distanceDistance[index].Offset;
-            //        }
-            //    }
 
-            //    _errorGraph[seed] = new Graph2D(x, fx);
-            //    int errorBound = FieldAnalysis.FindBoundaryInError(_errorGraph[seed]);
-            //    if (errorBound >= 0)
-            //        _allBoundaryPoints.Add(new Point(_pathlinesTime[seed * LineX + errorBound][0]));
-            //}
-            ////   GeometryWriter.WriteGraphCSV(RedSea.Singleton.DonutFileName + "Error.csv", _errorGraph);
-            //Console.WriteLine("Radii without boundary point: {0} of {1}", _numSeeds - _allBoundaryPoints.Count, _numSeeds);
+            _graphData = FieldAnalysis.WriteGraphToSun(_ftle, new Vector3(_selection.X, _selection.Y, 0));
+            _graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, Flat, SliceTimeMain);
 
-            //_boundaryCloud = new PointCloud(_graphPlane, new PointSet<Point>(_allBoundaryPoints.ToArray()));
-            ////int errorBound = FieldAnalysis.FindBoundaryInError(_errorGraph[0]);
-            ////_pathlinesTime.Cut(errorBound);
-            //// ~~~~~~~~~~~~ Get Boundary for Rendering ~~~~~~~~~~~~ \\
-            //_pathlinesTime.Thickness *= 0.1f;
-            //_pathlines = new LineBall(_linePlane, _pathlinesTime, LineBall.RenderEffect.HEIGHT, ColorMapping.GetComplementary(Colormap), Flat);
+            float min = float.MaxValue;
+            float max = float.MinValue;
+            foreach (var g in _ftle)
+                foreach (var fx in g.Fx)
+                {
+                    min = Math.Min(fx, min);
+                    max = Math.Max(fx, max);
+                }
 
-            //// _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            _graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_ftle, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, Flat);
-
+            //Console.WriteLine($"Min value: {0}\nMax value: {1}", min, max);
             _rebuilt = false;
         }
 
@@ -2575,27 +2389,19 @@ namespace FlowSharp
         {
             if (_lastSetting != null && (_rebuilt || FlatChanged || GraphChanged) && (Flat && !Graph))
             {
-                //               _graph = new LineBall(zPlane, FieldAnalysis.WriteGraphsToCircles(dist, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
                 _rebuilt = false;
             }
             if (_lastSetting != null && (FlatChanged || IntegrationTimeChanged || _rebuilt || Graph && GraphChanged && Flat))
                 BuildGraph();
-            //_graph = new LineBall(_graphPlane, FieldAnalysis.WriteGraphToSun(_errorGraph, new Vector3(_selection.X, _selection.Y, 0)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            // new LineBall(_graphPlane, FieldAnalysis.WriteGraphsToCircles(_distanceAngleGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain)), LineBall.RenderEffect.HEIGHT, Colormap, false);
-            //LineSet cutLines;
-            ////if (SliceTimeReference > SliceTimeMain)
-            ////{
-            ////    // _graph = cut version of _coreAngleGraph.
-            ////    int length = SliceTimeReference - SliceTimeMain;
-            ////    length = (int)((float)length / StepSize + 0.5f);
-            ////    cutLines = FieldAnalysis.CutLength(new LineSet(_coreDistanceGraph), length);
-            ////}
-            ////else
-            ////    cutLines = new LineSet(_coreDistanceGraph);
-
-            //cutLines = new LineSet(FieldAnalysis.);
-
-            //_graph = new LineBall[] { new LineBall(_graphPlane, cutLines, LineBall.RenderEffect.HEIGHT, Colormap) };
+        }
+        protected override void TraceCore(int member = 0, int startSubstep = 0)
+        {
+            LoadCoreBySelection(member, startSubstep);
+        }
+        public override void ClickSelection(Vector2 pos)
+        {
+            base.ClickSelection(pos);
+            Console.WriteLine("Selected core: " + _selectedCore);
         }
 
         public override string GetName(Setting.Element element)

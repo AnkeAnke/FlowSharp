@@ -107,7 +107,7 @@ namespace FlowSharp
             DropDownColormap.SelectedIndex = (int)Colormap.Parula;
 
             DropDownCore.ItemsSource = Enum.GetValues(typeof(DataMapper.CoreAlgorithm)).Cast<DataMapper.CoreAlgorithm>();
-            DropDownColormap.SelectedIndex = 0;
+            DropDownColormap.SelectedIndex = (int)DataMapper.CoreAlgorithm.ROUGH_STREAM_CONNECTION;
 
             VarX.ItemsSource = Enum.GetValues(typeof(DataMapper.Setting.Element)).Cast<DataMapper.Setting.Element>();
             VarX.SelectedIndex = 0;
@@ -119,6 +119,13 @@ namespace FlowSharp
             string dir = Directory.GetCurrentDirectory();
             b.UriSource = new Uri(dir + "/Framework/Renderer/Resources/Colormap" + "Parula" + ".png");
             b.EndInit();
+
+            DropDownCore.SelectedItem = (int)DataMapper.CoreAlgorithm.ROUGH_STREAM_CONNECTION;
+            _mapper.CurrentSetting.Core = DataMapper.CoreAlgorithm.ROUGH_STREAM_CONNECTION;
+            _mapper.CurrentSetting.IntegrationTime = 60;
+            _mapper.CurrentSetting.StepSize = 0.5f;
+            DropDownColormap.SelectedItem = (int)Colormap.Parula;
+            _mapper.CurrentSetting.Colormap = Colormap.Parula;
 
             ColormapView.Source = b;
         }
@@ -248,6 +255,13 @@ namespace FlowSharp
         {
             var comboBox = sender as ComboBox;
             _mapper.CurrentSetting.Tracking = (RedSea.DisplayTracking)(comboBox.SelectedItem as RedSea.DisplayTracking?);
+            UpdateRenderer();
+        }
+
+        public void SetSliceTimeMain(int time)
+        {
+            DropDownSlice0.SelectedItem = time;
+            _mapper.CurrentSetting.SliceTimeMain = time;
             UpdateRenderer();
         }
 

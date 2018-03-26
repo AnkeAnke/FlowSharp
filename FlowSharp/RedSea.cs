@@ -20,6 +20,7 @@ namespace FlowSharp
         public LoaderBuilderNCF GetLoaderNCF;
         public FilenameBuilder GetFilename;
         public string DonutFileName;
+        public string DiskFileName;
         public string CoreFileName;
         public string RingFileName;
         public string SnapFileName;
@@ -89,6 +90,7 @@ namespace FlowSharp
         {
             NONE,
             MEMBER_COMPARISON,
+            AREA_EDITOR,
             //SUBSTEP_VIEWER,
             CP_TRACKING,
             PATHLINE_CORES,            

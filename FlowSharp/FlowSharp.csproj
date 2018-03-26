@@ -117,6 +117,7 @@
     <Compile Include="Framework\Renderer\Data\PointCloud.cs" />
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
     <Compile Include="Framework\Renderer\Data\Renderable.cs" />
+    <Compile Include="Framework\Renderer\Editor.cs" />
     <Compile Include="Framework\Renderer\LineStatisticsMapper.cs" />
     <Compile Include="Framework\Renderer\PathlineLengthMapper.cs" />
     <Compile Include="Loader\GeometryWriter.cs" />
@@ -187,6 +188,9 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Framework\Renderer\Resources\ColormapHotCold.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="Framework\Renderer\Data\DataEffects\Plane.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -205,10 +209,22 @@
     <Content Include="Framework\Renderer\Resources\ColormapHeat.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Framework\Renderer\Resources\ColormapHotColdBlack.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Renderer\Resources\ColormapHotHot.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Renderer\Resources\ColormapHotHotBlack.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Framework\Renderer\Resources\ColormapParulaIso.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Framework\Renderer\Resources\ColormapParulaLong.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Framework\Renderer\Resources\ColormapParulaSegmentation.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Framework\Renderer\Resources\ColormapRed.png">

@@ -105,9 +105,14 @@ namespace FlowSharp
         Heat,
         Red,
         Gray,
+        HotCold,
+        HotColdBlack,
+        HotHot,
+        HotHotBlack,
         Heatstep,
         Circular,
         ParulaIso,
-        ParulaLong
+        ParulaLong,
+        ParulaSegmentation
     }
 }
