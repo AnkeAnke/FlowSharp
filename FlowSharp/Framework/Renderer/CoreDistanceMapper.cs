@@ -526,6 +526,29 @@ namespace FlowSharp
         {
             WriteGraph(methodName, _selectedCore, graph, _graphData);
         }
+
+        protected static Int2 GetClosestIndex(Graph2D[] sun, Vector2 sunCenter, Vector2 pos)
+        {
+            Debug.Assert(sun != null && sun.Length > 0 && sun[0].Length > 0);
+
+            // Establish basic measures.
+            int numAngles = sun.Length;
+            int numRads = sun[0].Length;
+            float anglePerIndex = (float)((Math.PI * 2) / numAngles);
+            float innerOffset = sun[0].X[0];
+            float radPerIndex = (sun[0].X[numRads - 1] - innerOffset) / numRads;
+
+            // Calculate nearest angle.
+            float posAngle = FieldAnalysis.Angle2DCW(pos - sunCenter);
+            ///float relativeAngle = (float)(posAngle / (Math.PI * 2));
+            int posAngleIndex = (int)(posAngle / anglePerIndex + 0.5f) % numAngles;
+
+            // Calculate nearest radius.
+            float posRad = (sunCenter - pos).Length() - innerOffset;
+            int posRadIndex = (int)(posRad / radPerIndex + 0.5f); // Round mathm.
+
+            return new Int2(posAngleIndex, posRadIndex);
+        }
         #endregion NotMap
 
         public List<Renderable> Map()
@@ -2309,9 +2332,9 @@ namespace FlowSharp
             // Integrate first few steps.
             pathlineIntegrator.Field = _velocity;
             Console.WriteLine("Starting integration of {0} pathlines", circle.Length);
-            pathlines = pathlineIntegrator.Integrate(circle, false, integrationLength)[0];
-
             float timeLength = (int)Math.Min(Math.Ceiling(time + integrationLength), RedSea.Singleton.NumSubstepsTotal / _everyNthTimestep);
+            pathlines = pathlineIntegrator.Integrate(circle, false, timeLength)[0];
+
             while (_currentEndStep + 1 < timeLength)
             {
                 // Don't load more steps than we need to!
@@ -2356,6 +2379,7 @@ namespace FlowSharp
 
             }
 
+            Console.WriteLine($"=== Working on FTLE Slice {0} ===", SliceTimeMain);
             _pathlinesTime = IntegrateCircles(offsets, angles, out _ftle, SliceTimeMain);
             _rebuilt = true;
 

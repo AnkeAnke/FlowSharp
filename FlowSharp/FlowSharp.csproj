@@ -102,6 +102,7 @@
     <Compile Include="Framework\Data\Graph.cs" />
     <Compile Include="Framework\Data\Surface.cs" />
     <Compile Include="Framework\Renderer\CoreDistanceMapper.cs" />
+    <Compile Include="Framework\Renderer\CoreOkuboMapper.cs" />
     <Compile Include="Framework\Renderer\CUDAMappers.cs" />
     <Compile Include="Framework\Renderer\DataMapper.cs" />
     <Compile Include="Framework\Algorithms\FieldAnalysis.cs" />
@@ -117,6 +118,7 @@
     <Compile Include="Framework\Renderer\Data\PointCloud.cs" />
     <Compile Include="Framework\Renderer\Data\Plane.cs" />
     <Compile Include="Framework\Renderer\Data\Renderable.cs" />
+    <Compile Include="Framework\Renderer\Coherency.cs" />
     <Compile Include="Framework\Renderer\Editor.cs" />
     <Compile Include="Framework\Renderer\LineStatisticsMapper.cs" />
     <Compile Include="Framework\Renderer\PathlineLengthMapper.cs" />

@@ -21,7 +21,7 @@ namespace FlowSharp
         protected float _rangeGraphData, _minGraphData;
         protected Graph2D[] _dataGraph;
         protected bool _rebuilt = false;
-        protected Graph2D[] _distanceDistance;
+        //protected Graph2D[] _distanceDistance;
 
         private LineSet _selectionLines;
         //private LineBall _selectionGraph;
@@ -119,12 +119,15 @@ namespace FlowSharp
                 {
                     case RedSea.DiffusionMeasure.FTLE:
                         _currentFileName = "FTLE";
+                        _rangeGraphData = 0.095f;
                         break;
                     case RedSea.DiffusionMeasure.Direction:
                         _currentFileName = "Okubo";
+                        _rangeGraphData = 0.2f;
                         break;
                     default:
                         _currentFileName = "Concentric";
+                        _rangeGraphData = 20;
                         break;
                 }
 
@@ -151,9 +154,13 @@ namespace FlowSharp
                         //_selectionLines = FieldAnalysis.WriteGraphToSun(_selectionData, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
                     }
 
+                    // Some weird things happening, maybe this solves offset drawing...
+                    _graphData = FieldAnalysis.WriteGraphToSun(_dataGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
+
+
                     var dataRange = _graphData.GetRange(2);
-                    _rangeGraphData = dataRange.Item2;// - dataRange.Item1;
-                    _minGraphData = SliceTimeMain;// dataRange.Item1;
+                    //_rangeGraphData = dataRange.Item2 - SliceTimeMain;
+                    _minGraphData = SliceTimeMain;
 
                     MaskOnData();
                 }
@@ -189,24 +196,16 @@ namespace FlowSharp
                 return;
 
             Renderer.Singleton.Remove(_graph);
-            float rangeOffset = _rangeGraphData * 0.01f;
+            float rangeOffset = _rangeGraphData * 0.5f;
 
             Graph2D[] maskGraph = new Graph2D[_dataGraph.Length];
             for (int angle = 0; angle < maskGraph.Length; ++angle)
-                maskGraph[angle] = Graph2D.Operate(_dataGraph[angle], _selectionData[angle], (b,a) => (Math.Max(0, a + rangeOffset + b * (_rangeGraphData + rangeOffset))) );//(_rangeGraphData);
-
-            //_selectionGraph = new LineBall(_graphPlane, _selectionLines, LineBall.RenderEffect.HEIGHT, Colormap, true, SliceTimeMain);
-            //_selectionGraph.LowerBound = 0;
-            //_selectionGraph.UpperBound = 1;
-            //_selectionGraph.UsedMap = Colormap.Gray;
-            //_graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, true, SliceTimeMain);
-            //_graph.UpperBound += _graph.UpperBound - _graph.LowerBound;
-            //_graph.UsedMap = Colormap.ParulaSegmentation;
+                maskGraph[angle] = Graph2D.Operate(_dataGraph[angle], _selectionData[angle], (b,a) => (Math.Max(0, a + rangeOffset + b * (2 * _rangeGraphData))) );
 
             LineSet maskedLines = FieldAnalysis.WriteGraphToSun(maskGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
             _graph = new LineBall(_graphPlane, maskedLines, LineBall.RenderEffect.HEIGHT, Colormap, true, SliceTimeMain);
             _graph.LowerBound = _minGraphData;
-            _graph.UpperBound = _minGraphData + 2 * (rangeOffset + _rangeGraphData);
+            _graph.UpperBound = _minGraphData + 4 * _rangeGraphData;
             _graph.UsedMap = Colormap.ParulaSegmentation;
 
             Renderer.Singleton.AddRenderable(_graph);
@@ -242,7 +241,7 @@ namespace FlowSharp
                 addArea = false;
             }
 
-            _mouseCircle = new Point(new Vector3(mousePos, 0.001f + SliceTimeMain));
+            _mouseCircle = new Point(new Vector3(mousePos, 0.00001f + SliceTimeMain));
             _mouseCircle.Radius = _brushSize;
 
             // Calculate whether (and where) within round canvas.
@@ -256,10 +255,29 @@ namespace FlowSharp
                 float minDistToCore = Math.Max(distMouseToCore - _brushSize, 0);
                 float maxDistToCore = distMouseToCore + _brushSize;
 
+                Int2 nearestIndex = GetClosestIndex(_dataGraph, _selection, mousePos);
+                int mouseAngle = nearestIndex.X;
+                int mouseRad = nearestIndex.Y;
+
+                // Establish basic measures.
+                int numRads = _dataGraph[0].Length;
+                float radPerIndex = (_dataGraph[0].X[1] - _dataGraph[0].X[0]);
+
+                // Calculate angle and radian indices needed to each side.
+                float nearestRad = mouseRad - _brushSize / radPerIndex;
+                float furthestRad = Math.Min(mouseRad + _brushSize / radPerIndex, numRads - 1);
+                if (nearestRad < 0)
+                {
+                    furthestRad = (float)Math.Ceiling(Math.Max(-nearestRad, furthestRad));
+                    nearestRad = 0;
+                }
+
                 for (int angle = 0; angle < _selectionData.Length; ++angle)
                 {
-                    for (int rad = 0; rad < _selectionData[angle].Length; ++rad)
+                    for (int rad = (int)nearestRad; rad < furthestRad; ++rad)
                     {
+                        if (rad < 0 || rad >= _dataGraph[0].Length)
+                            break;
                         Vector3 dataPos = _graphData[angle][rad];
                         float distToBrush = (new Vector2(dataPos[0], dataPos[1]) - mousePos).Length();
                         if (distToBrush < _brushSize)
@@ -340,7 +358,7 @@ namespace FlowSharp
                     _selection = pos;
                     _selectionChanged = true;
 
-                    Console.WriteLine("Pos: {0}", pos);//, _debugCore.Sample((Vec2)pos));
+                    Console.WriteLine("Pos: {0}", pos);
                     return;
                 }
 

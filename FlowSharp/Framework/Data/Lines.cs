@@ -248,6 +248,19 @@ namespace FlowSharp
             return new PointSet<EndPoint>(points.ToArray());
         }
 
+        public PointSet<Point> ToPointSet()
+        {
+            List<Point> points = new List<Point>(NumExistentPoints);
+            
+            foreach (Line line in _lines)
+            {
+                foreach (Vector3 pos in line.Positions)
+                    points.Add(new Point(pos));
+            }
+
+            return new PointSet<Point>(points.ToArray());
+        }
+
         public void FlattenLines(float level = 0)
         {
             foreach (Line line in Lines)

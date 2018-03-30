@@ -657,6 +657,20 @@ namespace FlowSharp
             }
             return new LineSet(lines);
         }
+
+        public delegate bool Stencil(float val);
+        public static LineSet WriteStencilToSun(Graph2D[] values, Vector3 center, Stencil stencil)
+        {
+            float angleDiff = (float)(Math.PI * 2 / values.Length);
+            Line[] lines = new Line[values.Length];
+            for (int l = 0; l < values.Length; ++l)
+            {
+                Vector3 dir = new Vector3((float)Math.Sin(l * angleDiff + PiH), (float)Math.Cos(l * angleDiff + PiH), 0);
+                lines[l] = values[l].SetLineHeightStraight(center, dir, Vector3.UnitZ);
+            }
+            return new LineSet(lines);
+        }
+
         public static Line FindBoundaryFromDistanceDonut(Line[] distances)
         {
             int[] tmp;
@@ -859,6 +873,14 @@ namespace FlowSharp
             return OperateZ(l0, l1, (a, b) => { return (a - b).Length(); });
         }
 
+        public static float Angle2DCCW(Vector2 vec)
+        {
+            float angle = (float)Math.Atan2(vec.Y, vec.X);
+            if (angle < 0)
+                angle += Pi2;
+            return angle;
+        }
+
         public static float Angle2DCCW(Vector3 vec)
         {
             float angle = (float)Math.Atan2(vec.Y, vec.X);
@@ -866,6 +888,14 @@ namespace FlowSharp
                 angle += Pi2;
             return angle;
         }
+        public static float Angle2DCW(Vector2 vec)
+        {
+            float angle = (float)Math.Atan2(-vec.Y, vec.X);
+            if (angle < 0)
+                angle += Pi2;
+            return angle;
+        }
+
         public static float Angle2DCW(Vector3 vec)
         {
             float angle = (float)Math.Atan2(-vec.Y, vec.X);

@@ -120,10 +120,10 @@ namespace FlowSharp
 
             RedSea.Singleton.GetLoader = RedSeaLoader; //= (step, substep, var) => locDataFolder + (step + 1) + ((substep == null)?(var == RedSea.Variable.VELOCITY_Z? "/W" + locWFileName : locFileName) : (locFolderName + substep) + "/" + "S" + locWFileName);
             RedSea.Singleton.GetFilename = RedSeaFilenames;
-            RedSea.Singleton.DonutFileName = "D:/KTH/Projects/EddyRedo/Data/Donut";
+            RedSea.Singleton.DonutFileName ="D:/KTH/Projects/EddyRedo/Data/Donut";
             RedSea.Singleton.DiskFileName = "D:/KTH/Projects/EddyRedo/Data/Disks/Disk";
-            RedSea.Singleton.CoreFileName =  "D:/KTH/Projects/EddyRedo/Data/Core";
-            RedSea.Singleton.SnapFileName =  "D:/KTH/Projects/EddyRedo/Data/Screenshots/";
+            RedSea.Singleton.CoreFileName = "D:/KTH/Projects/EddyRedo/Data/Core";
+            RedSea.Singleton.SnapFileName = "D:/KTH/Projects/EddyRedo/Data/Screenshots/";
             RedSea.Singleton.RingFileName = "D:/KTH/Projects/EddyRedo/Data/Rings/";
             //Tests.CopyBeginningOfFile(RedSea.Singleton.GetFilename(0), 100000);
 
@@ -257,6 +257,9 @@ namespace FlowSharp
             DataMapper ftle = new MapperFTLE(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.FTLE_CONCENTRIC, ftle);
 
+            DataMapper coreOkubo = new CoreOkuboMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.OKUBO_CONCENTRIC, coreOkubo);
+
             DataMapper pathDist = new DistanceMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.PATHLINE_DISTANCE, pathDist);
 
@@ -271,6 +274,9 @@ namespace FlowSharp
 
             DataMapper editor = new ConcentricEditorMapper(12, redSea);
             RedSea.Singleton.SetMapper(RedSea.Display.AREA_EDITOR, editor);
+
+            DataMapper coherency = new CoherencyMapper(12, redSea);
+            RedSea.Singleton.SetMapper(RedSea.Display.COHERENCY, coherency);
         }
     }
 }

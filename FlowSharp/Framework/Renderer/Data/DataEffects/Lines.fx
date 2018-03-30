@@ -34,7 +34,7 @@ struct GS_IN
 struct PS_IN
 {
 	float4 pos : SV_POSITION;
-	float2 uv : TEXTURE;
+    float2 uv : TEXTURE;
 	float len : LINE_LENGTH;
 };
 
@@ -136,7 +136,7 @@ struct PS_IN_H
 	float4 pos : SV_POSITION;
 	float2 uv : TEXTURE;
 	float len : LINE_LENGTH;
-	float height : HEIGHT;
+	nointerpolation float height : HEIGHT;
 	float lightness : LIGHT;
 };
 
@@ -191,10 +191,6 @@ void GS_Height(line GS_IN_H ends[2], inout TriangleStream<PS_IN_H> triStream)
 	output.height = height0;
 	triStream.Append(output);
 
-	output.pos = mul(projection, pos1 - diagNeg); output.pos.w += wOffset;
-	output.uv = lineUV - uvNeg;
-	output.height = height1;
-	triStream.Append(output);
 	output.pos = mul(projection, pos0 + diagNeg); output.pos.w += wOffset;
 	output.uv = uvNeg;
 	output.height = height0;
@@ -203,6 +199,10 @@ void GS_Height(line GS_IN_H ends[2], inout TriangleStream<PS_IN_H> triStream)
 	output.uv = lineUV + uv;
 	output.height = height1;
 	triStream.Append(output);
+    output.pos = mul(projection, pos1 - diagNeg); output.pos.w += wOffset;
+    output.uv = lineUV - uvNeg;
+    output.height = height1;
+    triStream.Append(output);
 
 }
 
