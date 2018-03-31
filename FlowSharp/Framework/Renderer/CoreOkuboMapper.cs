@@ -19,6 +19,7 @@ namespace FlowSharp
             }
         }
         protected Graph2D[] _okubo;
+        protected float _standardDeviation;
         protected bool _rebuilt = false;
         public CoreOkuboMapper(int everyNthField, Plane plane) : base(everyNthField, plane)
         {
@@ -26,7 +27,7 @@ namespace FlowSharp
             _linePlane = new Plane(_linePlane.Origin, _linePlane.XAxis, _linePlane.YAxis, _linePlane.ZAxis, 1.0f);
         }
 
-        protected void IntegrateCircles(float[] radii, float[] angles, out Graph2D[] okuboData)
+        protected void ComputeOkubo(float[] radii, float[] angles, out Graph2D[] okuboData)
         {
             float integrationLength = 40; // IntegrationTime;
 
@@ -36,10 +37,11 @@ namespace FlowSharp
             if (_velocity.TimeOrigin > SliceTimeMain || _velocity.TimeOrigin + _velocity.Size.T < SliceTimeMain)
                 LoadField(SliceTimeMain, MemberMain, 1);
 
-            var sliceVelocity = _velocity.GetTimeSlice(SliceTimeMain);
+            VectorField okuboField = new VectorField(_velocity.GetSlice(SliceTimeMain), FieldAnalysis.OkuboWeiss, 1);
 
-            float min = float.MaxValue;
-            float max = float.MinValue;
+            float mean, fill, standardDeviation;
+            (okuboField.Scalars[0] as ScalarField).ComputeStatistics(out fill, out mean, out _standardDeviation);
+            Console.WriteLine("Mean: " + mean + ", SD: " + _standardDeviation + ", valid cells: " + fill);
 
             for (int angle = 0; angle < angles.Length; ++angle)
             {
@@ -51,26 +53,14 @@ namespace FlowSharp
                     float y = (float)(Math.Cos(angles[angle] + Math.PI / 2));
                     Vec2 pos = new Vec2(_selection.X + x * radii[rad], _selection.Y + y * radii[rad]);
 
-                    if (!sliceVelocity.Grid.InGrid(pos) || !sliceVelocity.IsValid(pos))
+                    if (!okuboField.Grid.InGrid(pos) || !okuboField.IsValid(pos))
                     {
                         okuboData[angle].Fx[rad] = 1;
                         continue;
                     }
-                    Vector v = sliceVelocity.Sample(pos);
-                    if (v[0] == sliceVelocity.InvalidValue)
-                    {
-                        okuboData[angle].Fx[rad] = 1;
-                        continue;
-                    }
-                    SquareMatrix J = sliceVelocity.SampleDerivative(pos);
-
-                    float ow = FieldAnalysis.OkuboWeiss(v, J)[0];
-                    okuboData[angle].Fx[rad] = ow;
-                    min = Math.Min(min, ow);
-                    max = Math.Max(max, ow);
+                    okuboData[angle].Fx[rad] = okuboField[0].Sample(pos) + 0.2f * _standardDeviation;
                 }
             }
-            Console.WriteLine("Okubo range [{0},{1}]", min, max);
         }
 
         protected override void FindBoundary()
@@ -82,7 +72,7 @@ namespace FlowSharp
             }
 
             float angleDiff = (float)((Math.PI * 2) / _numSeeds);
-            float[] offsets = new float[LineX];
+            float[] radii = new float[LineX];
             float[] angles = new float[_numSeeds];
             for (int seed = 0; seed < _numSeeds; ++seed)
             {
@@ -91,11 +81,11 @@ namespace FlowSharp
             }
             for (int o = 0; o < LineX; ++o)
             {
-                offsets[o] = AlphaStable + o * _lengthRadius / (LineX - 1);
+                radii[o] = o * _lengthRadius / (LineX - 1);
             }
 
             Console.WriteLine($"=== Working on Okubo Slice {0} ===", SliceTimeMain);
-            IntegrateCircles(offsets, angles, out _okubo);
+            ComputeOkubo(radii, angles, out _okubo);
             //LineSet okuboLines = FieldAnalysis.WriteGraphToSun(_okubo, new Vector3(_selection, SliceTimeMain));
             _rebuilt = true;
 
@@ -111,20 +101,61 @@ namespace FlowSharp
 
             _graphData = FieldAnalysis.WriteGraphToSun(_okubo, new Vector3(_selection.X, _selection.Y, 0));
             _graph = new LineBall(_graphPlane, _graphData, LineBall.RenderEffect.HEIGHT, Colormap, Flat, SliceTimeMain);
-            _graph.LowerBound = -0.2f;
-            _graph.UpperBound = 0.2f;
+            _graph.LowerBound = -0.05f;
+            _graph.UpperBound = 0.05f;
 
-            //float min = float.MaxValue;
-            //float max = float.MinValue;
-            //foreach (var g in _okubo)
-            //    foreach (var fx in g.Fx)
-            //    {
-            //        min = Math.Min(fx, min);
-            //        max = Math.Max(fx, max);
-            //    }
-
-            //Console.WriteLine($"Min value: {0}\nMax value: {1}", min, max);
             _rebuilt = false;
+
+            // Load or compute selection by floodfill.
+            Graph2D[] okuboSelection;
+            LineSet okuboLines;
+            if (LoadGraph("OkuboSelection", _selectedCore, out okuboSelection, out okuboLines))
+                return;
+
+            // Floodfill.
+            int numAngles = _okubo.Length;
+            int numRadii = _okubo[0].Length;
+            HashSet<Int2> toFlood = new HashSet<Int2>();
+
+            okuboSelection = new Graph2D[numAngles];
+            for (int angle = 0; angle < numAngles; ++angle)
+            {
+                toFlood.Add(new Int2(angle, 0));
+
+                okuboSelection[angle] = new Graph2D(numRadii);
+                for (int r = 1; r < numRadii; ++r)
+                {
+                    okuboSelection[angle].Fx[r] = 0;
+                    okuboSelection[angle].X[r] = _okubo[angle].X[r];
+                }
+            }
+
+            while (toFlood.Count > 0)
+            {
+                Int2 current = toFlood.Last();
+                toFlood.Remove(current);
+                okuboSelection[current.X].Fx[current.Y] = 1;
+
+                // In each direction, go negative and positive.
+                for (int dim = 0; dim < 2; ++dim)
+                    for (int sign = -1; sign <= 1; sign += 2)
+                    {
+                        Int2 neighbor = new Int2(current);
+                        neighbor[dim] += sign;
+
+                        // Wrap angle around.
+                        neighbor[0] = (neighbor[0] + numAngles) % numAngles;
+                        if (neighbor.Y >= 0 && neighbor.Y < numRadii
+                            && _okubo[neighbor.X].Fx[neighbor.Y] <= 0
+                            && okuboSelection[neighbor.X].Fx[neighbor.Y] == 0)
+                        {
+                            toFlood.Add(neighbor);
+                        }
+                    }
+            }
+
+            LineSet sun = FieldAnalysis.WriteGraphToSun(okuboSelection, new Vector3(_selection, SliceTimeMain));
+            WriteGraph("OkuboSelection", _selectedCore, okuboSelection, sun);
         }
 
         protected override void UpdateBoundary()

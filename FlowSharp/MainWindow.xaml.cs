@@ -265,6 +265,13 @@ namespace FlowSharp
             UpdateRenderer();
         }
 
+        public void SetDiffusionMeasure(int measure)
+        {
+            DropDownDiffusionMeasure.SelectedItem = measure;
+            _mapper.CurrentSetting.DiffusionMeasure = (RedSea.DiffusionMeasure)measure;
+            UpdateRenderer();
+        }
+
         private void OnChangeSlice0(object sender, RoutedEventArgs e)
         {
             var comboBox = sender as ComboBox;

@@ -155,6 +155,13 @@ namespace FlowSharp
                 }
             }
 
+            if (state.IsPressed(Key.F11))
+            {
+                RedSea.Singleton.WPFWindow.SetDiffusionMeasure((int)RedSea.DiffusionMeasure.Direction);
+                RedSea.Singleton.WPFWindow.SetDiffusionMeasure((int)RedSea.DiffusionMeasure.Neighbor);
+                RedSea.Singleton.WPFWindow.SetDiffusionMeasure((int)RedSea.DiffusionMeasure.FTLE);
+            }
+
 
             // Map mouse movement to angles.
             UpdateThetaPhiFromMouse(passedTimeSinceLastFrame, canvas);

@@ -248,6 +248,12 @@ namespace FlowSharp
             pathlineIntegrator.Field = _velocity;
             _stencilPathlines.Add(pathlineIntegrator.Integrate(seeds.ToPointSet(), false)[0]);
 
+            //List<Tuple<Int2, Line>> indexedPathlines = new List<Tuple<Int2, Line>>();
+            List<Int2> pathlineIndices = new List<Int2>();
+            for (int a = 0; a < _coherency.Length; a++)
+                for (int r = 0; r < _coherency[0].Length; r++)
+                    pathlineIndices.Add(new Int2(a, r));
+
             // ~~~~~~~~~~~~~~~~~~~~~~~~ Filter and Repeat ~~~~~~~~~~~~~~~~~~~~~~~~ \\
 
             Graph2D[] interimSlice;
@@ -260,8 +266,13 @@ namespace FlowSharp
 
                 // ~~~~~~~~~~~~~~~~~~~~~~~~ Keep Only Those Inside ~~~~~~~~~~~~~~~~~~~~~~~~ \\
                 List<Line> shrunkenLineSet = new List<Line>();
-                foreach (Line pathLine in _stencilPathlines[_stencilPathlines.Count - 1].Lines)
+                List<Int2> shrunkenIndexSet = new List<Int2>();
+
+                Line[] lastLines = _stencilPathlines[_stencilPathlines.Count - 1].Lines;
+                for (int lineIdx = 0; lineIdx < lastLines.Length; ++lineIdx)
                 {
+                    Line pathLine = lastLines[lineIdx];
+                    Int2 lineIdx2 = pathlineIndices[lineIdx];
                     if (pathLine.Length < 1)
                         continue;
 
@@ -278,15 +289,19 @@ namespace FlowSharp
 
                     // Keep this pathline.
                     shrunkenLineSet.Add(pathLine);
+                    shrunkenIndexSet.Add(lineIdx2);
 
                     // Update coherency map. Use max in case we ever add more in-between slices.
-                    Vector2 startPos = new Vector2(pathLine[0].X, pathLine[0].Y);
-                    indexInSun = GetClosestIndex(interimSlice, _selection, startPos);
-                    _coherency[indexInSun.X].Fx[indexInSun.Y] = Math.Max(_coherency[indexInSun.X].Fx[indexInSun.Y], toTime);
+                    //Vector2 startPos = new Vector2(pathLine[0].X, pathLine[0].Y);
+                    //indexInSun = GetClosestIndex(interimSlice, _selection, startPos);
+                    //_coherency[indexInSun.X].Fx[indexInSun.Y] = Math.Max(_coherency[indexInSun.X].Fx[indexInSun.Y], toTime);
+                    _coherency[lineIdx2.X].Fx[lineIdx2.Y] = Math.Max(_coherency[lineIdx2.X].Fx[lineIdx2.Y], toTime);
                 }
 
                 // Replace last line set in list with new, filtered version.
                 _stencilPathlines[_stencilPathlines.Count - 1] = new LineSet(shrunkenLineSet.ToArray());
+                pathlineIndices = shrunkenIndexSet;
+
                 string pathlineName = RedSea.Singleton.DiskFileName + _currentFileName + string.Format("Pathlines_{0}_{1}.pathlines", SliceTimeMain, toTime);
                 GeometryWriter.WriteToFile(pathlineName, _stencilPathlines[_stencilPathlines.Count - 1]);
 
