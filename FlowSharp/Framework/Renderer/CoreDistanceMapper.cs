@@ -623,7 +623,7 @@ namespace FlowSharp
             #endregion BackgroundPlanes
 
             // Add Point to indicate clicked position.
-            renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.4f } })));
+//            renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.4f } })));
             bool rebuilt = false;
 
             // Recompute lines if necessary.

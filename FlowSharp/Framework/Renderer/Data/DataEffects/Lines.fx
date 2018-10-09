@@ -136,7 +136,7 @@ struct PS_IN_H
 	float4 pos : SV_POSITION;
 	float2 uv : TEXTURE;
 	float len : LINE_LENGTH;
-	nointerpolation float height : HEIGHT;
+	/*nointerpolation*/ float height : HEIGHT;
 	float lightness : LIGHT;
 };
 

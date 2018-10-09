@@ -98,7 +98,7 @@ namespace FlowSharp
             #endregion BackgroundPlanes
 
             // Add Point to indicate clicked position.
-            renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.4f } })));
+            //renderables.Add(new PointCloud(_linePlane, new PointSet<Point>(new Point[] { new Point() { Position = new Vector3(_selection, SliceTimeMain), Color = new Vector3(0.7f), Radius = 0.4f } })));
             bool rebuilt = false;
 
             if (_lastSetting == null ||
@@ -220,6 +220,35 @@ namespace FlowSharp
                 renderables.Add(_coreBall);
 
             return renderables;
+        }
+
+        protected float ComputeCoherency(Graph2D[] coherency, Graph2D[] mask)
+        {
+            float sumCoherency = 0;
+            float area = 0;
+
+            int numAngles = coherency.Length;
+            int numRadii = coherency[0].Length;
+
+            // Math constants.
+            float circleConst = (float)(0.5f / numAngles * Math.PI);
+            float radDist = coherency[0].X[1] - coherency[0].X[0];
+            float radDistSq = radDist * radDist;
+
+            for (int a = 0; a < numAngles; ++a)
+            {
+                for (int r = 0; r < numRadii; ++r)
+                {
+                    float locArea = circleConst * radDistSq * (2.0f * r + 1.0f);
+                    float locMask = mask[a].Fx[r];
+                    float locCoherency = coherency[a].Fx[r];
+
+                    area += locArea * locMask;
+                    sumCoherency += locArea * locMask * locCoherency;
+                }
+            }
+
+            return sumCoherency / area;
         }
 
         protected void IntegrateLines()
@@ -387,19 +416,28 @@ namespace FlowSharp
             if (_coherency == null || _selectionData == null)
                 return;
 
-            Renderer.Singleton.Remove(_graph);
-            float dataRange = 80;
-            float rangeOffset = dataRange * 0.5f;
+            //Renderer.Singleton.Remove(_graph);
+            //float dataRange = 80;
+            //float rangeOffset = dataRange * 0.5f;
 
-            Graph2D[] maskGraph = new Graph2D[_coherency.Length];
-            for (int angle = 0; angle < maskGraph.Length; ++angle)
-                maskGraph[angle] = Graph2D.Operate(_coherency[angle], _selectionData[angle], (b, a) => (Math.Max(0, a + rangeOffset + b * (2 * dataRange))));
+            //Graph2D[] maskGraph = new Graph2D[_coherency.Length];
+            //for (int angle = 0; angle < maskGraph.Length; ++angle)
+            //    maskGraph[angle] = Graph2D.Operate(_coherency[angle], _selectionData[angle], (b, a) => (Math.Max(0, a + rangeOffset + 1/*b*/ * (2 * dataRange))));
 
-            LineSet maskedLines = FieldAnalysis.WriteGraphToSun(maskGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
-            _graph = new LineBall(_graphPlane, maskedLines, LineBall.RenderEffect.HEIGHT, Colormap, true, SliceTimeMain);
+            //LineSet maskedLines = FieldAnalysis.WriteGraphToSun(maskGraph, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
+            //_graph = new LineBall(_graphPlane, maskedLines, LineBall.RenderEffect.HEIGHT, Colormap, true, SliceTimeMain);
+            //_graph.LowerBound = SliceTimeMain;
+            //_graph.UpperBound = SliceTimeMain + 4 * dataRange;
+            //_graph.UsedMap = Colormap.ParulaSegmentation;
+
+            LineSet lines = FieldAnalysis.WriteGraphToSun(_coherency, new Vector3(_selection.X, _selection.Y, SliceTimeMain));
+            _graph = new LineBall(_graphPlane, lines, LineBall.RenderEffect.HEIGHT, Colormap.Parula, true, SliceTimeMain);
             _graph.LowerBound = SliceTimeMain;
-            _graph.UpperBound = SliceTimeMain + 4 * dataRange;
-            _graph.UsedMap = Colormap.ParulaSegmentation;
+            _graph.UpperBound = SliceTimeMain + 80;
+
+            // Compute area coherency.
+            float overallCoherency = ComputeCoherency(_coherency, _selectionData);
+            Console.WriteLine(String.Format("=== {0} Coherency is {1} / 80 = {2}===", _currentFileName, overallCoherency, overallCoherency/80));
         }
 
         public override string GetName(Setting.Element element)
